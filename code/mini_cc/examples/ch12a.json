@@ -1,0 +1,4 @@
+[
+  {"call": "Memory", "input": {"action": "save", "type": "feedback", "name": "commit message 前缀", "description": "写 commit message 时用 feat:/fix:/docs: 这类前缀", "body": "commit message 第一行必须以 feat: / fix: / docs: / refactor: / test: 开头，后面是一句中文摘要。\n**Why:** 用户要按前缀生成 changelog，光秃秃的一句话没法归类。\n**How to apply:** 任何时候帮用户写或改 commit message 都套用；用户另有指定时以用户为准。"}, "text": "这是一条以后每次都要遵守的偏好，记进长期记忆。"},
+  {"say": "记住了。以后写 commit message 都会带 feat: / fix: 这类前缀，换个会话也一样。"}
+]

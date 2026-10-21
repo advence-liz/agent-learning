@@ -22,8 +22,9 @@ def test_system_prompt_is_stable_and_cached(make_app):
     s1, s2 = client.requests[0].system, client.requests[1].system
     assert s1 == s2  # 同一会话内逐字节相同 → prompt cache 能命中
     assert s1[-1]["cache_control"] == {"type": "ephemeral"}
-    assert "# Environment" in s1[-1]["text"] and str(app.settings.cwd) in s1[-1]["text"]
-    assert "Today's date" not in s1[0]["text"] + s1[-1]["text"]  # 会变的东西不进 system
+    env = next(b["text"] for b in s1 if b["text"].startswith("# Environment"))  # 第 12 章起后面还有 # Memory 段
+    assert str(app.settings.cwd) in env
+    assert "Today's date" not in "".join(b["text"] for b in s1)  # 会变的东西不进 system
     assert client.requests[0].cache is True
 
 

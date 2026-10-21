@@ -111,3 +111,10 @@
 - `context.py`：默认 provider 加入任务提醒；`STATIC_PROMPT` 增加「3 步以上先建清单」。
 - 测试：`tests/test_ch11_tasks.py`（8 个）。
 - 收尾（为第 12–21 章预留）：`loop.py` 新增生命周期钩子 `Agent.before_request`（每次请求模型前）与 `Agent.turn_end`（一轮结束时），循环拆为 `_loop()`（调 turn_end 钩子）+ `_steps()`；新增 `tests/test_extension_points.py`（3 个）验证 `before_request` / `turn_end` / `listeners` / `write_hooks` / `system_sections` / `extra_checks` / 运行时注册工具。扩展点清单见 `ARCHITECTURE.md`。
+
+## 第 12 章 · 长期记忆（12-memory.md）
+
+- 新增 `memory.py`：`MemoryStore`（`<home>/projects/<仓库根 slug>/memory/`，`MEMORY.md` 索引 + 每条记忆一个带 frontmatter 的 markdown；`save()` 同 slug 原地更新索引行、`delete()`、`entries()`；`load_index()` 截到 200 行 / 25KB 并明说截断；接近上限 90% 时保存结果里提醒精简）、`slugify()`（ASCII 可读 + 非 ASCII 补稳定哈希）、`system_section()`（记忆指引 + 索引，挂 `ContextBuilder.system_sections`）。
+- 新增 `tools/memory_tool.py:MemoryTool`（`save` / `delete`，`self_check` 返回 allow 免审批）；默认工具加入 `Memory`。
+- `cli.py`：`App.memory`、`ctx.extras["memory"]`；`_attach()` 换会话时 `context.invalidate()`（新记忆在下个会话进 system，同一会话 system 不变）；新命令 `/memory`（`/memory rm <slug>`）。
+- 测试：`tests/test_ch12_memory.py`（8 个）；`test_ch09_context.py` 的 system 断言改为按标题查找 `# Environment` 段。

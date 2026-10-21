@@ -12,6 +12,7 @@ from .config import Settings
 from .loop import Agent
 from .model import AnthropicClient, FakeClient, ModelClient
 from .auto_mode import AutoReviewer, keyword_reviewer_turn
+from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
 from .session import Session, SessionStore
 from .tasks import TaskStore
@@ -83,6 +84,10 @@ class App:
         self.reviewer = AutoReviewer(reviewer_client or client, lambda: self.agent.messages, str(settings.cwd))
         self.agent.permissions.classifier = self.reviewer
         self.store = SessionStore(settings.home, settings.cwd)
+        # 第 12 章：长期记忆。索引放进 system（会话开始时求值一次），Memory 工具从 extras 拿到它
+        self.memory = MemoryStore.for_project(settings.home, settings.cwd)
+        self.agent.ctx.extras["memory"] = self.memory
+        self.agent.context.system_sections.append(self.memory.system_section)
         self._attach(self.store.new())
 
     def _attach(self, session: Session) -> None:
@@ -95,6 +100,8 @@ class App:
         self.agent.listeners.append(self._recorder)
         # 第 11 章：任务清单跟着会话走（/new 换新清单，/resume 载入旧清单）
         self.agent.ctx.extras["tasks"] = TaskStore.load(session.tasks_path)
+        # 换会话 = 重新算一次 system：上个会话里新存的记忆从这里开始进上下文
+        self.agent.context.invalidate()
 
     def _record_mode(self, old: str, new: str) -> None:
         # 和 Claude Code 一样把模式变化记进会话文件（读取时被忽略，只作审计）
@@ -233,6 +240,19 @@ def _context(app: App, arg: str) -> None:
 @COMMANDS.register("/todos", "查看当前会话的任务清单")
 def _todos(app: App, arg: str) -> None:
     app.ui.info(app.agent.ctx.extras["tasks"].render())
+
+
+@COMMANDS.register("/memory", "查看长期记忆索引；/memory rm <slug> 删除一条")
+def _memory(app: App, arg: str) -> None:
+    store = app.memory
+    if arg.startswith("rm "):
+        slug = arg[3:].strip()
+        app.ui.info(f"已删除 {slug}" if store.delete(slug) else f"没有 {slug}")
+        return
+    entries = store.entries()
+    app.ui.info(f"记忆目录：{store.dir}（{len(entries)} 条，下个会话开始时进上下文）")
+    if entries:
+        app.ui.table([(e.slug, f"{e.name} — {e.description}") for e in entries])
 
 
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))

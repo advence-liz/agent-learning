@@ -42,13 +42,14 @@ flowchart TB
 | `session.py` | `SessionStore/Session`：`<home>/projects/<slug>/<id>.jsonl`，每条消息一行，`uuid/parentUuid` 链 | 4, 11 |
 | `permissions.py` | 模式、`decide()` 判定链、会话规则、`extra_checks`、`classifier` | 5, 6 |
 | `auto_mode.py` | `AutoReviewer`：独立请求、只看用户原话 + 动作、json_schema 结构化输出、fail closed | 6 |
-| `tools/` | `base.py`（`Tool`、`ToolResult`、`ToolContext`）、`registry.py`（两道防线）、`validate.py`、`file_state.py`、`read/write/edit/bash/ask_user/task_tools.py` | 1, 3, 5, 7, 10, 11 |
+| `tools/` | `base.py`（`Tool`、`ToolResult`、`ToolContext`）、`registry.py`（两道防线）、`validate.py`、`file_state.py`、`read/write/edit/bash/ask_user/task_tools/memory_tool.py` | 1, 3, 5, 7, 10–12 |
 | `attachments.py` | `Attachment` + `<system-reminder>` 渲染 | 8 |
 | `mentions.py` | `@` 解析、附件、`git ls-files` + 模糊补全 | 8 |
 | `context.py` | `ContextBuilder`：静态 system（带 cache_control）+ providers（项目说明、日期、外部修改、通知） | 9 |
 | `tasks.py` | `TaskStore`（`<id>.tasks.json`）+ 任务提醒 provider | 11 |
 | `ui.py` | 事件 → 终端；`ask()`、`ask_permission()`、`ask_questions()` | 1, 2, 5, 10, 11 |
-| `cli.py` | `App`、`CommandRegistry`（`/help /new /status /model /resume /mode /context /todos /exit`）、REPL（Shift+Tab、补全）、`main()` | 1, 4–6, 8, 9, 11 |
+| `memory.py` | `MemoryStore`：`MEMORY.md` 索引 + 主题文件；索引截断后进 system | 12 |
+| `cli.py` | `App`、`CommandRegistry`（`/help /new /status /model /resume /mode /context /todos /memory /exit`）、REPL（Shift+Tab、补全）、`main()` | 1, 4–6, 8, 9, 11, 12 |
 
 ## 一轮对话的数据流
 
@@ -90,7 +91,7 @@ sequenceDiagram
 
 | 章节 | 用哪个扩展点 | 现状 |
 |---|---|---|
-| 12 长期记忆 | `ContextBuilder.system_sections`（记忆索引放 system，会话内稳定）或新的 provider（按需注入相关记忆）；`Agent.turn_end` 钩子（一轮结束后提取记忆）；新工具注册进 `ToolRegistry`；落盘位置 `settings.home / "projects" / slug / "memory"` | `system_sections`、`turn_end` 已有测试（`tests/test_extension_points.py`） |
+| 12 长期记忆 | `ContextBuilder.system_sections`（记忆索引放 system，会话内稳定）或新的 provider（按需注入相关记忆）；`Agent.turn_end` 钩子（一轮结束后提取记忆）；新工具注册进 `ToolRegistry`；落盘位置 `settings.home / "projects" / slug / "memory"` | **已实现**：`system_sections` + `Memory` 工具；slug 按 git 根算；`turn_end` 未使用（留作练习） |
 | 13 rewind | `Agent.listeners`（每条消息的回调，已用于会话落盘）；JSONL 记录的 `uuid/parentUuid` 链；`ToolContext.write_hooks` / `before_write(path)`（Write/Edit/Edit 新建文件在写盘前调用，用于拍文件快照）；`Agent.load_history()` 回退到某个前缀；`SessionStore.load` 会忽略未知 `type` 的记录（可写入 `file-history-snapshot` 之类） | 钩子已接好、有测试；Bash 改文件不会触发 `write_hooks`（需要时可在 Bash 前后对 `file_state` 里的文件做 diff） |
 | 14 compact | `Agent.before_request` 钩子（看 `agent.usage.last_input` 决定是否压缩）；`complete(client, req)` 做一次摘要请求；`Agent.load_history()` 换成「摘要 + 尾部」；会话里写一条 `{"type": "compact_boundary"}` 之类的记录并让 `SessionStore.load` 识别；压缩后 providers 会**自动重新注入**项目说明与任务清单（它们扫描历史判断，不记标志位） | `before_request` 已有测试；`instructions_provider`、`task_reminder_provider` 的「历史里看不见就重注入」已有测试 |
 | 15 MCP | `ToolRegistry.register()` 运行时注册（`mcp__server__tool` 命名）；`Tool.read_only/kind/self_check` 决定权限；`ContextBuilder.system_sections` 放 server instructions；新命令 `@COMMANDS.register("/mcp", ...)`。注意 MCP Python SDK 是 async 的，而循环是同步生成器：可以在后台线程跑一个事件循环，用 `asyncio.run_coroutine_threadsafe` 调用 | 运行时注册工具已有测试 |
