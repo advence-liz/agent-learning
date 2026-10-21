@@ -155,3 +155,12 @@
 - `tools/base.py`：`ToolContext.tool_use_id`（循环执行工具前填入）、`untracked_dirs`；`context.py:changed_files_provider` 跳过 `untracked_dirs`。
 - `cli.py`：`App.jobs`、`App.busy`、`App.wake_if_idle()`（空闲且有通知时 `run_turn([])`）、`App._run()`；`close()` 先停后台任务；`LineReader`（管道模式读线程 + 队列，等待时轮询唤醒；`ui.line_source` 让交互问题从同一队列取答案）；终端模式看门线程让 `prompt_toolkit` 输入框以哨兵退出后唤醒；新命令 `/tasks`（别名 `/bashes`，`/tasks stop <id>`）。
 - 测试：`tests/test_ch16_background.py`（8 个，真实子进程）。
+
+## 第 17 章 · Sub Agent 机制（17-subagent.md）
+
+- 新增 `subagent.py`：`AgentType`（说明 + 工具子集 + read_only + load_instructions + effort）、内置 `general-purpose` / `Explore`（只读、不注入 AGENTS.md、effort low）、`load_agent_types()`（`<home>/agents/*.md`、`<cwd>/.mini_cc/agents/*.md`，frontmatter name / description / tools）、`run_subagent()`（全新 `Agent`：工具子集减去 `NEVER_FOR_CHILDREN`、自己的 `ContextBuilder` / `ToolContext` / `PermissionManager`，只读类型挂 `extra_checks`；进度回调；`max_turns` → `[partial]`；transcript 写 `subagents/agent-<id>.jsonl`，`isSidechain`）、`AgentTool`（描述里列出所有类型）、`SubagentRuntime`（前台同步、后台交给 `JobManager.start_thread`）。
+- `jobs.py`：`start_thread()`（线程型任务，通知里带 `<result>`）；`_new()` 支持指定 id。
+- `context.py`：`ContextBuilder.static_prompt`（sub agent 替换主 agent 的身份说明）。
+- `model.py`：`FakeClient.from_json` 支持 `{"main": [...], "agents": {description: [...]}}`。
+- `cli.py`：注册 `Agent` 工具、`ctx.extras["subagents"]`、`App.subagent_client` / `subagent_max_turns`；`--fake` 剧本里有 `agents` 时子 agent 用各自剧本。
+- 测试：`tests/test_ch17_subagent.py`（8 个）。

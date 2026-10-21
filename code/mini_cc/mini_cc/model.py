@@ -235,8 +235,18 @@ class FakeClient:
         """离线演示用：从 JSON 读脚本。每项是 {"say": 文本, "thinking": 可选} 或 {"call": 工具名, "input": {...}, "text": 可选}。"""
         import json
 
+        data = json.loads(open(path, encoding="utf-8").read())
+        if isinstance(data, dict):
+            # 第 17 章：{"main": [...], "agents": {"<description>": [...]}}：sub agent 各用各的剧本
+            client = cls._from_items(data["main"])
+            client.agent_clients = {k: cls._from_items(v) for k, v in data.get("agents", {}).items()}
+            return client
+        return cls._from_items(data)
+
+    @classmethod
+    def _from_items(cls, items: list[dict[str, Any]]) -> "FakeClient":
         turns: list[Script] = []
-        for item in json.loads(open(path, encoding="utf-8").read()):
+        for item in items:
             if "error" in item:  # {"error": "overloaded"} / {"error": "auth"}：模拟 API 失败
                 k = item["error"]
                 turns.append(ModelError(item.get("message", k), retryable=k in ("overloaded", "rate_limit", "network"), kind=k))

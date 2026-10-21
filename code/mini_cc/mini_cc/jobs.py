@@ -68,10 +68,10 @@ class JobManager:
         self._ids: dict[str, itertools.count] = {}
         self._lock = threading.Lock()
 
-    def _new(self, kind: str, prefix: str, description: str, tool_use_id: str) -> Job:
+    def _new(self, kind: str, prefix: str, description: str, tool_use_id: str, job_id: str | None = None) -> Job:
         with self._lock:
-            n = next(self._ids.setdefault(prefix, itertools.count(1)))
-            job = Job(f"{prefix}{n}", kind, description, self.dir / f"{prefix}{n}.output", tool_use_id)
+            job_id = job_id or f"{prefix}{next(self._ids.setdefault(prefix, itertools.count(1)))}"
+            job = Job(job_id, kind, description, self.dir / f"{job_id}.output", tool_use_id)
             self.jobs[job.id] = job
         self.dir.mkdir(parents=True, exist_ok=True)
         return job
@@ -103,6 +103,29 @@ class JobManager:
             self.notify(render_notification(job, f'Background command "{job.description}" {verb}'))
 
         job.thread = threading.Thread(target=wait, name=f"job-{job.id}", daemon=True)
+        job.thread.start()
+        return job
+
+    # ------------------------------------------------------------ 线程型任务（第 17 章 sub agent）
+
+    def start_thread(self, kind: str, prefix: str, description: str, fn: Callable[[Job], tuple[str, str, str | None]],
+                     tool_use_id: str = "", job_id: str | None = None) -> Job:
+        """fn(job) 在新线程里跑，返回 (status, summary, result)；结束后发通知（result 放进 <result>）。"""
+        job = self._new(kind, prefix, description, tool_use_id, job_id)
+
+        def run() -> None:
+            try:
+                status, summary, result = fn(job)
+            except Exception as e:  # noqa: BLE001
+                status, summary, result = "failed", f'{kind} "{description}" crashed: {type(e).__name__}: {e}', None
+            job.ended = time.time()
+            if job.stop_requested:
+                job.status = "killed"
+                return
+            job.status = status
+            self.notify(render_notification(job, summary, result))
+
+        job.thread = threading.Thread(target=run, name=f"job-{job.id}", daemon=True)
         job.thread.start()
         return job
 

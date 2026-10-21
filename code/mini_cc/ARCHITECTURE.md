@@ -47,6 +47,7 @@ flowchart TB
 | `compact.py` | 简单压缩：摘要请求（同前缀）→ 新起点 = 摘要 + 挂回文件 + providers 重新注入；`auto_compact_hook`；`merge_consecutive_users` | 14 |
 | `mcp_client.py` | `.mcp.json` → `McpManager`（后台 asyncio 循环 + 每 server 常驻会话）→ `McpTool`；项目级 server 批准 | 15 |
 | `jobs.py` | `JobManager`：后台任务表（bash / agent / monitor）、输出文件、`<task-notification>` | 16–18 |
+| `subagent.py` | `AgentType` / `run_subagent`（同一个 `Agent` 类、全新 messages 与上下文）/ `AgentTool` / `SubagentRuntime` | 17 |
 | `rewind.py` | `FileHistory`：每条用户提示词一个检查点，`write_hooks` 写前备份（`<home>/file-history/<session>/<hash>@v<n>`）；`restore/truncate` | 13 |
 | `permissions.py` | 模式、`decide()` 判定链、会话规则、`extra_checks`、`classifier` | 5, 6 |
 | `auto_mode.py` | `AutoReviewer`：独立请求、只看用户原话 + 动作、json_schema 结构化输出、fail closed | 6 |
@@ -105,7 +106,7 @@ sequenceDiagram
 | 14 compact（**已实现**） | `Agent.before_request` 钩子（看 `agent.usage.last_input` 决定是否压缩）；`complete(client, req)` 做一次摘要请求；`Agent.load_history()` 换成「摘要 + 尾部」；会话里写一条 `{"type": "compact_boundary"}` 之类的记录并让 `SessionStore.load` 识别；压缩后 providers 会**自动重新注入**项目说明与任务清单（它们扫描历史判断，不记标志位） | **已实现**：边界记录是 `{"type":"system","subtype":"compact_boundary","parentUuid":null}`（`branch()` 走到这里断开）；`Agent._request()` 合并相邻 user 消息；没有保留尾巴（preserved thinking） |
 | 15 MCP（**已实现**） | `ToolRegistry.register()` 运行时注册（`mcp__server__tool` 命名）；`Tool.read_only/kind/self_check` 决定权限；`ContextBuilder.system_sections` 放 server instructions；新命令 `@COMMANDS.register("/mcp", ...)`。注意 MCP Python SDK 是 async 的，而循环是同步生成器：可以在后台线程跑一个事件循环，用 `asyncio.run_coroutine_threadsafe` 调用 | **已实现**：`App.start_mcp()` 在第一次请求前连接并注册，之后工具列表不再变（prompt cache 稳定） |
 | 16 后台命令（**已实现**） | `Agent.notify(text)`（线程安全队列）→ `notifications_provider` 在下一次追加 user 消息时送达；`ToolContext.emit(event)` 向 UI 报进度；`/tasks` 命令名已预留（任务清单用的是 `/todos`）；`BashTool` 加 `run_in_background` 参数 | **已实现**：`jobs.py` + `TaskStop` + `/tasks`；空闲时 `App.wake_if_idle()` 用 `run_turn([])` 送达通知（REPL 两种模式都会轮询） |
-| 17 sub agent | `Agent` 没有全局状态：用独立的 `ToolRegistry`（只读工具子集）、独立的 `ContextBuilder`（不同 system）、同一个或另一个 `ModelClient` 新建一个 `Agent` 即可；结果经父 Agent 的 `notify()` 回来；`PermissionManager` 可共享或另建 | 构造参数已解耦 |
+| 17 sub agent（**已实现**） | `Agent` 没有全局状态：用独立的 `ToolRegistry`（只读工具子集）、独立的 `ContextBuilder`（不同 system）、同一个或另一个 `ModelClient` 新建一个 `Agent` 即可；结果经父 Agent 的 `notify()` 回来；`PermissionManager` 可共享或另建 | **已实现**：子 agent 另建 `ContextBuilder`（新增 `static_prompt` 字段）/ `ToolContext` / `PermissionManager`；后台走 `JobManager.start_thread` |
 | 18 监听事件 | 同 16：持续运行的监听线程每匹配一行就 `agent.notify(...)` | 同上 |
 | 19 图片 | `ToolResult.content` 已支持 `list[dict]`（可放 image 块）；`mentions.resolve_mentions` 遇到图片扩展名时可返回 image 块（`build_user_content` 接受任意块）；`ui.preview` 对非文本内容显示 `[non-text content]` | 类型已留口 |
 | 20 skills | `ContextBuilder.system_sections`（skills 目录，只放名字 + 一句描述）；新增 `Skill` 工具按需读取 SKILL.md；`CommandRegistry` 支持 prompt 型命令（handler 里调用 `app.handle_line(展开后的 prompt)` 即可） | 同上 |

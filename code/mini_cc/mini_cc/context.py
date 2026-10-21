@@ -217,6 +217,8 @@ class ContextBuilder:
     providers: list[Provider] = field(default_factory=list)
     # 额外的 system 段落（第 12 章记忆、第 20 章 skills 目录可以往这里加）。函数在会话开始时求值一次
     system_sections: list[Callable[[], str | None]] = field(default_factory=list)
+    # 第 17 章：sub agent 用自己的身份说明替换掉主 agent 的 STATIC_PROMPT
+    static_prompt: str = STATIC_PROMPT
     _system_cache: list[dict[str, Any]] | None = None
 
     @classmethod
@@ -231,7 +233,7 @@ class ContextBuilder:
     def system_blocks(self) -> list[dict[str, Any]]:
         """会话内只算一次：任何一个字节变化都会让 prompt cache 失效，所以别在这里放时间戳。"""
         if self._system_cache is None:
-            texts = [STATIC_PROMPT, environment_text(self.agent.settings.cwd, self.agent.settings.model)]
+            texts = [self.static_prompt, environment_text(self.agent.settings.cwd, self.agent.settings.model)]
             texts += [t for fn in self.system_sections if (t := fn())]
             blocks = [{"type": "text", "text": t} for t in texts]
             blocks[-1]["cache_control"] = {"type": "ephemeral"}

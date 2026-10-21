@@ -16,6 +16,7 @@ from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .compact import auto_compact_hook, compact
 from .mcp_client import Approvals, McpManager, ServerState, load_config, select_servers
 from .jobs import JobManager
+from .subagent import AgentTool, SubagentRuntime, load_agent_types
 from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
 from .rewind import Checkpoint, FileHistory, is_prompt, prompt_text
@@ -107,6 +108,12 @@ class App:
         self.agent.ctx.extras["jobs"] = self.jobs
         self.agent.ctx.untracked_dirs.append(self.jobs.dir)
         self.busy = False
+        # 第 17 章：sub agent。类型在启动时读一次（工具描述会话内不变，prompt cache 稳定）
+        self.subagent_types = load_agent_types(settings.cwd, settings.home)
+        self.agent.tools.register(AgentTool(lambda: self.subagent_types))
+        self.agent.ctx.extras["subagents"] = SubagentRuntime(self)
+        self.subagent_client = lambda description: self.client  # 测试 / 离线演示可以换成单独的剧本
+        self.subagent_max_turns = 30
 
     def _attach(self, session: Session) -> None:
         """把 Agent 的「新消息」事件接到当前会话文件上（换会话时先摘掉旧的）。"""
@@ -539,6 +546,8 @@ def main(argv: list[str] | None = None) -> int:
         client = AnthropicClient(settings.model, fallbacks=settings.fallbacks)
         reviewer = AnthropicClient(settings.model, fallbacks=settings.fallbacks)
     app = App(settings, client, reviewer_client=reviewer)
+    if getattr(client, "agent_clients", None):  # 离线剧本里给 sub agent 单独写了台词
+        app.subagent_client = lambda d: client.agent_clients.get(d, client)
     app.start_mcp()
     if args.resume or args.cont:
         infos = app.store.list()
