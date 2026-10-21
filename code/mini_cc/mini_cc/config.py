@@ -35,3 +35,8 @@ class Settings:
     max_tool_output: int = 30000
     # 第 5 章：权限模式 default | acceptEdits | auto | plan | bypassPermissions
     permission_mode: str = "default"
+    # 第 14 章：上下文窗口与自动压缩。上一次请求的输入超过 window - buffer 就先压缩再请求
+    # （Opus 5.5 是 1M 窗口；buffer 留给压缩请求本身和这一步新增的工具结果）
+    context_window: int = 1_000_000
+    auto_compact_buffer: int = 40_000
+    auto_compact: bool = True

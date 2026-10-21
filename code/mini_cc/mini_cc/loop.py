@@ -115,9 +115,12 @@ class Agent:
         self.usage = Usage()
 
     def _request(self) -> ModelRequest:
+        from .compact import merge_consecutive_users
+
         return ModelRequest(
             system=self.context.system_blocks(),
-            messages=self.messages,
+            # 第 14 章：压缩后「摘要 + 下一条提示词」是两条相邻的 user 消息，请求时合并（不改历史）
+            messages=merge_consecutive_users(self.messages),
             tools=self.tools.schemas(),
             max_tokens=self.settings.max_tokens,
             output_config={"effort": self.settings.effort},

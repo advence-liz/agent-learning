@@ -127,3 +127,14 @@
 - `tools/file_state.py`：`FileStateCache.clear()`。
 - `ARCHITECTURE.md`：不变量 1 补充「分支点」说明（`load_history` 只用于 resume / rewind / compact）。
 - 测试：`tests/test_ch13_rewind.py`（8 个）。
+
+## 第 14 章 · compact 压缩上下文（14-compact.md）
+
+- 新增 `compact.py`：`compact(agent, trigger, instructions)`（简单压缩：同 system / 同 tools / 原样历史 + 摘要指令，`<summary>` 提取；新历史只有一条 user 消息 = `SUMMARY_HEADER` + 摘要 + 最近 5 个文件，再经 `context.inject(..., "user")` 让 providers 重新注入项目说明 / 日期 / 任务清单；失败时历史不变）、`auto_compact_hook`（挂 `before_request`，`last_input ≥ context_window - auto_compact_buffer` 时触发，只在最后一条是 user 时压缩）、`merge_consecutive_users()`、`extract_summary()`、`estimate_tokens()`。
+- `loop.py`：`_request()` 发请求前合并相邻 user 消息（历史不变，请求视图确定性合并）。
+- `session.py`：`meta["compact"]` → 先写 `{"type":"system","subtype":"compact_boundary","parentUuid":null,"logicalParentUuid",...,"compactMetadata"}`，摘要记录带 `isCompactSummary`；`chain` 从边界重新开始。
+- `config.py`：`context_window`（1M）、`auto_compact_buffer`（4 万）、`auto_compact`。
+- `tools/file_state.py`：`remember()` 先 pop 再插入，`paths()` 按最近看到排序。
+- `model.py`：`FakeClient.from_json` 支持每步 `usage`（演示上下文快满）。
+- `cli.py`：注册自动压缩钩子；新命令 `/compact [指令]`；`/status` 显示窗口与阈值；压缩生成的消息不开检查点。
+- 测试：`tests/test_ch14_compact.py`（8 个）。

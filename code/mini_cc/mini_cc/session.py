@@ -67,6 +67,13 @@ class Session:
 
     def record(self, msg: dict[str, Any], meta: dict[str, Any] | None = None) -> None:
         """Agent.listeners 回调：每条新消息立刻追加一行。文件在第一条消息时才创建。"""
+        if meta and meta.get("compact"):
+            # 第 14 章：压缩边界。parentUuid 为空 = 链在这里断开，读取时不再往前走；logicalParentUuid 只作审计
+            boundary = {"type": "system", "subtype": "compact_boundary", "uuid": str(uuidlib.uuid4()),
+                        "parentUuid": None, "logicalParentUuid": self.last_uuid, "sessionId": self.id,
+                        "timestamp": _now(), "compactMetadata": meta["compact"]}
+            self.append_record(boundary)
+            self.last_uuid, self.chain = boundary["uuid"], []
         rec: dict[str, Any] = {
             "type": msg["role"],
             "uuid": str(uuidlib.uuid4()),
@@ -78,6 +85,8 @@ class Session:
         }
         if meta and meta.get("usage"):
             rec["usage"] = meta["usage"]
+        if meta and meta.get("compact"):
+            rec["isCompactSummary"] = True
         self.append_record(rec)
         self.last_uuid = rec["uuid"]
         self.chain.append(rec["uuid"])

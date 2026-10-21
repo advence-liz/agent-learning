@@ -33,6 +33,7 @@ class FileStateCache:
 
     def remember(self, path: Path, text: str, partial: bool = False) -> None:
         keep = text if len(text) <= self.MAX_KEEP else None
+        self._records.pop(path, None)  # 重新插入 = 移到末尾：paths() 按「最近看到」排序（第 14 章挂回最近的文件）
         self._records[path] = FileRecord(path.stat().st_mtime_ns, digest(text), partial, keep)
 
     def get(self, path: Path) -> FileRecord | None:

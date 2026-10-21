@@ -246,6 +246,8 @@ class FakeClient:
                 turns.append(call(item["call"], item.get("input", {}), item.get("text")))
             else:
                 turns.append(say(item["say"], item.get("thinking")))
+            if "usage" in item and isinstance(turns[-1], FakeTurn):
+                turns[-1].usage = {"output_tokens": 20, **item["usage"]}  # 第 14 章：演示「上下文快满了」
         return cls(turns)
 
     def _next(self, req: ModelRequest) -> FakeTurn:

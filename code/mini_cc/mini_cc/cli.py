@@ -13,6 +13,7 @@ from .config import Settings
 from .loop import Agent
 from .model import AnthropicClient, FakeClient, ModelClient
 from .auto_mode import AutoReviewer, keyword_reviewer_turn
+from .compact import auto_compact_hook, compact
 from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
 from .rewind import Checkpoint, FileHistory, is_prompt, prompt_text
@@ -93,6 +94,8 @@ class App:
         # 第 13 章：Write/Edit 写盘前给文件拍快照；回退后把用户原话放回输入框
         self.agent.ctx.write_hooks.append(lambda path: self.file_history.before_write(path))
         self.prefill = ""
+        # 第 14 章：每次请求模型前检查上下文是否逼近窗口
+        self.agent.before_request.append(auto_compact_hook)
         self._attach(self.store.new())
 
     def _attach(self, session: Session) -> None:
@@ -113,7 +116,7 @@ class App:
 
     def _on_message(self, msg: dict, meta: dict) -> None:
         """第 13 章：用户亲手发的每条消息开一个检查点。"""
-        if is_prompt(msg) and self.session.last_uuid:
+        if is_prompt(msg) and self.session.last_uuid and not meta.get("compact"):
             self.file_history.begin(self.session.last_uuid, prompt_text(msg))
 
     def rewind(self, n: int, mode: str = "both") -> tuple[Checkpoint, list[tuple[str, str]]]:
@@ -202,7 +205,8 @@ def _status(app: App, arg: str) -> None:
         ("allow", ", ".join(sorted(app.agent.permissions.allow_rules)) or "-"),
         ("reviewer", f"{app.reviewer.calls} calls"),
         ("messages", str(len(app.agent.messages))),
-        ("context", f"{u.last_input} tokens（最近一次请求的输入）"),
+        ("context", f"{u.last_input} tokens（最近一次请求的输入）/ 窗口 {app.settings.context_window}，"
+                    f"超过 {app.settings.context_window - app.settings.auto_compact_buffer} 自动压缩"),
         ("total", f"in {u.input_tokens} / out {u.output_tokens} / {u.requests} requests"),
     ])
 
@@ -322,6 +326,15 @@ def _rewind(app: App, arg: str) -> None:
         app.ui.info(f"原话：{cp.prompt}（已放回输入框，可以改一改再发）")
     else:
         app.ui.info("代码已恢复，对话保持不变")
+
+
+@COMMANDS.register("/compact", "把当前对话压缩成摘要；/compact <要重点保留什么> 可以引导摘要")
+def _compact(app: App, arg: str) -> None:
+    if not app.agent.messages:
+        app.ui.info("当前没有对话可以压缩")
+        return
+    for ev in compact(app.agent, "manual", arg):
+        app.ui.render(ev)
 
 
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))
