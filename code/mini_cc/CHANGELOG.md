@@ -138,3 +138,11 @@
 - `model.py`：`FakeClient.from_json` 支持每步 `usage`（演示上下文快满）。
 - `cli.py`：注册自动压缩钩子；新命令 `/compact [指令]`；`/status` 显示窗口与阈值；压缩生成的消息不开检查点。
 - 测试：`tests/test_ch14_compact.py`（8 个）。
+
+## 第 15 章 · 注册 MCP server（15-mcp.md）
+
+- 新增 `mcp_client.py`：`load_config()`（`<home>/mcp.json` 用户级 + `<cwd>/.mcp.json` 项目级，`${VAR}` / `${VAR:-默认}` 展开，stdio / http）、`ServerConfig.fingerprint()`、`McpManager`（后台线程 asyncio 循环；每个 server 一个常驻协程：`stdio_client` + `ClientSession`，stderr 写 `<home>/logs/mcp-<name>.log`；`start()` 并行连接限时 15s、失败只标 failed；`call()` 用 `run_coroutine_threadsafe`，超时 120s；`close()`；`instructions_section()` 挂 system）、`McpTool`（`mcp__<server>__<tool>`，`readOnlyHint` → `read_only`）、`mcp_tool_name()`（清洗 + 64 字符）、`convert_content()`（文本 / 图片块）、`Approvals` + `select_servers()`（项目级 server 首次启动前询问，按配置指纹记住）。
+- 新增 `examples/mcp_tracker_server.py`：演示用 stdio server（mcp 2.x `MCPServer`，3 个工具）。
+- `cli.py`：`App.mcp`、`App.start_mcp()`（`main()` 启动时调用）、`App.close()`；新命令 `/mcp`（`-v` 列出工具）。
+- `ui.py`：`preview()` 支持 content 块列表（文本拼接，其余显示 `[type]`）。
+- 测试：`tests/test_ch15_mcp.py`（7 个，其中 4 个真实拉起 stdio 子进程）。

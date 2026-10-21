@@ -16,6 +16,8 @@ from .tools.ask_user import Answer, Question, parse_answer, render_question
 
 
 def preview(content, max_lines: int = 3, width: int = 100) -> str:
+    if isinstance(content, list):  # content block 列表（MCP 结果、图片）：文本拼起来，其余显示占位
+        content = "\n".join(b["text"] if b.get("type") == "text" else f"[{b.get('type')}]" for b in content)
     text = content if isinstance(content, str) else "[non-text content]"
     lines = text.splitlines() or [""]
     head = [ln[:width] for ln in lines[:max_lines]]

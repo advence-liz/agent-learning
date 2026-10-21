@@ -14,6 +14,7 @@ from .loop import Agent
 from .model import AnthropicClient, FakeClient, ModelClient
 from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .compact import auto_compact_hook, compact
+from .mcp_client import Approvals, McpManager, ServerState, load_config, select_servers
 from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
 from .rewind import Checkpoint, FileHistory, is_prompt, prompt_text
@@ -94,6 +95,9 @@ class App:
         # 第 13 章：Write/Edit 写盘前给文件拍快照；回退后把用户原话放回输入框
         self.agent.ctx.write_hooks.append(lambda path: self.file_history.before_write(path))
         self.prefill = ""
+        # 第 15 章：MCP。连接在 start_mcp() 里做（要先问用户批准项目级 server）；server 的说明进 system
+        self.mcp = McpManager(settings.home / "logs")
+        self.agent.context.system_sections.append(self.mcp.instructions_section)
         # 第 14 章：每次请求模型前检查上下文是否逼近窗口
         self.agent.before_request.append(auto_compact_hook)
         self._attach(self.store.new())
@@ -113,6 +117,28 @@ class App:
         self.agent.ctx.extras["tasks"] = TaskStore.load(session.tasks_path)
         # 换会话 = 重新算一次 system：上个会话里新存的记忆从这里开始进上下文
         self.agent.context.invalidate()
+
+    def start_mcp(self) -> None:
+        """读 .mcp.json → 批准 → 并行连接 → 把工具注册进 ToolRegistry。在第一次请求模型之前调用。"""
+        configs = load_config(self.settings.cwd, self.settings.home)
+        if not configs:
+            return
+        approvals = Approvals(self.settings.home / "mcp-approvals.json", str(self.settings.cwd.resolve()))
+        start, rejected = select_servers(configs, approvals, self.ui.ask, self.ui.info)
+        self.mcp.start(start)
+        for cfg in rejected:
+            self.mcp.servers[cfg.name] = ServerState(cfg.name, cfg, "disabled")
+        for tool in self.mcp.tools():
+            self.agent.tools.register(tool)
+        self.agent.context.invalidate()  # system 里多了 server instructions
+        states = list(self.mcp.servers.values())
+        ok = [s for s in states if s.status == "connected"]
+        bad = [s.name for s in states if s.status == "failed"]
+        self.ui.info(f"MCP：{len(ok)}/{len(states)} 个 server 已连接，{sum(len(s.tools) for s in ok)} 个工具"
+                     + (f"；连接失败：{', '.join(bad)}（/mcp 查看原因）" if bad else ""))
+
+    def close(self) -> None:
+        self.mcp.close()
 
     def _on_message(self, msg: dict, meta: dict) -> None:
         """第 13 章：用户亲手发的每条消息开一个检查点。"""
@@ -337,6 +363,21 @@ def _compact(app: App, arg: str) -> None:
         app.ui.render(ev)
 
 
+@COMMANDS.register("/mcp", "查看 MCP server 的连接状态和工具")
+def _mcp(app: App, arg: str) -> None:
+    if not app.mcp.servers:
+        app.ui.info("没有配置 MCP server（项目 .mcp.json 或 ~/.mini_cc/mcp.json）")
+        return
+    rows = []
+    for st in app.mcp.servers.values():
+        detail = f"{len(st.tools)} tools" if st.status == "connected" else st.error or "-"
+        rows.append((st.name, f"{st.status:<10} {st.config.scope:<8} {detail}"))
+        if arg == "-v" and st.status == "connected":
+            rows += [("", f"  mcp__{st.name}__{t.name}{'  (read-only)' if t.annotations and t.annotations.read_only_hint else ''}")
+                     for t in st.tools]
+    app.ui.table(rows)
+
+
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))
 def _exit(app: App, arg: str) -> str:
     return EXIT
@@ -413,6 +454,7 @@ def main(argv: list[str] | None = None) -> int:
         client = AnthropicClient(settings.model, fallbacks=settings.fallbacks)
         reviewer = AnthropicClient(settings.model, fallbacks=settings.fallbacks)
     app = App(settings, client, reviewer_client=reviewer)
+    app.start_mcp()
     if args.resume or args.cont:
         infos = app.store.list()
         if not infos:
@@ -420,8 +462,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             sid = app.store.resolve(args.resume) if args.resume else infos[0].id
             app.ui.info(f"已恢复会话 {sid[:8]}（{app.resume(sid)} 条消息）")
-    if args.prompt:
-        app.handle_line(args.prompt)
-        return 0
-    repl(app)
+    try:
+        if args.prompt:
+            app.handle_line(args.prompt)
+        else:
+            repl(app)
+    finally:
+        app.close()
     return 0
