@@ -17,6 +17,7 @@ from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .compact import auto_compact_hook, compact
 from .mcp_client import Approvals, McpManager, ServerState, load_config, select_servers
 from .jobs import JobManager
+from .skills import SkillError, SkillRuntime, SkillTool, load_skills
 from .subagent import AgentTool, SubagentRuntime, load_agent_types
 from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
@@ -61,6 +62,9 @@ class CommandRegistry:
     def dispatch(self, app: "App", line: str) -> str | None:
         name, _, arg = line.strip().partition(" ")
         cmd = self.lookup(name)
+        skills = getattr(app, "skill_rt", None)
+        if cmd is None and skills and name[1:] in skills.skills:  # 第 20 章：没有同名内置命令，就当 skill 展开
+            return app.run_skill_command(name[1:], arg.strip())
         if cmd is None:
             close = difflib.get_close_matches(name, self.all_names(), n=1)
             hint = f"，你是不是想输入 {close[0]}？" if close else "，输入 /help 查看全部命令"
@@ -115,6 +119,12 @@ class App:
         self.agent.ctx.extras["subagents"] = SubagentRuntime(self)
         self.subagent_client = lambda description: self.client  # 测试 / 离线演示可以换成单独的剧本
         self.subagent_max_turns = 30
+        # 第 20 章：skills。目录进 system（预算：窗口的 1%，按 4 字符/token 换成字符数），正文按需加载
+        self.skill_rt = SkillRuntime(load_skills(settings.cwd, settings.home), settings.home / "skills-usage.json")
+        self.agent.ctx.extras["skills"] = self.skill_rt
+        self.agent.tools.register(SkillTool())
+        self.agent.context.system_sections.append(
+            lambda: self.skill_rt.system_section(settings.context_window // 100 * 4))
 
     def _attach(self, session: Session) -> None:
         """把 Agent 的「新消息」事件接到当前会话文件上（换会话时先摘掉旧的）。"""
@@ -154,6 +164,17 @@ class App:
     def close(self) -> None:
         self.jobs.stop_all()
         self.mcp.close()
+
+    def run_skill_command(self, name: str, arg: str) -> None:
+        """/skill-name args：prompt 型命令。正文展开后作为这一轮的用户消息发给模型（这一条命令是花钱的）。"""
+        try:
+            body = self.skill_rt.invoke(self.skill_rt.skills[name], arg, self.settings.cwd)
+        except SkillError as e:
+            self.ui.error(f"skill {name} 加载失败：{e}")
+            return
+        self.ui.info(f"  ⎿ 已加载 skill {name}（{len(body)} 字符）")
+        self._run([{"type": "text", "text": body},
+                   {"type": "text", "text": f"<command-name>/{name}</command-name>\n<command-args>{arg}</command-args>"}])
 
     def wake_if_idle(self) -> bool:
         """空闲时有通知（后台命令结束、sub agent 交报告、监听到事件）：主动开一轮，把通知交给模型。"""
@@ -438,6 +459,17 @@ def _tasks(app: App, arg: str) -> None:
                   for j in app.jobs.jobs.values()])
 
 
+@COMMANDS.register("/skills", "列出可用的 skills（/name 手动调用）")
+def _skills(app: App, arg: str) -> None:
+    rt = app.skill_rt
+    if not rt.skills:
+        app.ui.info("没有 skill（<home>/skills/<name>/SKILL.md 或 .mini_cc/skills/<name>/SKILL.md）")
+        return
+    app.ui.table([(f"/{s.name}", f"{s.scope:<8} {'手动' if not s.model_invocable else '自动'}  "
+                                 f"调用 {rt.usage.get(s.name, 0)} 次  {s.description[:50]}")
+                  for s in sorted(rt.skills.values(), key=lambda s: s.name)])
+
+
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))
 def _exit(app: App, arg: str) -> str:
     return EXIT
@@ -499,7 +531,7 @@ def repl(app: App) -> None:
         def get_completions(self, document, complete_event):
             text = document.text_before_cursor
             if text.startswith("/") and " " not in text:
-                for name in app.commands.all_names():
+                for name in app.commands.all_names() + [f"/{n}" for n in app.skill_rt.skills]:
                     if name.startswith(text):
                         yield Completion(name, start_position=-len(text))
 

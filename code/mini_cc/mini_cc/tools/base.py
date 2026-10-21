@@ -29,6 +29,8 @@ class ToolContext:
 
     # 第 16 章：当前正在执行的 tool_use id（后台任务的通知里要带上它）；这些目录下的文件变化不提醒模型
     tool_use_id: str = ""
+    # 第 20 章：工具想在 tool_result 之后追加的普通文本块（skill 正文），循环在这一批结果之后统一放进去
+    followup_blocks: list[dict[str, Any]] = field(default_factory=list)
     untracked_dirs: list[Path] = field(default_factory=list)
 
     # 第 11 章：工具想告诉 UI 的事件（比如任务清单变了）先放这里，循环在 ToolEnd 之后统一转发

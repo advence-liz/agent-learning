@@ -180,3 +180,12 @@
 - `tools/read.py`：图片返回 `[text 说明, image 块]` 的 tool_result；不登记文件状态。
 - `cli.py`：`handle_line` 区分斜杠命令和以 `/` 开头的绝对路径；`/context` 单独统计图片（含 `tool_result` 内嵌图片），字符数剔除 base64。
 - 测试：`tests/test_ch19_image.py`（8 个）。
+
+## 第 20 章 · 渐进式加载 Skills（20-skill.md）
+
+- 新增 `skills.py`：`Skill` / `load_skills()`（`<home>/skills/*/SKILL.md` + `<cwd>/.mini_cc/skills/*/SKILL.md`，frontmatter name / description / disable-model-invocation）、`listing()`（手动专用的不进目录；单个描述 ≤1536 字符；超预算时按调用次数从少到多砍描述、保留名字）、`render_body()`（`$ARGUMENTS` / `$0..$9` / `${SKILL_DIR}` 替换，`` !`cmd` `` 预处理、失败即中止，无占位符时补 `ARGUMENTS:`，前缀 `Base directory for this skill:`）、`SkillTool`（结果 `Launching skill: <name>`，正文经 `followup_blocks` 追加在结果之后）、`SkillRuntime`（调用次数落盘 `<home>/skills-usage.json`，记录本会话调用过的正文）。
+- `tools/base.py`：`ToolContext.followup_blocks`；`loop.py:_run_tools` 把它们追加在一批 `tool_result` 之后。
+- `cli.py`：目录挂 `system_sections`（预算 = 窗口 1% × 4 字符）；注册 `Skill` 工具；`CommandRegistry.dispatch` 未知命令若是 skill 名则走 `App.run_skill_command()`（prompt 型命令：正文 + `<command-name>` 作为用户消息）；命令补全包含 skill；新命令 `/skills`。
+- `compact.py`：压缩后原样挂回本会话调用过的 skill 正文（每个 ≤2 万字符）。
+- `subagent.py`：`NEVER_FOR_CHILDREN` 加入 `Skill`。
+- 测试：`tests/test_ch20_skills.py`（9 个）。

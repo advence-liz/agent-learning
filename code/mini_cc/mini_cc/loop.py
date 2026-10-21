@@ -209,6 +209,9 @@ class Agent:
             results.append({"type": "tool_result", "tool_use_id": tu["id"], "content": r.content, "is_error": r.is_error})
         if last_tasks is not None:
             yield last_tasks
+        # 第 20 章：tool_result 必须排在 user 消息最前面，工具追加的文本（skill 正文）放在全部结果之后
+        results += self.ctx.followup_blocks
+        self.ctx.followup_blocks = []
         # 同一条 assistant 里的多个 tool_use，结果必须放进同一条 user 消息（注入的提醒排在 tool_result 之后）
         yield from self._append_user(results, "tool_result")
         return stop

@@ -87,6 +87,21 @@ def _reattach_files(agent: "Agent") -> list[dict[str, Any]]:
     return blocks
 
 
+REATTACH_SKILL_CHARS = 20_000   # 每个 skill 正文最多挂回这么多字符（Claude Code 文档：每个 5000 token）
+
+
+def _reattach_skills(agent: "Agent") -> list[dict[str, Any]]:
+    """第 20 章：本会话调用过的 skill 正文不交给摘要，原样挂回（只保留开头部分，所以要点要写在最前面）。"""
+    rt = agent.ctx.extras.get("skills")
+    if rt is None:
+        return []
+    from .attachments import Attachment
+
+    return [render(Attachment("skill", name, f"Re-attached skill after compaction: {name}\n\n"
+                                             f"{body[:REATTACH_SKILL_CHARS]}"))
+            for name, body in rt.invoked.items()]
+
+
 def compact(agent: "Agent", trigger: str = "manual", instructions: str = "") -> Iterator[Event]:
     """压缩当前历史。生成器：产出给 UI 的事件；失败时历史保持不变。"""
     pre = agent.usage.last_input or estimate_tokens(agent.messages)
@@ -114,7 +129,7 @@ def compact(agent: "Agent", trigger: str = "manual", instructions: str = "") -> 
         return
 
     text = f"{SUMMARY_HEADER}\n\n{summary}" + (f"\n\n{CONTINUE}" if trigger == "auto" else "")
-    blocks = [{"type": "text", "text": text}] + _reattach_files(agent)
+    blocks = [{"type": "text", "text": text}] + _reattach_files(agent) + _reattach_skills(agent)
     agent.load_history([], agent.usage)
     # 用 "user" 触发 providers：历史空了，项目说明 / 日期 / 任务清单会自动重新注入
     merged, atts = agent.context.inject(blocks, "user")
@@ -124,7 +139,7 @@ def compact(agent: "Agent", trigger: str = "manual", instructions: str = "") -> 
     post = estimate_tokens(msg)
     agent._append(msg, compact={"trigger": trigger, "preTokens": pre, "postTokens": post})
     agent.usage.last_input = post
-    yield Notice(f"已压缩：{pre} → 约 {post} tokens（摘要 {len(summary)} 字符，挂回 {len(blocks) - 1} 个文件）")
+    yield Notice(f"已压缩：{pre} → 约 {post} tokens（摘要 {len(summary)} 字符，挂回 {len(blocks) - 1} 个文件 / skill）")
 
 
 def auto_compact_hook(agent: "Agent") -> list[Event]:

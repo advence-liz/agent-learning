@@ -1,0 +1,7 @@
+[
+  {"call": "Skill", "input": {"skill": "pr-summary", "args": "main"}, "text": "这正好有个 skill，先加载它。"},
+  {"call": "Bash", "input": {"command": "git diff --stat main...HEAD"}, "text": "按 skill 的步骤，先看改动面。"},
+  {"call": "Read", "input": {"file_path": ".mini_cc/skills/pr-summary/references/ui-checklist.md"}, "text": "改了 .tsx，skill 说要过一遍 UI 检查清单。"},
+  {"say": "PR 描述：\n\n**动机**：登录按钮在窄屏下溢出。\n**改动**：LoginButton.tsx 改为固定宽度 + 文本省略。\n**验证**：375px / 1440px 两档截图对比；暗色模式已检查。"},
+  {"say": "v1.3.0 发版说明：\n- 修复：登录按钮在窄屏下溢出"}
+]
