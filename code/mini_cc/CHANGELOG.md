@@ -164,3 +164,10 @@
 - `model.py`：`FakeClient.from_json` 支持 `{"main": [...], "agents": {description: [...]}}`。
 - `cli.py`：注册 `Agent` 工具、`ctx.extras["subagents"]`、`App.subagent_client` / `subagent_max_turns`；`--fake` 剧本里有 `agents` 时子 agent 用各自剧本。
 - 测试：`tests/test_ch17_subagent.py`（8 个）。
+
+## 第 18 章 · 监听外部事件（18-monitor.md）
+
+- `jobs.py`：`JobManager.start_monitor()`（stdout 逐行读、200ms 内合并成一个 `Monitor event` 通知；stderr 只进输出文件；单事件最多 `max_batch_lines` 行；`event_window` 内超过 `max_events` 自动停止；到期杀掉并通知 re-arm；进程退出时 `stream ended (exit code, N events)`；主动停止不通知）。
+- 新增 `tools/monitor.py:MonitorTool`（`command / description / timeout_ms`，默认 5 分钟、上限 30 分钟；权限复用 Bash 的命令分析；描述里写清「一次 vs 每次」、逐行刷新、过滤要覆盖失败、事件不是用户回复）；默认工具加入 `Monitor`。
+- `subagent.py`：`NEVER_FOR_CHILDREN` 加入 `Monitor`。
+- 测试：`tests/test_ch18_monitor.py`（7 个，真实子进程）。

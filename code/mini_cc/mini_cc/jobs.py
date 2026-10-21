@@ -61,6 +61,12 @@ def render_notification(job: Job, summary: str, result: str | None = None) -> st
 
 
 class JobManager:
+    # 第 18 章 Monitor 的节流参数（数值参考 Claude Code Monitor 工具的说明：200ms 内的行合并成一条通知）
+    batch_window = 0.2        # 秒：这段时间内的输出行合并成一个事件
+    max_batch_lines = 50      # 一个事件最多带多少行，多的留在输出文件里
+    max_events = 30           # event_window 秒内超过这么多事件就自动停掉（刷屏的 monitor 会吃光上下文）
+    event_window = 60.0
+
     def __init__(self, dir: Path, notify: Callable[[str], None]):
         self.dir = dir
         self.notify = notify
@@ -126,6 +132,96 @@ class JobManager:
             self.notify(render_notification(job, summary, result))
 
         job.thread = threading.Thread(target=run, name=f"job-{job.id}", daemon=True)
+        job.thread.start()
+        return job
+
+    # ------------------------------------------------------------ monitor（第 18 章）
+
+    def start_monitor(self, command: str, cwd: Path, description: str, timeout: float, tool_use_id: str = "") -> Job:
+        """命令的 stdout 每一行（200ms 内的合并）是一个事件；进程退出 / 超时 / 刷屏时各发一条结束通知。"""
+        job = self._new("monitor", "m", description, tool_use_id)
+        out = open(job.output_file, "w", encoding="utf-8")
+        job.proc = subprocess.Popen(command, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=out,
+                                    stdin=subprocess.DEVNULL, start_new_session=True, text=True, bufsize=1)
+        lock = threading.Lock()
+        pending: list[str] = []
+        first_at: list[float] = []          # 当前这批第一行到达的时间
+        sent: list[float] = []              # 每个事件发出的时间（节流用）
+        job.extra["events"] = 0
+        end_reason: list[str] = []
+
+        def kill(reason: str) -> None:
+            if not end_reason:
+                end_reason.append(reason)
+            try:
+                os.killpg(job.proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+        def flush() -> None:
+            with lock:
+                if not pending:
+                    return
+                lines, more = pending[: self.max_batch_lines], len(pending) - self.max_batch_lines
+                pending.clear()
+                first_at.clear()
+            body = "\n".join(lines) + (f"\n(… {more} more lines in the output file)" if more > 0 else "")
+            if job.stop_requested or end_reason:
+                return
+            job.extra["events"] += 1
+            sent.append(time.monotonic())
+            self.notify("\n".join(["<task-notification>", f"<task-id>{job.id}</task-id>",
+                                    f'<summary>Monitor event: "{escape(description, quote=False)}"</summary>',
+                                    f"<event>{escape(body, quote=False)}</event>", "</task-notification>"]))
+            recent = [t for t in sent if t > time.monotonic() - self.event_window]
+            if len(recent) >= self.max_events:
+                kill("flood")
+
+        def read() -> None:
+            for line in job.proc.stdout:
+                out.write(line)
+                out.flush()
+                if line.strip():
+                    with lock:
+                        pending.append(line.rstrip("\n"))
+                        if not first_at:
+                            first_at.append(time.monotonic())
+
+        reader = threading.Thread(target=read, name=f"job-{job.id}-read", daemon=True)
+        reader.start()
+        deadline = time.monotonic() + timeout
+
+        def tick() -> None:
+            while reader.is_alive():
+                reader.join(0.05)
+                with lock:
+                    due = bool(first_at) and time.monotonic() - first_at[0] >= self.batch_window
+                if due:
+                    flush()
+                if time.monotonic() >= deadline and reader.is_alive():
+                    kill("timeout")
+            flush()  # 进程结束前最后几行
+            rc = job.proc.wait()
+            out.close()
+            job.exit_code, job.ended = rc, time.time()
+            n = job.extra["events"]
+            if job.stop_requested:
+                job.status = "killed"
+                return
+            if end_reason == ["timeout"]:
+                job.status = "killed"
+                summary = (f'Monitor "{description}" expired after {timeout:g}s with {n} events. '
+                           "Arm it again (re-arm) if you still need the watch.")
+            elif end_reason == ["flood"]:
+                job.status = "killed"
+                summary = (f'Monitor "{description}" was stopped: too many events ({n} in {self.event_window:g}s). '
+                           "Restart it with a tighter filter (only the lines you would act on).")
+            else:
+                job.status = "completed" if rc == 0 else "failed"
+                summary = f'Monitor "{description}" stream ended (exit code {rc}, {n} events)'
+            self.notify(render_notification(job, summary))
+
+        job.thread = threading.Thread(target=tick, name=f"job-{job.id}", daemon=True)
         job.thread.start()
         return job
 

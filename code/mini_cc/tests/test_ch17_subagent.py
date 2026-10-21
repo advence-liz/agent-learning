@@ -54,7 +54,7 @@ def test_general_purpose_has_tools_but_no_recursion(make_app):
     app.handle_line("派个通用 agent")
     names = {t["name"] for t in client.requests[1].tools}
     assert {"Read", "Write", "Edit", "Bash"} <= names
-    assert not names & {"Agent", "AskUserQuestion", "TaskCreate", "Memory", "TaskStop"}
+    assert not names & {"Agent", "AskUserQuestion", "TaskCreate", "Memory", "TaskStop", "Monitor"}
 
 
 def test_unknown_type_lists_available(make_app):

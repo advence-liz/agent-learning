@@ -21,7 +21,7 @@ from .permissions import Decision, PermissionManager
 from .tools.base import Tool, ToolContext, ToolResult
 
 # 子 agent 不能用的工具：再派 agent（防止无限递归）、问用户（它没有用户）、父会话自己的状态
-NEVER_FOR_CHILDREN = {"Agent", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskList", "Memory", "TaskStop"}
+NEVER_FOR_CHILDREN = {"Agent", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskList", "Memory", "TaskStop", "Monitor"}
 
 BASE_PROMPT = """You are a sub agent of mini-cc, started by the main agent to do one self-contained task.
 You cannot see the main conversation: everything you know about the task is in the first user message.
