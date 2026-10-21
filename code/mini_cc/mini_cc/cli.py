@@ -15,6 +15,7 @@ from .model import AnthropicClient, FakeClient, ModelClient
 from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .compact import auto_compact_hook, compact
 from .mcp_client import Approvals, McpManager, ServerState, load_config, select_servers
+from .jobs import JobManager
 from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
 from .rewind import Checkpoint, FileHistory, is_prompt, prompt_text
@@ -101,6 +102,11 @@ class App:
         # 第 14 章：每次请求模型前检查上下文是否逼近窗口
         self.agent.before_request.append(auto_compact_hook)
         self._attach(self.store.new())
+        # 第 16 章：后台任务。输出文件放 <home>/tasks/<启动时的会话 id>/，文件会一直变，不做「外部修改」提醒
+        self.jobs = JobManager(settings.home / "tasks" / self.session.id, self.agent.notify)
+        self.agent.ctx.extras["jobs"] = self.jobs
+        self.agent.ctx.untracked_dirs.append(self.jobs.dir)
+        self.busy = False
 
     def _attach(self, session: Session) -> None:
         """把 Agent 的「新消息」事件接到当前会话文件上（换会话时先摘掉旧的）。"""
@@ -138,7 +144,26 @@ class App:
                      + (f"；连接失败：{', '.join(bad)}（/mcp 查看原因）" if bad else ""))
 
     def close(self) -> None:
+        self.jobs.stop_all()
         self.mcp.close()
+
+    def wake_if_idle(self) -> bool:
+        """空闲时有通知（后台命令结束、sub agent 交报告、监听到事件）：主动开一轮，把通知交给模型。"""
+        if self.busy or self.agent.notifications.empty():
+            return False
+        self._run([])  # 空内容：providers 会把通知作为 <system-reminder> 放进这条 user 消息
+        return True
+
+    def _run(self, content) -> None:
+        self.busy = True
+        try:
+            for ev in self.agent.run_turn(content):
+                self.ui.render(ev)
+        except KeyboardInterrupt:
+            # run_turn 的 finally 已经补齐了悬空的 tool_use，这里只负责告诉用户
+            self.ui.error("已中断（Ctrl+C），可以继续输入")
+        finally:
+            self.busy = False
 
     def _on_message(self, msg: dict, meta: dict) -> None:
         """第 13 章：用户亲手发的每条消息开一个检查点。"""
@@ -191,13 +216,7 @@ class App:
         attachments = resolve_mentions(line, self.agent.ctx)
         for a in attachments:
             self.ui.info(f"  ⎿ 已附加 {a.title}")
-        content = build_user_content(line, attachments)
-        try:
-            for ev in self.agent.run_turn(content):
-                self.ui.render(ev)
-        except KeyboardInterrupt:
-            # run_turn 的 finally 已经补齐了悬空的 tool_use，这里只负责告诉用户
-            self.ui.error("已中断（Ctrl+C），可以继续输入")
+        self._run(build_user_content(line, attachments))
         return None
 
 
@@ -378,6 +397,19 @@ def _mcp(app: App, arg: str) -> None:
     app.ui.table(rows)
 
 
+@COMMANDS.register("/tasks", "查看后台任务；/tasks stop <id> 停止", aliases=("/bashes",))
+def _tasks(app: App, arg: str) -> None:
+    if arg.startswith("stop "):
+        job = app.jobs.stop(arg[5:].strip())
+        app.ui.info(f"已停止 {job.id}" if job else f"没有任务 {arg[5:].strip()}")
+        return
+    if not app.jobs.jobs:
+        app.ui.info("没有后台任务")
+        return
+    app.ui.table([(j.id, f"{j.kind:<8} {j.status:<10} {j.runtime:6.1f}s  {j.description[:50]}")
+                  for j in app.jobs.jobs.values()])
+
+
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))
 def _exit(app: App, arg: str) -> str:
     return EXIT
@@ -386,11 +418,45 @@ def _exit(app: App, arg: str) -> str:
 # ---------------------------------------------------------------- 入口
 
 
+class LineReader:
+    """管道模式下读 stdin 的线程。get() 等下一行；等待期间反复调用 on_idle（用来送达后台通知）。"""
+
+    def __init__(self, stream) -> None:
+        import queue
+        import threading
+
+        self._q: "queue.Queue[str | None]" = queue.Queue()
+
+        def pump() -> None:
+            while line := stream.readline():
+                self._q.put(line)
+            self._q.put(None)  # EOF
+
+        threading.Thread(target=pump, name="stdin", daemon=True).start()
+
+    def get(self, on_idle=None, poll: float = 0.2) -> str | None:
+        import queue
+
+        while True:
+            try:
+                return self._q.get(timeout=poll)
+            except queue.Empty:
+                if on_idle:
+                    on_idle()
+
+
 def repl(app: App) -> None:
     import sys
 
     if not sys.stdin.isatty():  # 管道输入（演示/脚本化）：不用 prompt_toolkit，逐行读并回显
-        while line := sys.stdin.readline():  # 用 readline 而不是 for 迭代：权限弹窗的 input() 要和它共用缓冲
+        # 第 16 章：读线程把 stdin 一行行放进队列，主线程等输入时每 0.2s 看一眼有没有后台通知要送达。
+        # 权限弹窗等交互问题也从同一个队列取答案（ui.line_source），不会被读线程抢走
+        lines = LineReader(sys.stdin)
+        app.ui.line_source = lines.get
+        while True:
+            line = lines.get(on_idle=app.wake_if_idle)
+            if line is None:
+                break
             app.ui.info(f"❯ {line.rstrip()}")
             if app.handle_line(line) == EXIT:
                 break
@@ -423,14 +489,33 @@ def repl(app: App) -> None:
         bottom_toolbar=lambda: f" ▶▶ {app.agent.permissions.mode}（Shift+Tab 切换）",
     )
     app.ui.info(f"mini-cc · {app.settings.model} · {app.settings.cwd}（/help 查看命令）")
-    while True:
-        try:
-            line = session.prompt("❯ ", default=app.prefill)
+    # 第 16 章：等你输入时，后台任务可能结束。看门线程发现「空闲 + 有通知」就让输入框退出，主循环去唤醒模型
+    import threading
+
+    WAKE = object()
+    stop = threading.Event()
+
+    def watch() -> None:
+        while not stop.wait(0.3):
+            pt = session.app
+            if pt.is_running and not app.busy and not app.agent.notifications.empty():
+                pt.loop.call_soon_threadsafe(lambda: pt.is_running and pt.exit(result=WAKE))
+
+    threading.Thread(target=watch, name="wake-watch", daemon=True).start()
+    try:
+        while True:
+            try:
+                line = session.prompt("❯ ", default=app.prefill)
+            except (EOFError, KeyboardInterrupt):
+                break
+            if line is WAKE:
+                app.wake_if_idle()
+                continue
             app.prefill = ""
-        except (EOFError, KeyboardInterrupt):
-            break
-        if app.handle_line(line) == EXIT:
-            break
+            if app.handle_line(line) == EXIT:
+                break
+    finally:
+        stop.set()
 
 
 def main(argv: list[str] | None = None) -> int:

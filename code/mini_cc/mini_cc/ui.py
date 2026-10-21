@@ -142,8 +142,17 @@ class ConsoleUI(BufferUI):
         super().__init__()
         self.console = console or Console(highlight=False)
 
+    line_source = None  # 管道模式下由 repl 设置：从同一个 stdin 队列取答案
+
     def ask(self, prompt: str) -> str:
         self._end_stream()
+        if self.line_source is not None:
+            self.console.print(prompt, end="", markup=False)
+            line = self.line_source()
+            ans = (line or "").rstrip("\n")
+            self.lines.append(f"{prompt}{ans}")
+            self.console.print(ans, markup=False)
+            return ans
         try:
             ans = input(prompt)
         except EOFError:

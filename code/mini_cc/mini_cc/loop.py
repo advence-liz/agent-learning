@@ -197,6 +197,7 @@ class Agent:
                 ok, r, stop_now = yield from self._authorize(tu)
                 stop = stop or stop_now
                 if ok:
+                    self.ctx.tool_use_id = tu["id"]
                     r = self.tools.execute(tu["name"], tu["input"], self.ctx, self.settings.max_tool_output)
             yield ToolEnd(tu["id"], tu["name"], r)
             while self.ctx.pending_events:  # 工具执行期间攒下的事件

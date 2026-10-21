@@ -167,6 +167,8 @@ def changed_files_provider(max_diff_lines: int = 60) -> Provider:
         fs = st.agent.ctx.file_state
         notes = []
         for path in fs.paths():
+            if any(path.is_relative_to(d) for d in st.agent.ctx.untracked_dirs):
+                continue  # 第 16 章：后台任务的输出文件本来就在变，不算「外部修改」
             if not fs.is_stale(path):
                 continue
             rec = fs.get(path)

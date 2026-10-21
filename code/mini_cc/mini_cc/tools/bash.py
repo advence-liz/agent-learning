@@ -61,17 +61,34 @@ def is_read_only(command: str) -> bool:
 
 class BashTool(Tool):
     name = "Bash"
-    description = "Run a shell command in the project directory and return stdout/stderr."
+    description = (
+        "Run a shell command in the project directory and return stdout/stderr. "
+        "For commands that run long or never exit on their own (dev servers, watchers, full test suites, big "
+        "installs), set run_in_background=true: you get a task id and an output file immediately, keep working, "
+        "and a <task-notification> arrives when the command exits. Read the output file to check progress; "
+        "stop it with TaskStop. Do not poll with sleep."
+    )
     input_schema = {
         "type": "object",
         "properties": {
             "command": {"type": "string"},
-            "timeout": {"type": "integer", "description": "Seconds, default 30"},
+            "timeout": {"type": "integer", "description": "Seconds, default 30 (foreground only)"},
+            "description": {"type": "string", "description": "5-10 words on what this command does"},
+            "run_in_background": {"type": "boolean", "description": "Run without waiting; notified on exit"},
         },
         "required": ["command"],
     }
 
     def run(self, args, ctx: ToolContext) -> ToolResult:
+        if args.get("run_in_background"):
+            jobs = ctx.extras.get("jobs")
+            if jobs is None:
+                return ToolResult("Background tasks are not available here; run the command in the foreground.", True)
+            job = jobs.start_bash(args["command"], ctx.cwd, args.get("description", ""), ctx.tool_use_id)
+            # 措辞参考 Claude Code：告诉模型 id、输出在哪、什么时候会被通知、别去轮询
+            return ToolResult(f"Command running in background with ID: {job.id}. Output is being written to: "
+                              f"{job.output_file}. You will be notified when it completes. "
+                              "To check interim output, use Read on that file path.")
         timeout = args.get("timeout", 30)
         try:
             proc = subprocess.run(
@@ -79,7 +96,8 @@ class BashTool(Tool):
             )
         except subprocess.TimeoutExpired as e:
             partial = (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or "")
-            return ToolResult(f"{partial.rstrip()}\n[timed out after {timeout}s]".strip(), is_error=True)
+            return ToolResult(f"{partial.rstrip()}\n[timed out after {timeout}s; the process was killed. "
+                              "If it is expected to run long, use run_in_background=true]".strip(), is_error=True)
         parts = [proc.stdout.rstrip()]
         if proc.stderr.strip():
             parts.append(f"[stderr]\n{proc.stderr.rstrip()}")

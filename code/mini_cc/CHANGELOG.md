@@ -146,3 +146,12 @@
 - `cli.py`：`App.mcp`、`App.start_mcp()`（`main()` 启动时调用）、`App.close()`；新命令 `/mcp`（`-v` 列出工具）。
 - `ui.py`：`preview()` 支持 content 块列表（文本拼接，其余显示 `[type]`）。
 - 测试：`tests/test_ch15_mcp.py`（7 个，其中 4 个真实拉起 stdio 子进程）。
+
+## 第 16 章 · 后台运行命令（16-background.md）
+
+- 新增 `jobs.py`：`Job`（kind / status / exit_code / output_file / tool_use_id）、`JobManager`（`start_bash()`：`Popen` 输出写 `<home>/tasks/<session>/b<n>.output`、`start_new_session` 自成进程组、`stdin=DEVNULL`，等待线程退出时 `notify(<task-notification>)`；`stop()` 用 `killpg`，主动停止不通知；`stop_all()`）、`render_notification()`（字段同 Claude Code：task-id / tool-use-id / output-file / status / summary）。
+- `tools/bash.py`：`run_in_background` / `description` 参数，返回文案同 Claude Code；工具描述加「Do not poll with sleep」；前台超时提示改用后台。
+- 新增 `tools/task_stop.py:TaskStopTool`（`task_id`，免审批）；默认工具加入 `TaskStop`。
+- `tools/base.py`：`ToolContext.tool_use_id`（循环执行工具前填入）、`untracked_dirs`；`context.py:changed_files_provider` 跳过 `untracked_dirs`。
+- `cli.py`：`App.jobs`、`App.busy`、`App.wake_if_idle()`（空闲且有通知时 `run_turn([])`）、`App._run()`；`close()` 先停后台任务；`LineReader`（管道模式读线程 + 队列，等待时轮询唤醒；`ui.line_source` 让交互问题从同一队列取答案）；终端模式看门线程让 `prompt_toolkit` 输入框以哨兵退出后唤醒；新命令 `/tasks`（别名 `/bashes`，`/tasks stop <id>`）。
+- 测试：`tests/test_ch16_background.py`（8 个，真实子进程）。

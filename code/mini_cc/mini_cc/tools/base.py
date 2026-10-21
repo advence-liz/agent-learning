@@ -27,6 +27,10 @@ class ToolContext:
     # 写文件前的钩子（第 13 章 /rewind 在这里给文件拍快照）
     write_hooks: list[Callable[[Path], None]] = field(default_factory=list)
 
+    # 第 16 章：当前正在执行的 tool_use id（后台任务的通知里要带上它）；这些目录下的文件变化不提醒模型
+    tool_use_id: str = ""
+    untracked_dirs: list[Path] = field(default_factory=list)
+
     # 第 11 章：工具想告诉 UI 的事件（比如任务清单变了）先放这里，循环在 ToolEnd 之后统一转发
     pending_events: list[Any] = field(default_factory=list)
 
