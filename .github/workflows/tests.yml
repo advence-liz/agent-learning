@@ -5,9 +5,7 @@ name: Tests
 on:
   push:
     branches: [main]
-    paths: ['code/**', '.github/workflows/tests.yml']
   pull_request:
-    paths: ['code/**', '.github/workflows/tests.yml']
   workflow_dispatch:
     inputs:
       run_ml:
@@ -23,6 +21,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 防止模型权重、缓存之类的大文件被误提交（HuggingFace 缓存的 blob 没有扩展名，.gitignore 容易漏）
+  large-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: No tracked file over 5MB
+        run: |
+          big=$(git ls-files -z | xargs -0 du -k 2>/dev/null | awk '$1 > 5120 {print $1 "KB\t" $2}')
+          if [ -n "$big" ]; then echo "超过 5MB 的跟踪文件：" && echo "$big" && exit 1; fi
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
