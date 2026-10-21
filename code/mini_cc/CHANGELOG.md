@@ -110,3 +110,4 @@
 - `session.py`：`Session.tasks_path`。`cli.py`：`_attach` 时按会话载入清单（`/new` 新清单、`/resume` 旧清单）；新命令 `/todos`（`/tasks` 留给第 16 章后台任务）。
 - `context.py`：默认 provider 加入任务提醒；`STATIC_PROMPT` 增加「3 步以上先建清单」。
 - 测试：`tests/test_ch11_tasks.py`（8 个）。
+- 收尾（为第 12–21 章预留）：`loop.py` 新增生命周期钩子 `Agent.before_request`（每次请求模型前）与 `Agent.turn_end`（一轮结束时），循环拆为 `_loop()`（调 turn_end 钩子）+ `_steps()`；新增 `tests/test_extension_points.py`（3 个）验证 `before_request` / `turn_end` / `listeners` / `write_hooks` / `system_sections` / `extra_checks` / 运行时注册工具。扩展点清单见 `ARCHITECTURE.md`。

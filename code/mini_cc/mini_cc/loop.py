@@ -73,6 +73,11 @@ class Agent:
 
         self.context = ContextBuilder.default(self, settings.home)
         self.notifications: queue.Queue[str] = queue.Queue()
+        # 给后续章节的生命周期钩子（返回要转发给 UI 的事件列表，或 None）：
+        #   before_request：每次请求模型之前（第 14 章自动压缩：上下文快满时先压缩再请求）
+        #   turn_end：一轮结束时（第 12 章记忆提取、第 13 章 rewind 打检查点）
+        self.before_request: list[Callable[["Agent"], list[Event] | None]] = []
+        self.turn_end: list[Callable[["Agent", TurnEnd], list[Event] | None]] = []
 
     def notify(self, text: str) -> None:
         """任何线程都可以调用：消息会在下一次 user 消息（用户发话或工具结果）里送达模型。"""
@@ -221,8 +226,19 @@ class Agent:
             # 包括 Ctrl+C 导致的 GeneratorExit / KeyboardInterrupt：补齐悬空的 tool_use
             self.repair_history()
 
+    def _hooks(self, hooks: list[Callable[..., list[Event] | None]], *args: Any) -> Iterator[Event]:
+        for fn in hooks:
+            yield from fn(self, *args) or []
+
     def _loop(self) -> Iterator[Event]:
+        for end in self._steps():
+            if isinstance(end, TurnEnd):
+                yield from self._hooks(self.turn_end, end)
+            yield end
+
+    def _steps(self) -> Iterator[Event]:
         for _ in range(self.settings.max_iterations):
+            yield from self._hooks(self.before_request)
             done: MessageDone | None = None
             for ev in self._call_model():
                 if isinstance(ev, MessageDone):
