@@ -209,9 +209,17 @@ prompt 部分的 label 设成 -100，`CrossEntropyLoss` 会忽略它们。模型
 
 **loss 0.0004，准确率 74%。** loss 已经接近 0，说明训练集上几乎全对——它把那 30 个训练主干背得滚瓜烂熟。剩下的差距完全是泛化问题，**再多训 1000 步也不会好**，只能靠更丰富的数据。
 
-**`baking` 从哪来？** 测试句 "do you like pizza" 和训练集里任何一个主干都不像，模型在生成 route 的值时，`b` 开头之后走向了一个和 pizza 语义相关的词。这是一个很好的提醒：**微调没有改变模型的本质，它仍然是在逐 token 预测，不是在 5 个选项里做选择题**。微调能让「合法标签」的概率大幅升高，但不能让其他 token 的概率变成 0。
+**`baking` 从哪来？** 测试句 "do you like pizza" 和训练集里任何一个主干都不像。我的猜测是：模型生成 route 的值时先抽到了 `b`（billing、bug 都以它开头，训练里出现得很多），接下来的 token 又被 pizza 的语义拉向了 baking——这是推测，可以在练习里用逐 token 打印 top-5 来验证。这是一个很好的提醒：**微调没有改变模型的本质，它仍然是在逐 token 预测，不是在 5 个选项里做选择题**。微调能让「合法标签」的概率大幅升高，但不能让其他 token 的概率变成 0。
 
 要真正保证输出落在候选集合里，得在采样那一步动手：约束解码（constrained decoding），每一步把不合法的 token 的 logits 设成 $-\infty$——和 [上一章](05-inference-process.md) 的 `apply_top_k` 是同一个手法，只是掩码换成了「语法允许的 token」。`ticket_data.parse` 则是另一道防线：解析失败或标签非法就返回 `None`，调用方可以退回 unknown。
+
+`llm/test_lora.py` 不依赖大模型，几秒跑完：初始化即恒等、只有 A/B 有梯度、merge/unmerge 可逆、注入只替换目标层、r=2 的 LoRA 能把一个秩 2 的权重改动学到 loss < 1e-4、在一个小模型上与 peft 输出逐元素一致、测试集主干从未出现在训练集、`parse` 会拒绝 `baking` 这种编造的标签：
+
+```text
+❯ uv run pytest -q llm/test_lora.py
+........                                                                 [100%]
+8 passed in 2.71s
+```
 
 **回到主线**：LoRA 是本库里唯一一个「不靠上下文」的方法——它直接改了「根据已有 token 预测下一个 token」的那个概率分布。代价是你需要数据、需要训练、需要能拿到权重；收益是规则被内化了，推理时不再占用上下文。它和 skill、CLAUDE.md 解决的是同一个问题（让模型按你的规矩做事），走的是相反的路。
 
@@ -238,21 +246,23 @@ model.save_pretrained(out_dir)   # 只存适配器
 [等价性] 拷贝了 120 组 A/B，手写版 vs peft 版 max|Δlogits| = 0.00e+00
 [参数量] 手写版 trainable=921,600
 trainable params: 921,600 || all params: 135,436,608 || trainable%: 0.6805
+/Users/liz/liz/agent-learn/code/ml/.venv/lib/python3.12/site-packages/peft/utils/save_and_load.py:313: UserWarning: Could not find a config file in HuggingFaceTB/SmolLM2-135M-Instruct - will assume that the vocabulary was not modified.
+  warnings.warn(
 
 [peft 训练] device=mps
-  step   0  loss=1.4064  lr=3.97e-04    0.8s
-  step  25  loss=0.2104  lr=1.65e-03    9.5s
-  step  50  loss=0.0135  lr=1.32e-03   18.1s
-  step  75  loss=0.0009  lr=9.87e-04   26.6s
-  step 100  loss=0.0005  lr=6.53e-04   35.1s
-  step 125  loss=0.0004  lr=3.20e-04   44.0s
-  step 149  loss=0.0004  lr=0.00e+00   52.2s
-  训练耗时 52.3s
+  step   0  loss=1.4064  lr=3.97e-04    1.1s
+  step  25  loss=0.2104  lr=1.65e-03    9.6s
+  step  50  loss=0.0135  lr=1.32e-03   18.0s
+  step  75  loss=0.0009  lr=9.87e-04   26.4s
+  step 100  loss=0.0005  lr=6.53e-04   34.8s
+  step 125  loss=0.0004  lr=3.20e-04   43.1s
+  step 149  loss=0.0004  lr=0.00e+00   51.3s
+  训练耗时 51.3s
 [peft 微调后] valid_json=0.93  exact=0.67
-save_pretrained → /var/folders/.../adapter-ticket-xxxx: adapter_model.safetensors 3631 KiB, README.md 5 KiB, adapter_config.json 1 KiB
+save_pretrained → /var/folders/kg/wp3059mx6ng0bhk5hglh33wr0000gn/T/adapter-ticket-gz309vtb: adapter_model.safetensors 3631 KiB, README.md 5 KiB, adapter_config.json 1 KiB
 ```
 
-（中间还有一行 peft 的 UserWarning：离线模式下它找不到基座模型的 config，假设词表没改，无害。保存目录是 `tempfile.mkdtemp` 生成的临时路径，这里省略了。）
+（那条 UserWarning 是离线模式下 peft 联网查不到基座模型的 config，于是假设词表没改，无害。保存目录是 `tempfile.mkdtemp` 生成的临时路径。）
 
 logits 差值是精确的 0：**数学上完全相同**，参数量也一样。
 

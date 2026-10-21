@@ -38,8 +38,7 @@ def test_deltas_arrive_before_tool_runs(make_app):
     probe = Probe()
     app.agent.tools.register(probe)
     gen = app.agent.run_turn("go")
-    first = next(gen)
-    assert isinstance(first, TextDelta)
+    first = next(e for e in gen if isinstance(e, TextDelta))  # 第 9 章起前面会先有 ContextInjected
     assert probe.ran is False  # 生成器是惰性的：文本已经到了，工具还没执行
     rest = list(gen)
     assert probe.ran is True

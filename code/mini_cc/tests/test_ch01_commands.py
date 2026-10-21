@@ -3,12 +3,15 @@
 from mini_cc.cli import EXIT
 from mini_cc.model import call, say
 
+from .conftest import without_session_context
+
 
 def test_plain_text_goes_to_model(make_app):
     app, client = make_app(say("你好，我是 mini-cc"))
     app.handle_line("hi")
     assert "你好，我是 mini-cc" in app.ui.text
-    assert client.requests[0].messages[0] == {"role": "user", "content": "hi"}
+    first = client.requests[0].messages[0]
+    assert first["role"] == "user" and without_session_context(first["content"]) == "hi"
 
 
 def test_tool_loop_runs_bash_and_feeds_result_back(make_app):

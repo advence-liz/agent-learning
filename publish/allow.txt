@@ -1,0 +1,12 @@
+# 发布放行清单：tools/check_publish.py 的 REVIEW 规则名，一行一个。
+# 写上某个规则名 = 确认「这一类内容可以出现在公开网页上」。
+# 默认全部注释掉：不做决定就不会发布任何内部信息。
+#
+# company-name        公司名（会话目录名、护栏路由等）
+# project-webapp        项目名 webapp（各章「对照你的环境」）
+# internal-services   内部服务名
+# personal-toolchain  claude-skills / inject-guardrails / enforce-worktree
+# session-dir-names   会话目录名（-Users-me-work-webapp 这类，含本机用户名和公司项目路径）
+# session-ids         会话 UUID
+# spend-amounts       会话花费金额（$237 等）
+# cloud-config        Vertex / env2 等云配置键名（只有键名，没有值）

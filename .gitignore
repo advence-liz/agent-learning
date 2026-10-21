@@ -19,6 +19,9 @@ captures/
 .DS_Store
 
 # 模型权重与数据缓存（体积大，脚本会重新下载 / 生成）
+# HuggingFace 缓存把权重存成无扩展名的哈希 blob，只按扩展名排除会漏，必须排除整个缓存目录
+.hf-cache/
+.cache/
 *.safetensors
 *.bin
 *.gguf

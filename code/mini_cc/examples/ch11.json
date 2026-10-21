@@ -1,0 +1,21 @@
+[
+  {"calls": [
+    {"call": "TaskCreate", "input": {"subject": "读 posts 路由", "activeForm": "读 posts 路由"}},
+    {"call": "TaskCreate", "input": {"subject": "给 list_posts 加 page/page_size", "activeForm": "加分页参数"}},
+    {"call": "TaskCreate", "input": {"subject": "跑测试验证", "activeForm": "跑测试"}}
+  ], "text": "这个改动分三步，先建任务清单。"},
+  {"call": "TaskUpdate", "input": {"taskId": "1", "status": "in_progress"}},
+  {"call": "Read", "input": {"file_path": "posts.py"}},
+  {"calls": [
+    {"call": "TaskUpdate", "input": {"taskId": "1", "status": "completed"}},
+    {"call": "TaskUpdate", "input": {"taskId": "2", "status": "in_progress"}}
+  ]},
+  {"call": "Edit", "input": {"file_path": "posts.py", "old_string": "def list_posts(posts):\n    return posts", "new_string": "def list_posts(posts, page=1, page_size=20):\n    start = (page - 1) * page_size\n    return posts[start:start + page_size]"}},
+  {"calls": [
+    {"call": "TaskUpdate", "input": {"taskId": "2", "status": "completed"}},
+    {"call": "TaskUpdate", "input": {"taskId": "3", "status": "in_progress"}}
+  ]},
+  {"call": "Bash", "input": {"command": "python3 -c \"from posts import list_posts; assert list_posts(list(range(50)), 2, 20) == list(range(20, 40)); print('ok')\""}},
+  {"call": "TaskUpdate", "input": {"taskId": "3", "status": "completed"}},
+  {"say": "分页加好了：list_posts(posts, page=1, page_size=20)，测试通过。"}
+]

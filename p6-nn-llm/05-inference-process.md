@@ -14,7 +14,7 @@
 
 模型选的是 `HuggingFaceTB/SmolLM2-135M-Instruct`：Llama 架构，1.35 亿参数，权重文件 `model.safetensors` 269 MB（下载前用 `HfApi().model_info(..., files_metadata=True)` 查过体积）。它足够小，在笔记本 CPU 上推理几乎是实时的；又足够完整，有 chat template、GQA、RoPE，和大模型的结构一模一样。
 
-首次运行会下载约 270 MB，之后加 `HF_HUB_OFFLINE=1` 就完全离线了：
+首次运行会下载约 270 MB。Hugging Face 默认缓存在 `~/.cache/huggingface`，本项目用 `llm/hf_env.py` 把 `HF_HOME` 固定到了 `code/ml/llm/.hf-cache/`（写这章时全局缓存被清理过一次，固定到项目内更可复现）。下载完之后加 `HF_HUB_OFFLINE=1` 就完全离线了：
 
 ```text
 ❯ cd code/ml && HF_HUB_OFFLINE=1 uv run python llm/infer.py
@@ -232,6 +232,16 @@ got = continue_from_prefix(model, pcache, suffix_ids)      # 每个问题只算�
 注意 `max|Δlogits|=3.91e-05`，不是 0。两条计算路径（一次算 502 个 token vs 先 486 再 16）走了不同的矩阵分块，浮点舍入顺序不同。这个误差在这里无害，但它说明了一件事：**即使温度为 0，换一种批处理方式也可能让两个分数非常接近的候选交换名次**。
 
 最后第 [7] 段，推理程序自己把结果拼成 OpenAI 格式的 JSON：`finish_reason` 根据最后一个 token 是不是 eos 判断，`usage` 就是数了数两段 token 的长度。你平时调 API 拿到的那份 JSON，就是这么来的。
+
+上面每一个「一致=True」都有对应的测试（`llm/test_sampling.py` 7 条、`llm/test_infer.py` 6 条）：采样函数与 transformers 的 logits processor 对齐、温度下的经验分布符合理论值、三种 greedy 循环与 `generate` 一致、同种子采样一致、KV cache 每步恰好 +1、前缀复用 logits 一致且原 cache 未被污染、OpenAI JSON 的 usage 计数正确：
+
+```text
+❯ uv run pytest -q llm/test_sampling.py llm/test_infer.py
+.............                                                            [100%]
+13 passed in 3.34s
+```
+
+`test_infer.py` 需要本地已有模型缓存，没有时自动 skip，测试里不会联网。
 
 **回到主线**：这一章就是主线本身——「根据已有 token 预测下一个 token」被写成了一个 for 循环。KV cache 和前缀复用解决的是**同一段上下文不要重复算**：它们不改变模型看到什么，只省掉重复劳动。而采样参数决定的是「概率分布 → 一个确定的 token」这最后一步，那是所有随机性的来源。
 

@@ -5,12 +5,13 @@
 
 from __future__ import annotations
 
+import queue
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator
 
 from .config import Settings
-from .events import Event, Notice, PermissionDecision, ToolEnd, ToolStart, TurnEnd
+from .events import ContextInjected, Event, Notice, PermissionDecision, TasksUpdated, ToolEnd, ToolStart, TurnEnd
 from .model import MessageDone, ModelClient, ModelError, ModelRequest, TextDelta, ThinkingDelta
 from .permissions import PermissionManager, PermissionReply, PermissionRequest, denied_message
 from .retry import RetryPolicy
@@ -67,6 +68,30 @@ class Agent:
         # 第 5 章：权限。approver 由 UI 提供（弹窗问用户）；没有 approver（比如 -p 模式）时一律拒绝
         self.permissions = PermissionManager(settings.cwd)
         self.approver: Callable[[PermissionRequest], PermissionReply] | None = None
+        # 第 9 章：上下文组装与注入；notifications 是线程安全的「待送达消息」队列（第 16–18 章往里放）
+        from .context import ContextBuilder
+
+        self.context = ContextBuilder.default(self, settings.home)
+        self.notifications: queue.Queue[str] = queue.Queue()
+
+    def notify(self, text: str) -> None:
+        """任何线程都可以调用：消息会在下一次 user 消息（用户发话或工具结果）里送达模型。"""
+        self.notifications.put(text)
+
+    def drain_notifications(self) -> list[str]:
+        items = []
+        while True:
+            try:
+                items.append(self.notifications.get_nowait())
+            except queue.Empty:
+                return items
+
+    def _append_user(self, content: Any, trigger: str) -> Iterator[Event]:
+        """追加一条 user 消息，顺带把本轮该注入的上下文并进去。"""
+        merged, atts = self.context.inject(content, trigger)
+        for a in atts:
+            yield ContextInjected(a.kind, a.title)
+        self._append({"role": "user", "content": merged})
 
     def _append(self, msg: dict[str, Any], **meta: Any) -> None:
         """历史的唯一写入口。只追加、不修改——这条规矩让持久化、prompt cache、thinking 校验都简单。"""
@@ -86,12 +111,13 @@ class Agent:
 
     def _request(self) -> ModelRequest:
         return ModelRequest(
-            system=[{"type": "text", "text": SYSTEM_PROMPT}],
+            system=self.context.system_blocks(),
             messages=self.messages,
             tools=self.tools.schemas(),
             max_tokens=self.settings.max_tokens,
             output_config={"effort": self.settings.effort},
             thinking={"type": "adaptive", "display": "summarized"},
+            cache=True,
         )
 
     # ------------------------------------------------------------ 一次模型调用
@@ -150,6 +176,7 @@ class Agent:
         """执行一批工具调用。生成器返回 True 表示本轮应当结束（用户拒绝且没给理由）。"""
         results = []
         stop = False
+        last_tasks: TasksUpdated | None = None
         for tu in tool_uses:
             tool = self.tools.get(tu["name"])
             yield ToolStart(tu["id"], tu["name"], tu["input"], tool.summary(tu["input"]) if tool else tu["name"])
@@ -164,17 +191,25 @@ class Agent:
                 if ok:
                     r = self.tools.execute(tu["name"], tu["input"], self.ctx, self.settings.max_tool_output)
             yield ToolEnd(tu["id"], tu["name"], r)
+            while self.ctx.pending_events:  # 工具执行期间攒下的事件
+                ev = self.ctx.pending_events.pop(0)
+                if isinstance(ev, TasksUpdated):
+                    last_tasks = ev  # 一批里多次改清单，只在批末显示最终状态
+                else:
+                    yield ev
             results.append({"type": "tool_result", "tool_use_id": tu["id"], "content": r.content, "is_error": r.is_error})
-        # 同一条 assistant 里的多个 tool_use，结果必须放进同一条 user 消息
-        self._append({"role": "user", "content": results})
+        if last_tasks is not None:
+            yield last_tasks
+        # 同一条 assistant 里的多个 tool_use，结果必须放进同一条 user 消息（注入的提醒排在 tool_result 之后）
+        yield from self._append_user(results, "tool_result")
         return stop
 
     # ------------------------------------------------------------ 一轮对话
 
     def run_turn(self, prompt: str | list[dict[str, Any]]) -> Iterator[Event]:
         """主循环 + 最后一道安全网：无论里面出什么事，这个生成器都不会抛异常，历史也保持合法。"""
-        self._append({"role": "user", "content": prompt})
         try:
+            yield from self._append_user(prompt, "user")
             yield from self._loop()
         except ModelError as err:
             yield Notice(f"模型请求失败（{err.kind}）：{err}", "error")

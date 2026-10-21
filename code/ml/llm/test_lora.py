@@ -1,3 +1,4 @@
+import hf_env  # noqa: F401
 import torch
 from torch import nn
 

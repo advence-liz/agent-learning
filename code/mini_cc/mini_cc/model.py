@@ -26,6 +26,8 @@ class ModelRequest:
     output_config: dict[str, Any] | None = None
     # None = 不传；默认 adaptive + summarized，让终端能看到思考摘要
     thinking: dict[str, Any] | None = None
+    # 第 9 章：顶层自动缓存——缓存到最后一个可缓存块（agent 循环里历史只增不改，前缀几乎总能命中）
+    cache: bool = False
 
 
 # ---------------------------------------------------------------- 流式事件
@@ -135,6 +137,8 @@ class AnthropicClient:
             kwargs["output_config"] = req.output_config
         if req.thinking:
             kwargs["thinking"] = req.thinking
+        if req.cache:
+            kwargs["cache_control"] = {"type": "ephemeral"}
         return kwargs
 
     def stream(self, req: ModelRequest) -> Iterator[ModelEvent]:

@@ -6,6 +6,7 @@ import pytest
 import torch
 
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
+import hf_env  # noqa: E402,F401
 
 from infer import (MODEL_ID, build_prompt, continue_from_prefix, generate_no_cache,  # noqa: E402
                    generate_with_cache, prefill_prefix, to_openai_json)

@@ -1,0 +1,15 @@
+[
+  {"call": "AskUserQuestion", "text": "需求里技术栈和功能范围都没说，我先问清楚。", "input": {"questions": [
+    {"question": "博客用什么技术栈？", "header": "技术栈", "options": [
+      {"label": "Astro (Recommended)", "description": "内容站首选，默认零 JS"},
+      {"label": "Next.js", "description": "需要动态功能时更灵活"},
+      {"label": "Hugo", "description": "Go 写的静态站生成器，构建最快"}]},
+    {"question": "第一版要哪些功能？", "header": "功能范围", "multiSelect": true, "options": [
+      {"label": "评论", "description": "接 giscus"},
+      {"label": "RSS"},
+      {"label": "全文搜索", "description": "pagefind"}]},
+    {"question": "部署到哪里？", "header": "部署", "options": [
+      {"label": "Cloudflare Pages"}, {"label": "Vercel"}]}
+  ]}},
+  {"say": "收到：Astro + RSS + 全文搜索，部署到公司内网的 Nginx。我按这个口径开始搭骨架。"}
+]

@@ -1,138 +1,186 @@
 # 上下文是什么？token 怎么计费？
 
-> 原文（免费）：[上下文是什么？token 怎么计费？](https://labuladong.online/zh/ai-coding/basics/messages-and-tokens/) —— 建议先读原文，本页是我的笔记
+> 对应原站：[上下文是什么？token 怎么计费？](https://labuladong.online/zh/ai-coding/basics/messages-and-tokens/)（免费文章，推荐配合阅读；本章为独立原创课文）
 
-**一句话结论**：上下文就是你每次请求重发的那个 messages 数组——模型无状态，「记忆」全靠客户端把历史重新拼进去；所以对话越长输入 token 越多，而 Prompt Cache 让「前缀不变、只往尾部追加」的请求便宜一个数量级，这也是所有 Agent 都要「保持前缀稳定」的经济原因。
+> **一句话结论**：上下文就是每次请求都完整重发的那个 `messages` 数组。模型没有状态，历史越长，每轮的输入就越多。Prompt Cache 让「前缀不变、只在末尾追加」的请求便宜一个数量级，所以 Agent 设计的第一条经济纪律是：**别动前缀**。
 
----
+## 一个会话开了一整天，每句话都要重发几十万 token？
 
-## 核心要点
+先说一组你自己的数字。
 
-1. **一次调用 = 一个 messages 数组进，一条 message 出**。数组里 `user` 是你说的，响应里 `assistant` 是模型说的；后面还会出现 `system`、`tool`。整个数组就是 Prompt 的载体。
-2. **模型是无状态的**。原文实验很干脆：第一次说「我叫小明」，第二次单独问「我叫什么」，模型答不上来——两次请求对模型毫无关系。
-3. **多轮对话 = 每次重发全部历史**。user/assistant 交替排列，末尾追加新问题。ChatGPT「记得你」只是客户端在背后维护这个数组，原文的说法是「所有 AI 产品都是这样，没有例外」。
-4. **结束原因是控制流信号**：`stop`（说完了）、`length`（被 max_tokens 截断）、`tool_calls`（要调工具）。Agent 循环就是靠这个字段决定「继续还是退出」。（Anthropic 侧对应 `stop_reason`：`end_turn` / `max_tokens` / `tool_use` 等。）
-5. **一切按 token 计费，输入输出分开定价，输出更贵**。原因：输入可以并行 prefill，输出只能逐个 decode（机制见 [04](./04-llm-token-prediction.md)）。
-6. **对话越长越贵**：同样问「我叫什么」，不带历史 7 个输入 token，带 5 条历史就是 63 个。成本随历史长度线性增长。
-7. **Prompt Cache：缓存公共前缀**。相邻请求的前缀几乎完全相同，服务商把前缀的计算结果存起来，命中部分按低价计费、响应也更快。有最小长度门槛（太短不缓存），有过期时间。
-8. **缓存写入也收钱**：输入价格其实有三档——普通输入（1×）、缓存写入（Claude：5 分钟 1.25×、1 小时 2×）、缓存命中（最便宜）。写入多花的钱要靠后续命中摊平；Agent 场景前缀稳定、命中率高，几乎总是划算。
-9. **破坏前缀 = 缓存全废**：中途改系统提示、往历史中间插消息，从改动点往后全部按未命中计价，费用翻几倍。
+你在 webapp 目录下有一个会话，跑了很久（就是 `~/.claude/projects/-Users-me-work-webapp/` 下最大的那个 jsonl）。本章的统计脚本扫完它和它的 6 个 subagent 文件，得出的结论是：**平均每次请求，模型要读约 46.8 万个输入 token。**
 
-### messages 数组如何增长、缓存如何命中
+你可能会问：我每次只打了一句话，为什么模型要读 46 万 token？
+
+这个问题拆开是两个：
+
+1. 为什么每次都要重发全部历史？
+2. 重发了这么多，钱为什么没有爆炸？
+
+第一个问题的答案是「模型无状态」，第二个的答案是「前缀缓存」。
+
+## 模型是纯函数，记忆在调用方手里
+
+你写 React 写得多，应该对这件事很熟悉：一个纯函数组件不记得上一次渲染。同样的 props 进去，同样的 UI 出来；所谓「状态」，都是外面通过 props 或 state 传进来的。
+
+LLM 的推理也是这样。参数只读，两次请求之间没有任何共享。它「记得」你刚才说的话，唯一的原因是客户端把刚才那句话又放进了这一次请求。
+
+所以一次多轮对话在线上长这样：
 
 ```mermaid
 sequenceDiagram
     participant C as 客户端（维护 messages）
-    participant S as 服务端（模型 + 前缀缓存）
-    Note over C: 第 1 轮
-    C->>S: [sys, u1]
-    S-->>C: a1（全部按普通输入/写入计费）
-    Note over C: 追加 a1、u2
-    C->>S: [sys, u1, a1, u2]
-    Note over S: 前缀 [sys,u1] 命中缓存<br/>只计算 a1,u2
+    participant S as API（无状态模型 + 前缀缓存）
+    C->>S: [system, tools, u1]
+    S-->>C: a1 （前缀第一次出现：写入缓存）
+    Note over C: messages.push(a1, u2)
+    C->>S: [system, tools, u1, a1, u2]
+    Note over S: 前缀 system..u1 命中，只新算 a1、u2
     S-->>C: a2
-    Note over C: 追加 a2、u3
-    C->>S: [sys, u1, a1, u2, a2, u3]
-    Note over S: 前缀 [sys..u2] 命中<br/>只计算 a2,u3
+    Note over C: messages.push(a2, tool_result)
+    C->>S: [system, tools, u1, a1, u2, a2, tool_result]
+    Note over S: 前缀 system..u2 命中，只新算 a2、tool_result
     S-->>C: a3
-    Note over C,S: 如果此时改了 sys → 整个前缀失效，全部重算
+    Note over C,S: 如果中途改了 system 里一个字 → 从那个字往后全部重算
 ```
 
-### 一次请求的输入 token 拆成三块
+图注：每一次请求都是完整的历史，客户端只往末尾 push。消息有四种身份：`system`（规则）、`user`（你说的话和工具结果）、`assistant`（模型说的话和工具调用），以及工具定义 `tools`。
+
+类比在这里有个地方不成立：React 重渲染很便宜，可以随便来；LLM 每多读一个 token 都要算力、要钱。于是有了第二个问题。
+
+## token：计费的唯一单位
+
+API 按 token 收费。输入和输出分开定价，输出贵得多：`claude-opus-5-5` 输入每百万 token $4，输出 $20，是输入的 5 倍。为什么输出更贵，[下一章](./04-llm-token-prediction.md) 从 GPU 的角度解释。
+
+每次响应都带着一个 `usage` 字段，告诉你这次用了多少。Anthropic 把输入拆成了三份：
 
 ```mermaid
 flowchart LR
-    P["一次请求的输入"] --> R["cache_read<br/>命中的旧前缀<br/>≈0.1× 甚至更低"]
-    P --> W["cache_creation<br/>本次新写入缓存的部分<br/>1.25×（5min）/ 2×（1h）"]
-    P --> N["input_tokens<br/>断点之后、不缓存的尾巴<br/>1×"]
-    O["输出 output_tokens<br/>最贵（通常 5× 输入价）"]
+    P["这次请求的全部输入"] --> R["cache_read_input_tokens<br/>命中缓存的旧前缀<br/>Opus 5.5：0.05× 输入价"]
+    P --> W["cache_creation_input_tokens<br/>本次新写入缓存的部分<br/>5 分钟 TTL 1.25× · 1 小时 TTL 2×"]
+    P --> N["input_tokens<br/>最后一个缓存断点之后的尾巴<br/>1×"]
+    O["output_tokens<br/>模型生成的（含思考）<br/>Opus 5.5：5× 输入价"]
 ```
 
-> ⚠️ 勘误/补充（Anthropic 侧，核对自 `claude-api` skill 2026-10 文档）：
-> - 原文说「Anthropic 的 Claude 模型需要调用方主动标记缓存断点」，**已不完全准确**：现在除了在 content block 上放 `cache_control` 的显式断点，还支持**请求顶层的自动缓存**（顶层 `cache_control: {type: "ephemeral"}`，服务端自动把断点放在最后一个可缓存块并随对话前移）。最多 4 个断点。
-> - 「缓存命中 ≈ 0.1×」是一般情况；`claude-opus-5-5` 的缓存读是 $0.20/MTok，相对 $4 的输入价只有 **0.05×**。
-> - 最小可缓存前缀随模型不同（512–4096 token），低于门槛**静默不缓存**、不报错——原文实验里「重发多次也不命中」就是这个原因。
-> - Anthropic 的用量字段名是 `cache_creation_input_tokens`（写入）和 `cache_read_input_tokens`（命中），`input_tokens` 只统计最后一个断点之后未缓存的部分——和 OpenAI/DeepSeek 的 `prompt_tokens` 含义不同，别直接相加比较。
-> - 原文示例中的 `"model": "claude-sonnet-4-6"` 仍可用，但当前一代是 `claude-sonnet-5-5` / `claude-opus-5-5`。
-> - 原文关于「GPT 5.6 起缓存写入按 1.25× 收费」我未能核实，暂按原文记录。
-> - DeepSeek 价格（原文：输入未命中 1 元/M、命中 0.02 元/M、输出 4 元/M，高峰翻倍）：2026-10-21 查官方英文定价页为美元标价 $0.15 / $0.003 / $0.60（off-peak），命中价同样约为未命中的 1/50，高峰时段 UTC 01–04、06–10 即北京时间 9–12、14–18，与原文一致。
+注意：`input_tokens` **不是**「输入总量」，只是没走缓存的那一小截。模型实际读到的输入总量，是三项相加。OpenAI 和 DeepSeek 的 `prompt_tokens` 是总量口径，两家的数字不能直接比。
 
----
+## Prompt Cache：前缀像一条 git 提交链
 
-### 📝 作者是怎么讲的
+你可能会问：每轮重发的内容 99% 都和上一轮一样，服务端就不能把算过的部分存起来吗？
 
-- **开篇先把结论说白。** 上下文「其实很简单，就是一个 messages 数组」，开头就把抽象的「上下文」落到一个具体的数据结构上，后面全文都在验证这句话。
-- **先做实验制造矛盾，再解释。** 先自我介绍「我叫小明」，再单独问「我叫什么」，模型答不上来。作者顺势替读者问一句「刚才不是说过了吗」，然后把历史拼回 messages 数组再问一遍，模型就答对了。先让读者看到反常现象，再给出解释，「模型无状态」这一点就记得特别牢。
-- **用真实数字做证据。** 拿 usage 里的 prompt_tokens 从 7 涨到 63 证明「每次都重发全部历史」，再用一张小表把两次请求并排。结论有可核对的数字撑着，不靠作者断言。你写回归报告、性能对比也是这个路数。
-- **问题链逐层深入。** 历史全量重发会很贵吗？于是引出前缀缓存。缓存写入为什么比普通输入还贵？因为要占存储，保留越久越贵。那到底划不划算？看命中次数能不能摊平写入费。每个答案都引出下一个问题，最后落到一笔算出来的账：有缓存和没缓存差近 4 倍。
-- **结尾回扣主线。** 收尾说和 LLM 交互「就是这么朴实无华」，全靠一个 messages 数组，Agent 的任务就是组织好它，并回链到上一篇「LLM 是基座、Agent 是工程」的结论。
+可以，这就是 **Prompt Cache**（提示缓存）。服务端把一段前缀的中间计算结果保存一段时间，下一次请求如果开头一模一样，这一段就直接复用，按很低的价格计费。
 
-## 回到主线
+它的匹配规则最像 **git 的提交链**：每个 commit 的哈希都依赖它所有的祖先。你改了第 3 个 commit，第 3 个之后的哈希就全变了，哪怕后面的 diff 一个字没动。Prompt Cache 也一样，从改动的那个字节开始，后面所有内容都算未命中。渲染顺序是 `tools` → `system` → `messages`，所以改工具列表的代价最大，改最后一条消息的代价最小。
 
-本章把「上下文」这个抽象词落到了一个具体的数据结构：**messages 数组**。主线上的每一项技术，此后都可以翻译成对这个数组的操作：
+这个类比在一处不成立：git rebase 只是重算哈希，几乎不花钱；缓存失效则要把几十万 token 重新算一遍，按写入价付钱。
 
-- Agent 循环 = 往数组尾部不断追加 `assistant`（tool_use）和 `tool_result`
-- 压缩 = 把数组前半段替换成一段摘要（省 token，但会让缓存从替换点失效）
-- Sub Agent = 另开一个新数组干活，只把结论带回主数组
-- Prompt Cache 给出了一条**经济学上的硬约束**：只追加、不修改前缀。很多 Agent 设计（system-reminder 放在尾部而不是改 system、记忆在会话开头一次性注入）都是被这条约束塑造的。
+缓存还有几条细则（核对自 `claude-api` skill）：
 
----
+- **写入要加价**。5 分钟 TTL 是输入价的 1.25 倍，1 小时 TTL 是 2 倍，写进去的内容要靠后面的命中来摊平。按 5 分钟 TTL、命中价 0.1× 算，同一前缀用 2 次就回本（1.25 + 0.1 = 1.35，不开缓存是 2）；1 小时 TTL 要用 3 次（2 + 0.2 = 2.2 < 3）。在 Opus 5.5 上命中价只有 0.05×，回本更快。
+- **两种开法**。一种是在某个 content block 上放 `cache_control` 显式断点，一种是在请求顶层放 `cache_control: {type: "ephemeral"}` 开**自动缓存**：服务端把断点放在最后一个可缓存块上，随着对话增长自动前移。一个请求最多 4 个断点。
+- **太短不缓存，而且不报错**。最小可缓存长度随模型不同，在 512 到 4096 token 之间（skill 记载 Opus 5.5 / Sonnet 5.5 / Haiku 5.5 是 512，并注明以官方文档为准）。不够长的前缀只会静默地显示 `cache_creation_input_tokens: 0`。
+- **中途插指令别改 system**。新一代模型支持在 `messages` 里追加一条 `role: "system"` 消息。这样能下达新指令，又不破坏前缀。
+
+**回到主线**：这一章把「上下文」落到了一个具体的数据结构上。主线上的每一项技术，从此都可以翻译成对这个数组的操作：Agent 循环是在末尾追加 `tool_use` 和 `tool_result`；压缩是把前半段替换成摘要（省了窗口，但替换点之后的缓存全部失效）；Sub Agent 是另开一个新数组干活，只把结论带回来。Prompt Cache 则给所有这些设计加了一条经济上的硬约束：只追加，不修改前缀。
+
+## 动手：算一算你自己的会话账单
+
+Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储格式见 [你的聊天记录存在哪](../p1-tools/07-session-storage.md)）。脚本 [`code/agent/core/usage_stats.py`](../code/agent/core/usage_stats.py) 只读每条 assistant 记录的 `message.model`、`message.id`、`message.usage` 这三个字段，**不读也不打印任何会话正文**，最后只输出汇总数字。
+
+先看结果（对本机真实会话只读运行；价格是第一方 API 标价，你实际走的渠道另计，这里重在看比例）：
+
+```text
+$ S=~/.claude/projects/-Users-me-work-webapp/<session-id>
+$ uv run python -m core.usage_stats $S.jsonl $S/subagents/*.jsonl
+扫描 7 个文件（只读 usage 字段）
+价格表：claude-api skill，第一方 API 标价，cached 2026-10-06（Vertex 等合作方渠道另计价）
+model                  请求       未缓存输入           缓存读        写5m         写1h         输出     命中率       实际$      无缓存$
+claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    237.13   1910.65
+合计（有价目的模型）：实际 ≈ $237.13，若无缓存 ≈ $1910.65，缓存省了 87.6%
+去重掉的重复行：2456；解析失败行：0
+```
+
+几个关键实现：
+
+```python
+# 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
+# cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+PRICES: dict[str, dict[str, float]] = {
+    "claude-opus-5-5":   {"input": 4.00, "output": 20.00, "cache_read": 0.20},
+    "claude-opus-5":     {"input": 5.00, "output": 25.00, "cache_read": 0.50},   # *
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.20},
+    "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # * 且只适用于 ≤100K 的提示
+}
+WRITE_5M, WRITE_1H = 1.25, 2.0
+```
+
+```python
+# 一次 API 响应会按 content block 拆成多行写进 jsonl，每行带同一份 usage → 按 message.id 去重
+mid = msg.get("id")
+if mid in seen:
+    rep.duplicate_lines += 1
+    continue
+```
+
+这一步去重很关键。同一个会话不去重会数出 4481 次「请求」，估算费用变成 $545.02，是去重后的 2.3 倍，因为有 2456 行是同一次响应的重复记录。我验证过，同一个 `message.id` 的多行 `usage` 完全相同，所以按 id 只取一次就对了。另外，`model` 为 `<synthetic>` 的记录是 Claude Code 在本地合成的消息，没有打 API，要跳过。
+
+写入还要分 TTL 来算。新版记录的 `usage.cache_creation` 里带有 `ephemeral_5m_input_tokens` 和 `ephemeral_1h_input_tokens` 两个拆分；老记录没有这个拆分，脚本就按默认的 5 分钟来算。
+
+读这张表能得到三个结论：
+
+- **命中率 98.9%**。Claude Code 的前缀极其稳定，46 万 token 的上下文里，每轮真正新写入的只有几千。
+- **缓存省了 87.6%**。不开缓存的话，这个会话按标价要 $1910；实际是 $237。
+- **剩下的钱主要花在「读缓存」上**。拆开算：缓存读 $187.36，占 79%；两种写入合计 $33.7；输出只有 $16。即便单价打到一折，一个 46 万 token 的上下文被读两千次，依然是大头。这就是为什么长会话该压缩、新任务该开新会话：省下的不只是窗口，还有那 79%。
+
+还有一个实测观察：这个会话主线程的缓存写入里，1 小时 TTL 和 5 分钟 TTL 都有（约 500 万 vs 432 万）；6 个 subagent 的写入则**全是 5 分钟 TTL**。Claude Code 是按什么规则选 TTL 的，我没有查到文档，这里只记录现象。
+
+测试 `core/tests/test_usage_stats.py` 用一份合成的 jsonl 覆盖了去重、`<synthetic>`、坏行、TTL 拆分和费用公式，并断言输出里不会出现正文。
 
 ## 对照你的环境
 
-**你的每一轮 Claude Code 请求都在吃缓存**。从本机 `~/.claude/projects/-Users-liz-liz-agent-learn/*.jsonl` 会话记录里抽一条 assistant 消息的 `usage`（真实数据）：
+- **SessionStart 注入的内容在前缀里**。`inject-guardrails.sh` 注入的护栏在会话开头，之后不再变，所以只付一次写入费，之后每轮按命中价读取。反过来，如果哪个 hook 每轮都往**前缀**里塞带时间戳的内容，缓存就会每轮失效。动态内容应该追加在末尾，UserPromptSubmit hook 的 `additionalContext` 就是跟着当轮消息走的。
+- **「常驻层是稀缺资源」的计费含义**。你 CLAUDE.md 里这句话，从账单上看就是：常驻层每多 1000 token，每个新会话多付一次写入费，之后**每一轮**再多付一次读取费。以上面那个会话两千次请求来算，1000 token 的常驻内容就要被读 200 万次。
+- **想看任何一个会话**：`uv run python -m core.usage_stats <path.jsonl>`。不带参数时，默认读 webapp 项目目录下最大的那个会话。
 
-```text
-input_tokens: 2   cache_creation_input_tokens: 2458   cache_read_input_tokens: 65710   output_tokens: 82
-```
+## 常见坑
 
-读法：本轮约 6.8 万输入 token 里，6.57 万是命中的旧前缀，2458 是新追加并写入缓存的内容，只有 2 个 token 走普通输入。按第一方 `claude-sonnet-5-5` 标价（$2 输入 / $10 输出 / 读 $0.20 / 5 分钟写 1.25×）粗算：
+1. **把 `input_tokens` 当成输入总量**。它只是缓存断点之后的尾巴，总量要三项相加。
+2. **统计 jsonl 不去重**。同一次响应会拆成多行，费用会被算成好几倍。
+3. **在 system 里放会变的东西**，比如当前时间、请求 ID、没排序的 JSON。每轮都会让整个前缀失效。
+4. **以为加了 `cache_control` 就一定缓存**。前缀不够最小长度时，静默不缓存。
+5. **中途改工具列表**。tools 排在最前面，改了它，后面所有内容都要重算。
 
-| 计法 | 本轮费用 |
-|---|---|
-| 有缓存 | ≈ $0.0201 |
-| 假设全部按普通输入 | ≈ $0.1372（约 6.8 倍） |
+> ⚠️ 价格与口径说明：表中 Opus 5.5 / Sonnet 5.5 的缓存读价 $0.20 取自 `claude-api` skill 的原文；Opus 5 和 Haiku 5.5 的缓存读价是按 skill 里「≈0.1× 输入价」这条一般规则推算的，脚本里标了 `*`。Haiku 5.5 的 $0.10 / $0.50 只适用于 ≤100K token 的提示，超过后是 $0.50 / $2.50。第三方的对照：DeepSeek 英文定价页（2026-10-21 查）的标价是输入未命中 $0.15、命中 $0.003、输出 $0.60 每百万 token（非高峰时段），命中价约为未命中的 1/50；高峰时段（UTC 01–04、06–10）价格翻倍。
 
-（你走的是 Vertex，合作方定价另计，这里只看相对比例。）
+## 练习
 
-几个和你配置直接相关的推论：
-
-- **SessionStart hook 注入的内容在前缀里**：`inject-guardrails.sh` 注入的 guardrails 在会话开头、之后不变，所以只在首轮付一次写入费，后面每轮都是命中价。反过来，如果某个 hook 每轮往**前缀**里塞带时间戳的内容，会让缓存每轮失效——注入的动态内容应当追加在尾部（UserPromptSubmit hook 的 additionalContext 就是追加到当轮）。
-- **新开会话第一条消息慢、贵**：首轮整个系统提示 + 工具描述 + CLAUDE.md 都要写缓存；你 CLAUDE.md 里说的「常驻层是稀缺资源」，从计费角度看就是每个新会话都要为常驻层付一次 1.25× 的写入费、之后每轮再付读取费。
-- 想自己算：用 `jq` 或几行 Python 扫 jsonl 里的 `message.usage`，按上面四个字段汇总一个会话的命中率。
-
----
-
-## 自测题
-
-**1.** 为什么说「模型记得我叫小明」是一个错觉？要让第二次请求答出名字，最少需要做什么？
+**1.** 你让 Claude 帮忙写 webapp 的一个 hook，它每轮都把「当前时间」写进 system prompt 的开头。会有什么后果？怎么改？
 
 <details>
 <summary>参考答案</summary>
 
-模型无状态，每次请求互相独立，参数在推理时只读。要答出名字，必须在第二次请求的 messages 里带上包含「我叫小明」的那条历史（以及通常配套的 assistant 回复），即客户端自己维护并重发历史。
+system 位于前缀最前面（只排在 tools 之后），每轮内容都不同，等于每轮从开头起前缀就变了，缓存全部失效。所有历史都要按写入价重新计费，首字延迟也会明显变长。改法：system 保持字节级不变；时间这类动态信息追加在末尾，放进最新一条 user 消息，或者在新模型上追加一条 messages 内的 `role: "system"` 消息；缓存断点放在稳定前缀之后。
 
 </details>
 
-**2.** 一个 Agent 每轮都把「当前时间」写进 system prompt 开头。这会带来什么费用后果？怎么改？
+**2.** 用 Opus 5.5 的价格（输入 $4，缓存读 $0.20，即 0.05×）重算回本点：5 分钟 TTL 和 1 小时 TTL 下，一段前缀分别要被用几次，开缓存才划算？
 
 <details>
 <summary>参考答案</summary>
 
-system 在前缀最前面，每轮内容不同 → 从第一个字节起前缀就变了 → 每轮缓存全部失效，所有历史都按普通输入（甚至按写入价）重新计费，费用可能翻数倍、首字延迟也变长。改法：system 保持字节级不变，把时间等动态信息作为尾部消息追加（例如最新一条 user 消息里的 reminder，或 Claude 新模型支持的 messages 内 `role: "system"` 消息），并把缓存断点放在稳定前缀之后。
+5 分钟 TTL：用 1 次时 1.25× > 1×，亏；用 2 次时 1.25 + 0.05 = 1.30× < 2×，已经划算。1 小时 TTL：用 2 次时 2 + 0.05 = 2.05× > 2×，还差一点；用 3 次时 2 + 0.10 = 2.10× < 3×，划算。所以 1 小时 TTL 只适合「请求间隔超过 5 分钟、但会被反复命中」的前缀。
 
 </details>
 
-**3.** Claude 的缓存写入 5 分钟 TTL 是 1.25×、命中约 0.1×。一段前缀至少要被用几次，开缓存才比不开便宜？1 小时 TTL（2×）呢？
+**3.** 给 `usage_stats.py` 加一个 `--per-turn` 选项：按时间顺序输出每次请求的「输入总量」和「命中率」（只输出数字），找出你会话里命中率突然掉到很低的那几轮，再结合你当时做了什么（`/compact`？切换模型？改了 MCP？）解释原因。
 
-<details>
-<summary>参考答案</summary>
+**4.**（开放题）上面那个会话 79% 的钱花在读缓存上。如果由你给 Claude Code 设计一条「该开新会话了」的提示规则，你会用什么信号触发？累计读缓存的 token 数？上下文长度？任务边界？说说各自的误报场景。
 
-5 分钟：用 2 次时，开缓存 = 1.25 + 0.1 = 1.35×，不开 = 2×，已经划算；只用 1 次则 1.25× > 1×，亏。1 小时：用 2 次为 2 + 0.1 = 2.1× > 2×，仍亏；用 3 次为 2 + 0.2 = 2.2× < 3×，开始划算。所以 1 小时 TTL 只适合「间隔超过 5 分钟、但会被反复命中」的前缀。
+## 延伸阅读
 
-</details>
-
----
+- 原站文章：[上下文是什么？token 怎么计费？](https://labuladong.online/zh/ai-coding/basics/messages-and-tokens/)
+- Anthropic：[Prompt caching](https://docs.claude.com/en/docs/build-with-claude/prompt-caching)、[Pricing](https://docs.claude.com/en/docs/about-claude/pricing)、[Token counting](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+- DeepSeek：[Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing)
 
 ## 相关章节
 

@@ -53,6 +53,7 @@ class Session:
         self.store = store
         self.id = session_id or str(uuidlib.uuid4())
         self.path = store.dir / f"{self.id}.jsonl"
+        self.tasks_path = store.dir / f"{self.id}.tasks.json"  # 第 11 章：任务清单和历史分开存
         self.last_uuid: str | None = None
         if self.path.exists():
             for rec in self.store.read_records(self.path):

@@ -5,6 +5,8 @@ import json
 from mini_cc.model import FakeTurn, call, say, tool_block
 from mini_cc.session import SessionStore, project_slug
 
+from .conftest import without_session_context
+
 
 def _lines(path):
     return [json.loads(l) for l in path.read_text().splitlines()]
@@ -42,7 +44,7 @@ def test_resume_restores_history_and_continues_same_file(make_app, settings):
     app2.handle_line("我让你记的是几？")
     # 模型收到了完整历史
     sent = client2.requests[0].messages
-    assert sent[0]["content"] == "记住数字 42" and sent[1]["role"] == "assistant"
+    assert without_session_context(sent[0]["content"]) == "记住数字 42" and sent[1]["role"] == "assistant"
     # 新消息追加在同一个文件上
     assert len(_lines(path)) == 4
     # usage 也从文件里恢复了

@@ -13,6 +13,7 @@ import time
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hf_env  # noqa: E402,F401  必须先于 transformers
 from lora import count_params, inject_lora, lora_state_dict  # noqa: E402
 from ticket_data import make_split, messages, parse, target_json  # noqa: E402
 

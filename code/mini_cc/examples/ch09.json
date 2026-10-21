@@ -1,0 +1,6 @@
+[
+  {"call": "Read", "input": {"file_path": "utils.py"}, "text": "按 AGENTS.md 的规范，先看看 utils.py。"},
+  {"call": "Bash", "input": {"command": "python3 -c \"import pathlib; p=pathlib.Path('utils.py'); p.write_text(p.read_text().replace('def getUser', 'def get_user'))\""}, "text": "（模拟 formatter / 另一个终端改了文件）"},
+  {"say": "看到 utils.py 已经被改成 get_user 了，符合 snake_case 规范，不需要我再动。"},
+  {"say": "今天是 2026-10-21（来自注入的日期）。"}
+]

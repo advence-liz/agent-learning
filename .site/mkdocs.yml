@@ -1,5 +1,6 @@
 # 由 tools/build_site.py 生成，不要手改
 site_name: AI 开发学习知识库
+site_url: !ENV [KB_SITE_URL, '']   # GitHub Pages 构建时由 CI 设置
 docs_dir: docs
 site_dir: build
 use_directory_urls: false

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import difflib
 from dataclasses import dataclass, field
 from typing import Callable
@@ -13,6 +14,7 @@ from .model import AnthropicClient, FakeClient, ModelClient
 from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
 from .session import Session, SessionStore
+from .tasks import TaskStore
 from .tools import ToolRegistry, default_tools
 from .ui import BufferUI, ConsoleUI
 
@@ -74,6 +76,7 @@ class App:
         self.commands = commands
         self.agent = Agent(client, ToolRegistry(default_tools()), settings)
         self.agent.approver = self.ui.ask_permission
+        self.agent.ctx.extras["ask_user"] = self.ui.ask_questions  # 第 10 章
         self.agent.permissions.set_mode(settings.permission_mode)
         self.agent.permissions.on_mode_change.append(self._record_mode)
         # 第 6 章：auto 模式的审查员。用独立的 client，和主对话的上下文完全隔离
@@ -90,6 +93,8 @@ class App:
         self.session = session
         self._recorder = session.record
         self.agent.listeners.append(self._recorder)
+        # 第 11 章：任务清单跟着会话走（/new 换新清单，/resume 载入旧清单）
+        self.agent.ctx.extras["tasks"] = TaskStore.load(session.tasks_path)
 
     def _record_mode(self, old: str, new: str) -> None:
         # 和 Claude Code 一样把模式变化记进会话文件（读取时被忽略，只作审计）
@@ -199,6 +204,35 @@ def _mode(app: App, arg: str) -> None:
             app.ui.error(str(e))
             return
     app.ui.info(f"权限模式：{pm.mode}（循环顺序：{' → '.join(pm.cycle)}）")
+
+
+@COMMANDS.register("/context", "查看上下文里都放了什么（system 段落、注入的提醒、历史）")
+def _context(app: App, arg: str) -> None:
+    from .attachments import is_reminder
+
+    rows = []
+    for i, b in enumerate(app.agent.context.system_blocks()):
+        first = b["text"].splitlines()[0][:40]
+        rows.append((f"system[{i}]", f"{len(b['text']):>6} chars  {first}"))
+    n_rem = n_rem_chars = n_msg_chars = 0
+    for m in app.agent.messages:
+        blocks = m["content"] if isinstance(m["content"], list) else [{"type": "text", "text": m["content"]}]
+        for b in blocks:
+            size = len(json.dumps(b, ensure_ascii=False))
+            if is_reminder(b):
+                n_rem += 1
+                n_rem_chars += size
+            else:
+                n_msg_chars += size
+    rows.append(("reminders", f"{n_rem_chars:>6} chars  {n_rem} 个 <system-reminder> 块"))
+    rows.append(("messages", f"{n_msg_chars:>6} chars  {len(app.agent.messages)} 条消息（不含提醒）"))
+    rows.append(("last request", f"{app.agent.usage.last_input:>6} tokens"))
+    app.ui.table(rows)
+
+
+@COMMANDS.register("/todos", "查看当前会话的任务清单")
+def _todos(app: App, arg: str) -> None:
+    app.ui.info(app.agent.ctx.extras["tasks"].render())
 
 
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))

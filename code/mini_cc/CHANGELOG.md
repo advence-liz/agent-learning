@@ -70,3 +70,43 @@
 - `tools/base.py`：`ToolContext.file_state`、`ToolContext.write_hooks` + `before_write()`（为第 13 章 rewind 预留）。
 - `tools/__init__.py`：默认工具加入 `Edit`。
 - 测试：`tests/test_ch07_file_edit.py`（15 个）。
+
+## 第 8 章 · 用 @ 引用文件（08-file-mention.md）
+
+- 新增 `attachments.py`：`Attachment(kind, title, text)`、`render()`（`<system-reminder>` 包裹的文本块）、`is_reminder()`。
+- 新增 `mentions.py`：`find_mentions()`（排除邮箱、支持引号路径、中文标点截断）、`resolve_mentions()`（文件按 Read 的 `cat -n` 格式附加并**登记 FileState**、目录列一层、非路径原样保留、超 2000 行截断）、`build_user_content()`（附件在前、原话在后）、`list_project_files()`（优先 `git ls-files`）、`fuzzy_score/rank`（子序列模糊匹配）、`FileMentionCompleter`（5 秒缓存）。
+- `cli.py`：`handle_line` 解析 @ 并显示「已附加」；REPL 用 `merge_completers` 合并命令补全与文件补全。
+- 测试：`tests/test_ch08_mentions.py`（9 个）。
+
+## 第 9 章 · 更灵活的上下文注入机制（09-context-injection.md）
+
+- 新增 `context.py`：
+  - `STATIC_PROMPT`（身份、工作规则、`<system-reminder>` 语义说明）+ `environment_text()`（cwd、是否 git、平台、shell、模型）组成 system；`ContextBuilder.system_blocks()` 会话内只算一次，最后一块带 `cache_control`；`system_sections` 扩展点。
+  - 提供者（provider）机制：`InjectState(agent, trigger)`，`trigger` 为 `user` / `tool_result`；提供者扫描历史判断是否需要注入（不维护标志位，`/resume`、压缩后依然正确）。
+  - 内置提供者：`instructions_provider`（`~/.mini_cc` 与项目根 → cwd 的 `AGENTS.md`/`CLAUDE.md` + 会话开始时的 git 快照，每会话一次）、`date_provider`（首轮注入日期、日期变化时提醒）、`changed_files_provider`（读过的文件被外部修改 → 注入 unified diff 并按新内容登记）、`notifications_provider`（第 16–18 章的后台通知通道）。
+  - `ContextBuilder.inject()`：用户发话时注入块放最前，工具结果时放在 `tool_result` 之后；单个提供者异常被跳过。
+- `loop.py`：`Agent.context`、`Agent.notify()`（线程安全队列）/`drain_notifications()`、`_append_user()`（追加 user 消息并产出 `ContextInjected`）；`run_turn` 与 `_run_tools` 都经由它写 user 消息；请求带 `cache=True`。
+- `model.py`：`ModelRequest.cache` → 顶层 `cache_control={"type":"ephemeral"}`。
+- `tools/file_state.py`：`FileRecord.text` 保存模型看到的版本（≤20 万字符），用于算 diff。
+- `events.py` / `ui.py`：`ContextInjected`，显示为 `◇ system …`。
+- `cli.py`：新命令 `/context`。
+- 测试：`tests/test_ch09_context.py`（12 个）；`conftest.without_session_context()`，早期章节的 4 个测试改为忽略会话级注入。
+
+## 第 10 章 · 让 Agent 主动向你提问（10-ask-user-question.md）
+
+- 新增 `tools/ask_user.py`：`AskUserQuestionTool`（1–4 个问题、每题 2–4 个选项、`multiSelect`；只读、免审批；通过 `ctx.extras["ask_user"]` 回调拿答案；结果措辞参考 Claude Code「Your questions have been answered: … You can now continue …」；全部跳过返回 declined；无 UI 时让模型按默认值继续并声明假设）、`Question` / `Answer`、`parse_answer()`（序号 / 逗号多选 / 中文逗号 / 自由文本 = Other / 空 = 跳过 / 无效返回 None）、`render_question()`。
+- `ui.py`：`BufferUI.ask_questions()`（逐题显示，无效输入重问一次）。
+- `tools/__init__.py`：默认工具加入 `AskUserQuestion`。
+- `cli.py`：把 `ui.ask_questions` 接到 `agent.ctx.extras["ask_user"]`。
+- `context.py`：`STATIC_PROMPT` 增加「何时提问」一条。
+- 测试：`tests/test_ch10_ask_user.py`（8 个）。
+
+## 第 11 章 · 让 Agent 跟踪多步任务（11-task-management.md）
+
+- 新增 `tasks.py`：`Task` / `TaskStore`（每会话一个 `<session>.tasks.json`，先写临时文件再 `replace`；`create/update/unfinished/render`，☐◼☒ 清单）、`task_reminder_provider()`（清单未完成且模型连续 6 次请求没碰清单，或历史里看不到清单时注入提醒；扫描历史推导，不记标志位）。
+- 新增 `tools/task_tools.py`：`TaskCreate` / `TaskUpdate` / `TaskList`（只读免审批；`in_progress` 重复时提示；剩余数 / All tasks completed）。
+- `tools/base.py`：`ToolContext.pending_events` + `emit()`——工具执行期间产生的事件由循环在 `ToolEnd` 后转发（后续章节的后台任务也可复用）。
+- `events.py`：`TasksUpdated`。`loop.py`：一批工具调用里多次改清单只在批末转发一次。`ui.py`：画清单，Task 工具的结果行不重复显示。
+- `session.py`：`Session.tasks_path`。`cli.py`：`_attach` 时按会话载入清单（`/new` 新清单、`/resume` 旧清单）；新命令 `/todos`（`/tasks` 留给第 16 章后台任务）。
+- `context.py`：默认 provider 加入任务提醒；`STATIC_PROMPT` 增加「3 步以上先建清单」。
+- 测试：`tests/test_ch11_tasks.py`（8 个）。

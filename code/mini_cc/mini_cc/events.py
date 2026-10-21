@@ -44,12 +44,27 @@ class PermissionDecision:
 
 
 @dataclass
+class ContextInjected:
+    """客户端往上下文里注入了一个附件（第 9 章）。UI 显示成「◇ system …」。"""
+
+    kind: str
+    title: str
+
+
+@dataclass
+class TasksUpdated:
+    """任务清单变了（第 11 章）。rendered 是清单的文本形式。"""
+
+    rendered: str
+
+
+@dataclass
 class TurnEnd:
     stop_reason: str
     text: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
 
 
-Event = TextDelta | ThinkingDelta | ToolStart | ToolEnd | Notice | PermissionDecision | TurnEnd
+Event = TextDelta | ThinkingDelta | ToolStart | ToolEnd | Notice | PermissionDecision | ContextInjected | TasksUpdated | TurnEnd
 
-__all__ = ["Event", "TextDelta", "ThinkingDelta", "ToolStart", "ToolEnd", "Notice", "PermissionDecision", "TurnEnd"]
+__all__ = ["Event", "TextDelta", "ThinkingDelta", "ToolStart", "ToolEnd", "Notice", "PermissionDecision", "ContextInjected", "TasksUpdated", "TurnEnd"]

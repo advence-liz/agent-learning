@@ -10,8 +10,9 @@ import sys
 
 from rich.console import Console
 
-from .events import Event, Notice, PermissionDecision, TextDelta, ThinkingDelta, ToolEnd, ToolStart, TurnEnd
+from .events import ContextInjected, Event, Notice, TasksUpdated, PermissionDecision, TextDelta, ThinkingDelta, ToolEnd, ToolStart, TurnEnd
 from .permissions import PermissionReply, PermissionRequest
+from .tools.ask_user import Answer, Question, parse_answer, render_question
 
 
 def preview(content, max_lines: int = 3, width: int = 100) -> str:
@@ -70,6 +71,19 @@ class BufferUI:
         for k, v in rows:
             self._emit(f"{k.ljust(w)}  {v}")
 
+    def ask_questions(self, questions: list[Question]) -> list[Answer]:
+        """AskUserQuestion 的界面：逐题显示选项，读答案；输入无效就重问一次，再无效当作跳过。"""
+        answers = []
+        for n, q in enumerate(questions, 1):
+            for line in render_question(q, n, len(questions)):
+                self.info(line)
+            ans = parse_answer(self.ask("› "), q)
+            if ans is None:
+                self.info("  输入无效，请输入选项序号或你自己的答案")
+                ans = parse_answer(self.ask("› "), q) or Answer(q.question, skipped=True)
+            answers.append(ans)
+        return answers
+
     # ---- 流式片段
     def _start_stream(self, kind: str, prefix: str) -> None:
         if self._stream_kind != kind:
@@ -94,8 +108,15 @@ class BufferUI:
         elif isinstance(ev, ToolStart):
             self.info(f"⏺ {ev.summary}")
         elif isinstance(ev, ToolEnd):
+            if ev.name in ("TaskCreate", "TaskUpdate") and not ev.result.is_error:
+                return  # 清单本身会由 TasksUpdated 画出来，结果行就不重复了
             mark = "✘" if ev.result.is_error else "✔"
             self.info(f"{mark} {ev.name} -> {preview(ev.result.content)}")
+        elif isinstance(ev, TasksUpdated):
+            for line in ev.rendered.splitlines():
+                self.info(f"  {line}")
+        elif isinstance(ev, ContextInjected):
+            self.info(f"◇ system  {ev.title}")
         elif isinstance(ev, PermissionDecision):
             if ev.source == "classifier":
                 verb = "放行" if ev.behavior == "allow" else "拦截"

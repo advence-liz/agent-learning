@@ -22,14 +22,18 @@ class FileRecord:
     mtime_ns: int
     sha: str
     partial: bool = False  # 只读了一部分（offset/limit）
+    text: str | None = None  # 第 9 章：保存模型看到的版本，外部修改时据此算 diff（大文件不存）
 
 
 class FileStateCache:
     def __init__(self) -> None:
         self._records: dict[Path, FileRecord] = {}
 
+    MAX_KEEP = 200_000  # 超过这么多字符的文件不存原文，外部修改时只提示不给 diff
+
     def remember(self, path: Path, text: str, partial: bool = False) -> None:
-        self._records[path] = FileRecord(path.stat().st_mtime_ns, digest(text), partial)
+        keep = text if len(text) <= self.MAX_KEEP else None
+        self._records[path] = FileRecord(path.stat().st_mtime_ns, digest(text), partial, keep)
 
     def get(self, path: Path) -> FileRecord | None:
         return self._records.get(path)

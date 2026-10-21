@@ -17,6 +17,7 @@ import uuid
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hf_env  # noqa: E402,F401  必须先于 transformers
 from sampling import greedy_next, sample_next  # noqa: E402
 
 MODEL_ID = "HuggingFaceTB/SmolLM2-135M-Instruct"

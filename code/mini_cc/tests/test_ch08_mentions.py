@@ -5,6 +5,8 @@ from prompt_toolkit.document import Document
 from mini_cc.mentions import FileMentionCompleter, find_mentions, fuzzy_score, list_project_files, rank
 from mini_cc.model import call, say
 
+from .conftest import without_session_context as strip
+
 
 def test_find_mentions():
     assert find_mentions("看看 @src/app.py 和 @README.md，然后改") == ["src/app.py", "README.md"]
@@ -17,7 +19,7 @@ def test_mention_attaches_file_before_user_text(make_app):
     app, client = make_app(say("DEBUG 目前是 True"))
     (app.settings.cwd / "config.py").write_text("DEBUG = True\nPORT = 8000\n")
     app.handle_line("@config.py 里 DEBUG 是多少？")
-    content = client.requests[0].messages[0]["content"]
+    content = strip(client.requests[0].messages[0]["content"])
     assert isinstance(content, list) and len(content) == 2
     assert content[0]["text"].startswith("<system-reminder>")
     assert "     1\tDEBUG = True" in content[0]["text"]
@@ -40,7 +42,7 @@ def test_unknown_mention_left_alone_and_directory_listed(make_app):
     (app.settings.cwd / "src").mkdir()
     (app.settings.cwd / "src" / "a.py").write_text("")
     app.handle_line("@nobody 帮我看下 @src")
-    content = client.requests[0].messages[0]["content"]
+    content = strip(client.requests[0].messages[0]["content"])
     assert len(content) == 2 and "a.py" in content[0]["text"] and "directory @src" in content[0]["text"]
 
 
@@ -48,7 +50,7 @@ def test_large_file_truncated(make_app):
     app, client = make_app(say("ok"))
     (app.settings.cwd / "big.log").write_text("".join(f"{i}\n" for i in range(5000)))
     app.handle_line("@big.log 看下")
-    text = client.requests[0].messages[0]["content"][0]["text"]
+    text = strip(client.requests[0].messages[0]["content"])[0]["text"]
     assert "showing first 2000 of 5000 lines" in text
 
 
