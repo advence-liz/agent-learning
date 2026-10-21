@@ -1,0 +1,4 @@
+[
+  {"call": "Bash", "input": {"command": "ls examples"}, "text": "我先看看目录。"},
+  {"say": "examples 目录里有若干演示脚本。"}
+]

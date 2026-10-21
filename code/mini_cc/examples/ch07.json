@@ -1,0 +1,11 @@
+[
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "DEBUG = True", "new_string": "DEBUG = False"}, "text": "直接把 DEBUG 关掉。"},
+  {"call": "Read", "input": {"file_path": "config.py"}, "text": "得先读文件。"},
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "TIMEOUT = 30", "new_string": "TIMEOUT = 60"}},
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "# prod\nTIMEOUT = 30", "new_string": "# prod\nTIMEOUT = 60"}, "text": "有两处，带上注释那一行让它唯一。"},
+  {"call": "Bash", "input": {"command": "sed -i '' 's/DEBUG = True/DEBUG = True  # set by ops/' config.py"}, "text": "（模拟：你在另一个终端里改了这个文件）"},
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "DEBUG = True", "new_string": "DEBUG = False"}},
+  {"call": "Read", "input": {"file_path": "config.py"}, "text": "文件被改过了，重新读。"},
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "DEBUG = True  # set by ops", "new_string": "DEBUG = False  # set by ops"}},
+  {"say": "改好了：prod 的 TIMEOUT 改成 60，DEBUG 关闭，保留了你加的注释。"}
+]

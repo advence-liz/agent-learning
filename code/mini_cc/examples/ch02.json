@@ -1,0 +1,5 @@
+[
+  {"call": "Bash", "input": {"command": "ls mini_cc"}, "text": "我先看看包里有哪些模块。"},
+  {"call": "Bash", "input": {"command": "wc -l mini_cc/loop.py"}, "text": "循环在 loop.py，看看它多长。"},
+  {"say": "agent 循环在 mini_cc/loop.py，核心是 Agent.run_turn 这个生成器。", "thinking": "用户想知道循环在哪，两次工具调用已经足够回答。"}
+]
