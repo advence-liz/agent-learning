@@ -18,7 +18,8 @@ import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CODE_LINK = re.compile(r'\]\(((?:\.\./)+code/[^)#\s]+)(#[^)]*)?\)')
+# 指向站点外仓库文件的链接：配套代码 + 根目录的 STYLE.md
+CODE_LINK = re.compile(r'\]\(((?:\.\./)+(?:code/[^)#\s]+|STYLE\.md))(#[^)]*)?\)')
 REPO_URL = os.environ.get('KB_REPO_URL', '').rstrip('/')
 REPO_REF = os.environ.get('KB_REPO_REF', 'main')
 KB_ROOT_PATH = re.compile(r'/Users/[^/\s`"\')]+/(?:[^/\s`"\')]+/)*agent-learn/')
