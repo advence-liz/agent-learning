@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from pathlib import Path
 import json
 import difflib
@@ -217,7 +218,8 @@ class App:
         line = line.strip()
         if not line:
             return None
-        if line.startswith("/"):
+        # 以 / 开头但第一个词里还有 /，是拖进来的绝对路径（第 19 章），不是斜杠命令
+        if line.startswith("/") and "/" not in line.split()[0][1:]:
             return self.commands.dispatch(self, line)
         # 第 8 章：@ 引用的文件作为附件放进这条 user 消息
         attachments = resolve_mentions(line, self.agent.ctx)
@@ -312,10 +314,27 @@ def _context(app: App, arg: str) -> None:
     for i, b in enumerate(app.agent.context.system_blocks()):
         first = b["text"].splitlines()[0][:40]
         rows.append((f"system[{i}]", f"{len(b['text']):>6} chars  {first}"))
-    n_rem = n_rem_chars = n_msg_chars = 0
+    from .images import estimate_visual_tokens, image_info
+
+    n_rem = n_rem_chars = n_msg_chars = n_img = img_tokens = 0
+
+    def images_in(b):
+        if b.get("type") == "image":
+            yield b
+        elif b.get("type") == "tool_result" and isinstance(b.get("content"), list):
+            yield from (c for c in b["content"] if c.get("type") == "image")
+
     for m in app.agent.messages:
         blocks = m["content"] if isinstance(m["content"], list) else [{"type": "text", "text": m["content"]}]
         for b in blocks:
+            for img in images_in(b):  # 第 19 章：图片按 visual token 估算，不按 base64 字符数
+                n_img += 1
+                info = image_info(base64.b64decode(img["source"].get("data", "")))
+                img_tokens += estimate_visual_tokens(info[1], info[2]) if info else 0
+            if b.get("type") == "image":
+                continue
+            if b.get("type") == "tool_result" and isinstance(b.get("content"), list):
+                b = {**b, "content": [c for c in b["content"] if c.get("type") != "image"]}
             size = len(json.dumps(b, ensure_ascii=False))
             if is_reminder(b):
                 n_rem += 1
@@ -324,6 +343,8 @@ def _context(app: App, arg: str) -> None:
                 n_msg_chars += size
     rows.append(("reminders", f"{n_rem_chars:>6} chars  {n_rem} 个 <system-reminder> 块"))
     rows.append(("messages", f"{n_msg_chars:>6} chars  {len(app.agent.messages)} 条消息（不含提醒）"))
+    if n_img:
+        rows.append(("images", f"{img_tokens:>6} tokens（估算）  {n_img} 张图片"))
     rows.append(("last request", f"{app.agent.usage.last_input:>6} tokens"))
     app.ui.table(rows)
 

@@ -5,14 +5,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class Attachment:
-    kind: str    # file | directory | env | instructions | reminder | ...
+    kind: str    # file | directory | env | instructions | reminder | image | ...
     title: str   # 给人看的一行，比如 "@config.py（5 行）"
     text: str    # 给模型看的正文
+    blocks: list[dict] = field(default_factory=list)  # 第 19 章：紧跟在说明后面的非文本块（图片）
 
 
 def render(att: Attachment) -> dict:

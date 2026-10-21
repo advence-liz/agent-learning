@@ -32,7 +32,23 @@ def find_mentions(text: str) -> list[str]:
     return out
 
 
+def image_attachment(path: Path, ref: str) -> Attachment:
+    """第 19 章：图片作为 image 块附加（前面放一句说明）；不合规就只附加原因。"""
+    from .images import ImageError, load_image
+
+    try:
+        block, meta = load_image(path)
+    except ImageError as e:
+        return Attachment("image", f"@{ref}（图片无法附加）", f"The user attached @{ref}, but it was not sent: {e}")
+    return Attachment("image", f"@{ref}（图片 {meta.short} {meta.width}×{meta.height}，≈{meta.tokens} visual tokens）",
+                      f"The user attached the image @{ref} ({meta.note()}). It follows this note.", [block])
+
+
 def _file_attachment(path: Path, ref: str, ctx: ToolContext, max_lines: int) -> Attachment | None:
+    from .images import is_image_path
+
+    if is_image_path(path):
+        return image_attachment(path, ref)
     raw = path.read_bytes()
     if b"\x00" in raw[:8000]:
         return Attachment("file", f"@{ref}（二进制，已跳过）", f"The user mentioned @{ref}, a binary file (not shown).")
@@ -68,6 +84,14 @@ def resolve_mentions(text: str, ctx: ToolContext, max_lines: int = MAX_LINES) ->
             continue  # 不是路径（比如 @someone），原样留在文本里
         if att:
             atts.append(att)
+    # 第 19 章：拖进终端的图片路径（不带 @）也附加
+    from .images import find_image_paths
+
+    seen = {ctx.resolve(r) for r in find_mentions(text)}
+    for p in find_image_paths(text, ctx.cwd):
+        if p.resolve() not in seen:
+            seen.add(p.resolve())
+            atts.append(image_attachment(p, p.name))
     return atts
 
 
@@ -75,7 +99,10 @@ def build_user_content(text: str, attachments: list[Attachment]) -> str | list[d
     """附件在前、用户原话在后：长资料放前面、问题放最后，是 Anthropic 长上下文提示的建议顺序。"""
     if not attachments:
         return text
-    return [render(a) for a in attachments] + [{"type": "text", "text": text}]
+    blocks = []
+    for a in attachments:
+        blocks += [render(a), *a.blocks]  # 图片紧跟它的说明；全部在原话之前（官方建议：图片在前、问题在后）
+    return blocks + [{"type": "text", "text": text}]
 
 
 # ---------------------------------------------------------------- 输入补全

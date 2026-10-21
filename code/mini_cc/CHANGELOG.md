@@ -171,3 +171,12 @@
 - 新增 `tools/monitor.py:MonitorTool`（`command / description / timeout_ms`，默认 5 分钟、上限 30 分钟；权限复用 Bash 的命令分析；描述里写清「一次 vs 每次」、逐行刷新、过滤要覆盖失败、事件不是用户回复）；默认工具加入 `Monitor`。
 - `subagent.py`：`NEVER_FOR_CHILDREN` 加入 `Monitor`。
 - 测试：`tests/test_ch18_monitor.py`（7 个，真实子进程）。
+
+## 第 19 章 · 图片输入（19-image.md）
+
+- 新增 `images.py`：`sniff()`（按文件头识别 PNG / JPEG / GIF / WebP）、`image_info()`（只解析文件头取宽高，不依赖 Pillow）、`estimate_visual_tokens()`（28×28 一个 token；高分辨率档长边 2576 / 最多 4784 token 的缩放近似）、`load_image()`（8000px、base64 10MB 两道硬限制，`ImageError` 给出可照做的提示）、`ImageMeta`、`find_image_paths()`（拖入终端的路径：转义空格、引号）。
+- `attachments.py`：`Attachment.blocks`（说明之后紧跟的非文本块）。
+- `mentions.py`：`image_attachment()`；`@` 引用图片和拖入的图片路径都附加为 image 块；`build_user_content` 顺序为「说明 → 图片 → 原话」。
+- `tools/read.py`：图片返回 `[text 说明, image 块]` 的 tool_result；不登记文件状态。
+- `cli.py`：`handle_line` 区分斜杠命令和以 `/` 开头的绝对路径；`/context` 单独统计图片（含 `tool_result` 内嵌图片），字符数剔除 base64。
+- 测试：`tests/test_ch19_image.py`（8 个）。

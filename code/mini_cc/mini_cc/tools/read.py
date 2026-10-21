@@ -36,7 +36,16 @@ class ReadTool(Tool):
         path = ctx.resolve(args["file_path"])
         if path.is_dir():
             return ToolResult(f"{ctx.rel(path)} is a directory. Use Bash `ls` to list it.", True)
+        from ..images import ImageError, is_image_path, load_image, sniff
+
         raw = path.read_bytes()
+        if is_image_path(path) or sniff(raw[:16]):
+            # 第 19 章：图片作为 image 块放进 tool_result（content 是块列表）
+            try:
+                block, meta = load_image(path)
+            except ImageError as e:
+                return ToolResult(str(e), True)
+            return ToolResult([{"type": "text", "text": f"Image: {ctx.rel(path)} ({meta.note()})"}, block])
         if b"\x00" in raw[:8000]:
             return ToolResult(f"{ctx.rel(path)} looks like a binary file; not reading it.", True)
         text = read_text(path)
