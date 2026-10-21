@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import json
 import difflib
 from dataclasses import dataclass, field
@@ -14,6 +15,7 @@ from .model import AnthropicClient, FakeClient, ModelClient
 from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .memory import MemoryStore
 from .mentions import FileMentionCompleter, build_user_content, resolve_mentions
+from .rewind import Checkpoint, FileHistory, is_prompt, prompt_text
 from .session import Session, SessionStore
 from .tasks import TaskStore
 from .tools import ToolRegistry, default_tools
@@ -88,20 +90,53 @@ class App:
         self.memory = MemoryStore.for_project(settings.home, settings.cwd)
         self.agent.ctx.extras["memory"] = self.memory
         self.agent.context.system_sections.append(self.memory.system_section)
+        # 第 13 章：Write/Edit 写盘前给文件拍快照；回退后把用户原话放回输入框
+        self.agent.ctx.write_hooks.append(lambda path: self.file_history.before_write(path))
+        self.prefill = ""
         self._attach(self.store.new())
 
     def _attach(self, session: Session) -> None:
         """把 Agent 的「新消息」事件接到当前会话文件上（换会话时先摘掉旧的）。"""
         old = getattr(self, "_recorder", None)
-        if old in self.agent.listeners:
-            self.agent.listeners.remove(old)
+        for fn in (old, self._on_message):
+            if fn in self.agent.listeners:
+                self.agent.listeners.remove(fn)
         self.session = session
         self._recorder = session.record
         self.agent.listeners.append(self._recorder)
+        self.agent.listeners.append(self._on_message)  # 排在落盘之后：要用它刚分配的 uuid
+        self.file_history = FileHistory.load(self.settings.home / "file-history" / session.id)
         # 第 11 章：任务清单跟着会话走（/new 换新清单，/resume 载入旧清单）
         self.agent.ctx.extras["tasks"] = TaskStore.load(session.tasks_path)
         # 换会话 = 重新算一次 system：上个会话里新存的记忆从这里开始进上下文
         self.agent.context.invalidate()
+
+    def _on_message(self, msg: dict, meta: dict) -> None:
+        """第 13 章：用户亲手发的每条消息开一个检查点。"""
+        if is_prompt(msg) and self.session.last_uuid:
+            self.file_history.begin(self.session.last_uuid, prompt_text(msg))
+
+    def rewind(self, n: int, mode: str = "both") -> tuple[Checkpoint, list[tuple[str, str]]]:
+        """回到第 n 个检查点（这条用户消息发出之前）。mode: both | conversation | code。"""
+        cp = self.checkpoints()[n - 1]
+        changes = []
+        if mode in ("both", "code"):
+            changes = self.file_history.restore(cp.uuid)
+            for path, _ in changes:
+                self.agent.ctx.file_state.forget(Path(path))
+        if mode in ("both", "conversation"):
+            keep = self.session.chain.index(cp.uuid)
+            self.agent.load_history(self.agent.messages[:keep], self.agent.usage)  # 原来的前缀，逐字节不变
+            self.session.rewind(keep)
+            self.file_history.truncate(cp.uuid)
+            # 这条分支上模型「读过」什么已经说不清了：和 /resume 一样，从头信任磁盘
+            self.agent.ctx.file_state.clear()
+            self.prefill = cp.prompt
+        return cp, changes
+
+    def checkpoints(self) -> list[Checkpoint]:
+        """当前分支上的检查点（压缩、回退之后不在链上的不算）。"""
+        return [c for c in self.file_history.checkpoints if c.uuid in self.session.chain]
 
     def _record_mode(self, old: str, new: str) -> None:
         # 和 Claude Code 一样把模式变化记进会话文件（读取时被忽略，只作审计）
@@ -255,6 +290,40 @@ def _memory(app: App, arg: str) -> None:
         app.ui.table([(e.slug, f"{e.name} — {e.description}") for e in entries])
 
 
+@COMMANDS.register("/rewind", "回退对话和/或代码：/rewind 列出检查点；/rewind <n> [both|conversation|code]",
+                   aliases=("/checkpoint", "/undo"))
+def _rewind(app: App, arg: str) -> None:
+    cps = app.checkpoints()
+    if not cps:
+        app.ui.info("还没有可回退的检查点（每条你发出的消息是一个检查点）")
+        return
+    if not arg:
+        for i, c in enumerate(cps, 1):
+            n = len(c.files)
+            app.ui.info(f"{i}. {c.prompt.splitlines()[0][:40] if c.prompt else '(空)'}  "
+                        f"（{'改了 ' + str(n) + ' 个文件' if n else '未改文件'}）")
+        app.ui.info("输入 /rewind <序号> [both|conversation|code] 回到那条消息发出之前（默认 both）")
+        return
+    num, _, mode = arg.partition(" ")
+    mode = mode.strip() or "both"
+    if mode not in ("both", "conversation", "code"):
+        app.ui.error("模式只能是 both / conversation / code")
+        return
+    if not num.isdigit() or not 1 <= int(num) <= len(cps):
+        app.ui.error(f"没有第 {num} 个检查点（共 {len(cps)} 个）")
+        return
+    cp, changes = app.rewind(int(num), mode)
+    for path, action in changes:
+        app.ui.info(f"  ⎿ {'恢复' if action == 'restored' else '删除（这之后才新建的）'} {app.agent.ctx.rel(Path(path))}")
+    if mode in ("both", "code") and not changes:
+        app.ui.info("  ⎿ 没有可恢复的文件改动（Bash 改的文件不在检查点里）")
+    if mode in ("both", "conversation"):
+        app.ui.info(f"已回到第 {num} 个检查点之前，对话剩 {len(app.agent.messages)} 条消息")
+        app.ui.info(f"原话：{cp.prompt}（已放回输入框，可以改一改再发）")
+    else:
+        app.ui.info("代码已恢复，对话保持不变")
+
+
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))
 def _exit(app: App, arg: str) -> str:
     return EXIT
@@ -302,7 +371,8 @@ def repl(app: App) -> None:
     app.ui.info(f"mini-cc · {app.settings.model} · {app.settings.cwd}（/help 查看命令）")
     while True:
         try:
-            line = session.prompt("❯ ")
+            line = session.prompt("❯ ", default=app.prefill)
+            app.prefill = ""
         except (EOFError, KeyboardInterrupt):
             break
         if app.handle_line(line) == EXIT:

@@ -41,6 +41,9 @@ class FileStateCache:
     def forget(self, path: Path) -> None:
         self._records.pop(path, None)
 
+    def clear(self) -> None:
+        self._records.clear()
+
     def paths(self) -> list[Path]:
         return list(self._records)
 

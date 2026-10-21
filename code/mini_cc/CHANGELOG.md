@@ -118,3 +118,12 @@
 - 新增 `tools/memory_tool.py:MemoryTool`（`save` / `delete`，`self_check` 返回 allow 免审批）；默认工具加入 `Memory`。
 - `cli.py`：`App.memory`、`ctx.extras["memory"]`；`_attach()` 换会话时 `context.invalidate()`（新记忆在下个会话进 system，同一会话 system 不变）；新命令 `/memory`（`/memory rm <slug>`）。
 - 测试：`tests/test_ch12_memory.py`（8 个）；`test_ch09_context.py` 的 system 断言改为按标题查找 `# Environment` 段。
+
+## 第 13 章 · rewind 回退对话和代码（13-rewind.md）
+
+- 新增 `rewind.py`：`Checkpoint(uuid, prompt, files)`、`FileHistory`（`<home>/file-history/<session>/index.json` + `<路径哈希>@v<n>` 备份；`begin()` 开检查点；`before_write()` 每个检查点每个文件只备份一次、新建文件记 `None`；`restore()` 取目标检查点之后第一次的备份；`truncate()`）、`is_prompt()` / `prompt_text()`。
+- `session.py`：`branch()` 从最新叶子沿 `parentUuid` 回走（`load` / `list` 都改用它）；`Session.chain`（与 `Agent.messages` 对齐）；`Session.rewind(keep)` 追加 `{"type": "rewind", "leafUuid"}` 记录。
+- `cli.py`：`App._on_message`（listener，排在落盘之后）开检查点；`write_hooks` 接 `FileHistory`；`App.rewind(n, mode)`（both / conversation / code；回退对话时清空文件状态表、原话放进 `App.prefill`，REPL 用作输入框默认值）；`App.checkpoints()`；新命令 `/rewind`（别名 `/checkpoint` `/undo`）。
+- `tools/file_state.py`：`FileStateCache.clear()`。
+- `ARCHITECTURE.md`：不变量 1 补充「分支点」说明（`load_history` 只用于 resume / rewind / compact）。
+- 测试：`tests/test_ch13_rewind.py`（8 个）。

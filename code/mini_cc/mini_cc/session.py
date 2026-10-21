@@ -6,6 +6,10 @@
 每行一条记录：
     {"type": "user"|"assistant", "uuid", "parentUuid", "sessionId", "timestamp", "cwd", "message": {...}, "usage"?: {...}}
 其他 type（第 13/14 章的 rewind、compact 会加）读取时默认忽略。
+
+第 13 章起，读取不再是「从头到尾逐行」，而是从最新的叶子沿 parentUuid 往回走：
+/rewind 之后新消息指回分叉点，被丢弃的分支还留在文件里（只追加），但不在链上。
+一条 {"type": "rewind", "leafUuid": ...} 记录把叶子挪回分叉点（回退后什么都没说就退出，恢复时也是回退后的样子）。
 """
 
 from __future__ import annotations
@@ -55,10 +59,11 @@ class Session:
         self.path = store.dir / f"{self.id}.jsonl"
         self.tasks_path = store.dir / f"{self.id}.tasks.json"  # 第 11 章：任务清单和历史分开存
         self.last_uuid: str | None = None
+        # 当前分支上每条消息的 uuid，和 Agent.messages 一一对应（/rewind 靠它把消息下标换成 uuid）
+        self.chain: list[str] = []
         if self.path.exists():
-            for rec in self.store.read_records(self.path):
-                if rec.get("uuid"):
-                    self.last_uuid = rec["uuid"]
+            self.chain = [r["uuid"] for r in branch(self.store.read_records(self.path))]
+            self.last_uuid = self.chain[-1] if self.chain else None
 
     def record(self, msg: dict[str, Any], meta: dict[str, Any] | None = None) -> None:
         """Agent.listeners 回调：每条新消息立刻追加一行。文件在第一条消息时才创建。"""
@@ -75,12 +80,36 @@ class Session:
             rec["usage"] = meta["usage"]
         self.append_record(rec)
         self.last_uuid = rec["uuid"]
+        self.chain.append(rec["uuid"])
+
+    def rewind(self, keep: int) -> None:
+        """只保留当前分支的前 keep 条消息。文件不改：追加一条 rewind 记录，之后的新消息从分叉点长出新分支。"""
+        self.chain = self.chain[:keep]
+        self.last_uuid = self.chain[-1] if self.chain else None
+        self.append_record({"type": "rewind", "leafUuid": self.last_uuid, "sessionId": self.id, "timestamp": _now()})
 
     def append_record(self, rec: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         # 一次 write 一整行；O_APPEND 下多进程同时追加也不会交错成半行
         with self.path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def branch(recs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """当前分支上的消息记录（按时间顺序）：找到最新的叶子，沿 parentUuid 往回走。"""
+    by_id: dict[str, dict[str, Any]] = {}
+    leaf: str | None = None
+    for r in recs:
+        if r.get("type") in ("user", "assistant") and r.get("uuid") and "message" in r:
+            by_id[r["uuid"]] = r
+            leaf = r["uuid"]
+        elif r.get("type") == "rewind":
+            leaf = r.get("leafUuid")
+    out = []
+    while leaf and leaf in by_id:
+        out.append(by_id[leaf])
+        leaf = by_id[leaf].get("parentUuid")
+    return out[::-1]
 
 
 class SessionStore:
@@ -110,18 +139,17 @@ class SessionStore:
             raise FileNotFoundError(f"no session {session_id}")
         messages: list[dict[str, Any]] = []
         usage = Usage()
-        for rec in self.read_records(path):
-            if rec.get("type") in ("user", "assistant") and "message" in rec:
-                messages.append(rec["message"])
-                if rec.get("usage"):
-                    usage.add(rec["usage"])
+        for rec in branch(self.read_records(path)):
+            messages.append(rec["message"])
+            if rec.get("usage"):
+                usage.add(rec["usage"])
         return Session(self, session_id), messages, usage
 
     def list(self) -> list[SessionInfo]:
         infos = []
         for p in self.dir.glob("*.jsonl") if self.dir.exists() else []:
             recs = self.read_records(p)
-            msgs = [r for r in recs if r.get("type") in ("user", "assistant")]
+            msgs = branch(recs)
             title = next((t for r in msgs if r["type"] == "user" and (t := _first_text(r["message"]["content"]))), "")
             infos.append(SessionInfo(p.stem, p, title.strip().splitlines()[0][:50] if title else "(empty)",
                                      len(msgs), datetime.fromtimestamp(p.stat().st_mtime)))
