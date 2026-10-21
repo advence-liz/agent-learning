@@ -79,7 +79,7 @@ flowchart LR
 - [ ] [Zep 记忆系统的实现思路](p3-agent-internals/09-zep-memory.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/zep-memory/)
 - [ ] [Claude Code 的权限检查是怎么实现的](p3-agent-internals/10-permission-check.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/permission-check/)
 - [ ] [Plan Mode 是怎么实现的](p3-agent-internals/11-plan-mode.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/plan-mode/)
-- [ ] [Harness Engineering 是什么](p3-agent-internals/12-harness-engineering.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/basics/harness-engineering/)
+- [ ] [Harness Engineering 是什么](p3-agent-internals/12-harness-engineering.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/harness-engineering/)
 
 <a id="p2-agent-basics"></a>
 ### 第 3 部分 · Agent 开发基础
@@ -95,8 +95,8 @@ flowchart LR
 - [ ] [其他主流 Agent SDK 对比](p2-agent-basics/07-agent-sdk-comparison.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-sdk-comparison/)
 - [ ] [给 Agent 加上可观测性](p2-agent-basics/08-agent-observability.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-observability/)
 - [ ] [详解 LLM API 的流式响应模式](p2-agent-basics/09-streaming-response.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/streaming-response/)
-- [ ] [动手开发 MCP 工具](p2-agent-basics/10-mcp-tool.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-tool/)
-- [ ] [拆解 MCP 通信协议](p2-agent-basics/11-mcp-protocol.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-protocol/)
+- [ ] [动手开发 MCP 工具](p2-agent-basics/10-mcp-tool.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-tool/)
+- [ ] [拆解 MCP 通信协议](p2-agent-basics/11-mcp-protocol.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-protocol/)
 
 <a id="p4-mini-cc"></a>
 ### 第 4 部分 · 手搓 mini Claude Code
@@ -108,22 +108,22 @@ flowchart LR
 - [ ] [Agent 的错误处理与重试](p4-mini-cc/03-error-handling.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/error-handling/)
 - [ ] [持久化聊天记录](p4-mini-cc/04-resume.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/resume/)
 - [ ] [对工具调用进行权限审批](p4-mini-cc/05-permission.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/permission/)
-- [ ] [auto 模式自动进行权限审批](p4-mini-cc/06-auto-mode.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/auto-mode/)
-- [ ] [可靠的文件编辑工具](p4-mini-cc/07-file-edit.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/file-edit/)
-- [ ] [用 @ 引用文件](p4-mini-cc/08-file-mention.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/file-mention/)
-- [ ] [更灵活的上下文注入机制](p4-mini-cc/09-context-injection.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/context-injection/)
-- [ ] [让 Agent 主动向你提问](p4-mini-cc/10-ask-user-question.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/ask-user-question/)
-- [ ] [让 Agent 跟踪多步任务](p4-mini-cc/11-task-management.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/task-management/)
-- [ ] [给 Agent 加上长期记忆](p4-mini-cc/12-memory.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/memory/)
-- [ ] [支持 rewind 回退对话和代码](p4-mini-cc/13-rewind.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/rewind/)
-- [ ] [支持 compact 压缩上下文](p4-mini-cc/14-compact.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/compact/)
-- [ ] [给 Agent 注册 MCP server](p4-mini-cc/15-mcp.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/mcp/)
-- [ ] [让 Agent 在后台运行命令](p4-mini-cc/16-background.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/background/)
-- [ ] [实现 Sub Agent 机制](p4-mini-cc/17-subagent.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/subagent/)
-- [ ] [让 Agent 监听外部事件](p4-mini-cc/18-monitor.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/monitor/)
-- [ ] [支持图片输入](p4-mini-cc/19-image.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/image/)
-- [ ] [渐进式加载 Skills](p4-mini-cc/20-skill.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/skill/)
-- [ ] [让 Agent 先规划再动手](p4-mini-cc/21-plan.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/coding-agent/plan/)
+- [ ] [auto 模式自动进行权限审批](p4-mini-cc/06-auto-mode.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/auto-mode/)
+- [ ] [可靠的文件编辑工具](p4-mini-cc/07-file-edit.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/file-edit/)
+- [ ] [用 @ 引用文件](p4-mini-cc/08-file-mention.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/file-mention/)
+- [ ] [更灵活的上下文注入机制](p4-mini-cc/09-context-injection.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/context-injection/)
+- [ ] [让 Agent 主动向你提问](p4-mini-cc/10-ask-user-question.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/ask-user-question/)
+- [ ] [让 Agent 跟踪多步任务](p4-mini-cc/11-task-management.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/task-management/)
+- [ ] [给 Agent 加上长期记忆](p4-mini-cc/12-memory.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/memory/)
+- [ ] [支持 rewind 回退对话和代码](p4-mini-cc/13-rewind.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/rewind/)
+- [ ] [支持 compact 压缩上下文](p4-mini-cc/14-compact.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/compact/)
+- [ ] [给 Agent 注册 MCP server](p4-mini-cc/15-mcp.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/mcp/)
+- [ ] [让 Agent 在后台运行命令](p4-mini-cc/16-background.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/background/)
+- [ ] [实现 Sub Agent 机制](p4-mini-cc/17-subagent.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/subagent/)
+- [ ] [让 Agent 监听外部事件](p4-mini-cc/18-monitor.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/monitor/)
+- [ ] [支持图片输入](p4-mini-cc/19-image.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/image/)
+- [ ] [渐进式加载 Skills](p4-mini-cc/20-skill.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/skill/)
+- [ ] [让 Agent 先规划再动手](p4-mini-cc/21-plan.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/plan/)
 
 <a id="p5-ml"></a>
 ### 第 5 部分 · 机器学习基础 + 经典算法
@@ -159,7 +159,7 @@ flowchart LR
 - [ ] [反向传播：手写自动求导引擎](p6-nn-llm/03-ml-backpropagation.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/machine-learning/ml-backpropagation/)
 - [ ] [优化器：Momentum 和 Adam](p6-nn-llm/04-ml-optimizers.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/machine-learning/ml-optimizers/)
 - [ ] [动手跑通 LLM 推理的全流程](p6-nn-llm/05-inference-process.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/inference-process/)
-- [ ] [动手用 LoRA 微调模型](p6-nn-llm/06-lora-fine-tuning.md) · ✍️ 原创（写作中） · [原文](https://labuladong.online/zh/ai-coding/llm/lora-fine-tuning/)
+- [ ] [动手用 LoRA 微调模型](p6-nn-llm/06-lora-fine-tuning.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/lora-fine-tuning/)
 
 ## 配套代码
 
