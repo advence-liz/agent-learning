@@ -17,6 +17,7 @@ from .auto_mode import AutoReviewer, keyword_reviewer_turn
 from .compact import auto_compact_hook, compact
 from .mcp_client import Approvals, McpManager, ServerState, load_config, select_servers
 from .jobs import JobManager
+from .plan_mode import EnterPlanModeTool, ExitPlanModeTool, PlanController, plan_check, plan_mode_provider
 from .skills import SkillError, SkillRuntime, SkillTool, load_skills
 from .subagent import AgentTool, SubagentRuntime, load_agent_types
 from .memory import MemoryStore
@@ -125,6 +126,13 @@ class App:
         self.agent.tools.register(SkillTool())
         self.agent.context.system_sections.append(
             lambda: self.skill_rt.system_section(settings.context_window // 100 * 4))
+        # 第 21 章：plan 模式 = 规则提醒（provider）+ 权限关卡（extra_checks）+ 交接工具 + 只读 sub agent
+        pm = self.agent.permissions
+        pm.extra_checks.append(plan_check(lambda: self.plan_file))
+        self.agent.context.providers.append(plan_mode_provider(lambda: self.plan_file))
+        self.agent.tools.register(EnterPlanModeTool())
+        self.agent.tools.register(ExitPlanModeTool())
+        self.agent.ctx.extras["plan"] = PlanController(pm, lambda: self.plan_file, self.ui.ask_plan_approval)
 
     def _attach(self, session: Session) -> None:
         """把 Agent 的「新消息」事件接到当前会话文件上（换会话时先摘掉旧的）。"""
@@ -141,6 +149,11 @@ class App:
         self.agent.ctx.extras["tasks"] = TaskStore.load(session.tasks_path)
         # 换会话 = 重新算一次 system：上个会话里新存的记忆从这里开始进上下文
         self.agent.context.invalidate()
+
+    @property
+    def plan_file(self) -> Path:
+        """每个会话一份计划文件（Claude Code 放在 ~/.claude/plans/）。"""
+        return self.settings.home / "plans" / f"{self.session.id}.md"
 
     def start_mcp(self) -> None:
         """读 .mcp.json → 批准 → 并行连接 → 把工具注册进 ToolRegistry。在第一次请求模型之前调用。"""
@@ -470,6 +483,14 @@ def _skills(app: App, arg: str) -> None:
                   for s in sorted(rt.skills.values(), key=lambda s: s.name)])
 
 
+@COMMANDS.register("/plan", "进入 plan 模式（先规划再动手）；/plan <需求> 进入并直接开始")
+def _plan(app: App, arg: str) -> None:
+    app.agent.permissions.set_mode("plan")
+    app.ui.info(f"已进入 plan 模式：只读探索，计划写到 {app.plan_file}，用 ExitPlanMode 交给你审批")
+    if arg:
+        app.handle_line(arg)
+
+
 @COMMANDS.register("/exit", "退出", aliases=("/quit",))
 def _exit(app: App, arg: str) -> str:
     return EXIT
@@ -601,6 +622,8 @@ def main(argv: list[str] | None = None) -> int:
     app = App(settings, client, reviewer_client=reviewer)
     if getattr(client, "agent_clients", None):  # 离线剧本里给 sub agent 单独写了台词
         app.subagent_client = lambda d: client.agent_clients.get(d, client)
+    if isinstance(client, FakeClient):
+        client.vars["plan_file"] = lambda: app.plan_file  # 剧本里可以写 {plan_file}
     app.start_mcp()
     if args.resume or args.cont:
         infos = app.store.list()

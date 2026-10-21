@@ -22,6 +22,13 @@ flowchart TB
     cli --> compact["compact.py"]
     cli --> rewind["rewind.py<br/>FileHistory"]
     cli --> memory["memory.py"]
+    cli --> jobs["jobs.py<br/>JobManager"]
+    cli --> subagent["subagent.py"]
+    cli --> skills["skills.py"]
+    cli --> plan["plan_mode.py"]
+    cli --> images["images.py"]
+    subagent --> loop
+    mentions --> images
     loop["loop.py<br/>Agent.run_turn（生成器）"] --> model["model.py<br/>ModelClient / AnthropicClient / FakeClient"]
     loop --> perms["permissions.py<br/>PermissionManager"]
     loop --> context["context.py<br/>ContextBuilder + providers"]
@@ -50,6 +57,7 @@ flowchart TB
 | `subagent.py` | `AgentType` / `run_subagent`（同一个 `Agent` 类、全新 messages 与上下文）/ `AgentTool` / `SubagentRuntime` | 17 |
 | `images.py` | 图片识别 / 尺寸 / visual token 估算 / 限制检查 / 拖入路径 | 19 |
 | `skills.py` | 三层渐进式加载：目录（system）/ 正文（`Skill` 工具或 `/name`，追加）/ 附录（模型自己 Read） | 20 |
+| `plan_mode.py` | plan 模式四件套中的三件：`plan_check`（权限关卡）/ `plan_mode_provider`（提醒）/ `ExitPlanMode`、`EnterPlanMode` | 21 |
 | `rewind.py` | `FileHistory`：每条用户提示词一个检查点，`write_hooks` 写前备份（`<home>/file-history/<session>/<hash>@v<n>`）；`restore/truncate` | 13 |
 | `permissions.py` | 模式、`decide()` 判定链、会话规则、`extra_checks`、`classifier` | 5, 6 |
 | `auto_mode.py` | `AutoReviewer`：独立请求、只看用户原话 + 动作、json_schema 结构化输出、fail closed | 6 |
@@ -60,7 +68,7 @@ flowchart TB
 | `tasks.py` | `TaskStore`（`<id>.tasks.json`）+ 任务提醒 provider | 11 |
 | `ui.py` | 事件 → 终端；`ask()`、`ask_permission()`、`ask_questions()` | 1, 2, 5, 10, 11 |
 | `memory.py` | `MemoryStore`：`MEMORY.md` 索引 + 主题文件；索引截断后进 system | 12 |
-| `cli.py` | `App`、`CommandRegistry`（`/help /new /status /model /resume /mode /context /todos /memory /rewind /compact /mcp /tasks /skills /exit`）、REPL（Shift+Tab、补全）、`main()` | 1, 4–6, 8, 9, 11, 12 |
+| `cli.py` | `App`、`CommandRegistry`（`/help /new /status /model /resume /mode /context /todos /memory /rewind /compact /mcp /tasks /skills /plan /exit`）、REPL（Shift+Tab、补全）、`main()` | 1, 4–6, 8, 9, 11, 12 |
 
 ## 一轮对话的数据流
 
@@ -99,7 +107,24 @@ sequenceDiagram
 3. **每个 `tool_use` 都有 `tool_result`**。任何中断路径都经 `repair_history()` 补齐。
 4. **循环不抛异常**。`run_turn` 是安全网；工具异常是结果，不是控制流。
 
-## 给第 12–21 章预留的扩展点
+## 第 12–21 章新增的横切机制
+
+这些是实现第 12–21 章时在已有接口上新加的小口子（都有测试守着）：
+
+| 机制 | 位置 | 用途 |
+|---|---|---|
+| 分支点 | `Agent.load_history()` + 会话里的 `rewind` / `compact_boundary` 记录 + `session.branch()` 沿 `parentUuid` 回走 | 13 rewind、14 compact（见不变量 1 的补充说明） |
+| 请求视图合并 | `Agent._request()` 调 `merge_consecutive_users()` | 14：压缩后「摘要 + 下一条提示词」两条相邻 user 消息在请求里合并；历史不变 |
+| `ToolContext.tool_use_id` | 循环执行工具前填入 | 16–18：后台任务通知带上 tool-use-id |
+| `ToolContext.untracked_dirs` | `changed_files_provider` 跳过 | 16：后台任务输出文件不算「外部修改」 |
+| `ToolContext.followup_blocks` | `_run_tools` 把它们追加在一批 `tool_result` 之后 | 20：skill 正文不进 `tool_result` |
+| `ContextBuilder.static_prompt` | `system_blocks()` 的第一段 | 17：sub agent 换掉主 agent 的身份说明 |
+| `Attachment.blocks` | `build_user_content()` | 19：图片块紧跟它的说明 |
+| `JobManager` | `jobs.py` | 16 后台命令、17 后台 sub agent、18 Monitor 共用一张任务表和一个通知格式 |
+| `App.wake_if_idle()` | REPL 等输入时轮询 | 16–18：空闲时把通知交给模型 |
+| `FakeClient.from_json` 扩展 | 每步 `usage`、`{"main", "agents"}`、`vars` 占位符 | 14 / 17 / 21 的离线演示 |
+
+## 给第 12–21 章预留的扩展点（已全部实现）
 
 | 章节 | 用哪个扩展点 | 现状 |
 |---|---|---|
@@ -112,7 +137,7 @@ sequenceDiagram
 | 18 监听事件（**已实现**） | 同 16：持续运行的监听线程每匹配一行就 `agent.notify(...)` | **已实现**：`JobManager.start_monitor` + `Monitor` 工具；合并 / 截断 / 限流 / 到期四道阀门 |
 | 19 图片（**已实现**） | `ToolResult.content` 已支持 `list[dict]`（可放 image 块）；`mentions.resolve_mentions` 遇到图片扩展名时可返回 image 块（`build_user_content` 接受任意块）；`ui.preview` 对非文本内容显示 `[non-text content]` | **已实现**：`Attachment.blocks` 承载图片块；`Read` 返回块列表；`/context` 按 visual token 统计 |
 | 20 skills（**已实现**） | `ContextBuilder.system_sections`（skills 目录，只放名字 + 一句描述）；新增 `Skill` 工具按需读取 SKILL.md；`CommandRegistry` 支持 prompt 型命令（handler 里调用 `app.handle_line(展开后的 prompt)` 即可） | **已实现**：正文不进 `tool_result`，经新增的 `ToolContext.followup_blocks` 追加在结果之后；`dispatch` 回落到 skill；压缩后挂回 |
-| 21 plan 模式 | `permissions.PLAN` 常量已存在（`--permission-mode plan` 可选，但目前等同 default）；`PermissionManager.extra_checks`（排在 bypass 之前，plan 模式「只许写 plan 文件」挂这里）；`PermissionManager.cycle` 加入 `PLAN`；`set_mode()` + `on_mode_change`（记录进会话）；provider 扫描历史里最近一条 plan 提醒与当前模式比对，发完整/精简/退出提醒；`AskUserQuestion` 已有（plan 里用来澄清）；`TaskCreate` 已有（批准后拆任务）；审批 UI 可复用 `BufferUI.ask()` | `extra_checks` 已有测试 |
+| 21 plan 模式（**已实现**） | `permissions.PLAN` 常量已存在（`--permission-mode plan` 可选，但目前等同 default）；`PermissionManager.extra_checks`（排在 bypass 之前，plan 模式「只许写 plan 文件」挂这里）；`PermissionManager.cycle` 加入 `PLAN`；`set_mode()` + `on_mode_change`（记录进会话）；provider 扫描历史里最近一条 plan 提醒与当前模式比对，发完整/精简/退出提醒；`AskUserQuestion` 已有（plan 里用来澄清）；`TaskCreate` 已有（批准后拆任务）；审批 UI 可复用 `BufferUI.ask()` | **已实现**：`plan_check` + `plan_mode_provider` + `ExitPlanMode/EnterPlanMode` + 只读 sub agent；与 Claude Code 不同，bypass 下也拦截 |
 
 ## 测试约定
 

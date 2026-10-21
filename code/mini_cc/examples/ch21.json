@@ -1,0 +1,22 @@
+{
+  "main": [
+    {"call": "Agent", "input": {"description": "找 list_posts 调用方", "subagent_type": "Explore", "prompt": "找出项目里所有调用 list_posts 的地方，返回 文件:行号 和调用方式（传了哪些参数）。"}, "text": "现在是 plan 模式，先只读地摸清现状。调用方可能不止一处，派个 Explore 去找。"},
+    {"call": "AskUserQuestion", "input": {"questions": [{"question": "分页默认每页多少条？", "header": "page_size", "options": [{"label": "20 (Recommended)", "description": "和 list_users 一致"}, {"label": "50", "description": "减少翻页次数"}], "multiSelect": false}]}, "text": "有一个会影响接口行为的取舍，问一下。"},
+    {"call": "Edit", "input": {"file_path": "api/posts.py", "old_string": "def list_posts(posts):", "new_string": "def list_posts(posts, page=1, page_size=20):"}, "text": "（演示：模型「忍不住」想先改签名）"},
+    {"call": "Write", "input": {"file_path": "{plan_file}", "content": "# 给 list_posts 加分页\n\n目标：list_posts 支持分页，现有调用方行为不变。\n\n改动：\n1. api/posts.py：list_posts(posts, page=1, page_size=20)，切片返回\n2. web/feed.py:4 的调用不传参数，默认值保证行为不变（只是从「全部」变成「前 20 条」，需要确认）\n\n验证：断言 list_posts(range(50), 2) == range(20, 40)\n"}, "text": "被拦住了，按规矩把方案写进计划文件。"},
+    {"call": "ExitPlanMode", "input": {}},
+    {"call": "Edit", "input": {"file_path": "{plan_file}", "old_string": "2. web/feed.py:4 的调用不传参数，默认值保证行为不变（只是从「全部」变成「前 20 条」，需要确认）", "new_string": "2. web/feed.py:4 显式传 page_size=None 表示不分页；list_posts 在 page_size=None 时返回全部，旧行为完全不变"}, "text": "明白，旧调用方必须完全不受影响。改计划。"},
+    {"call": "ExitPlanMode", "input": {}},
+    {"call": "Read", "input": {"file_path": "api/posts.py"}},
+    {"call": "Edit", "input": {"file_path": "api/posts.py", "old_string": "def list_posts(posts):\n    return posts", "new_string": "def list_posts(posts, page=1, page_size=20):\n    if page_size is None:\n        return posts\n    start = (page - 1) * page_size\n    return posts[start:start + page_size]"}},
+    {"call": "Read", "input": {"file_path": "web/feed.py"}},
+    {"call": "Edit", "input": {"file_path": "web/feed.py", "old_string": "list_posts(all_posts)", "new_string": "list_posts(all_posts, page_size=None)"}},
+    {"say": "按批准的计划改完了：list_posts 支持 page / page_size（默认 20），web/feed.py 显式不分页，旧行为不变。"}
+  ],
+  "agents": {
+    "找 list_posts 调用方": [
+      {"call": "Bash", "input": {"command": "grep -rn 'list_posts(' --include=*.py ."}},
+      {"say": "- api/posts.py:1 定义\n- web/feed.py:4 list_posts(all_posts)，不传其他参数，期望拿到全部帖子"}
+    ]
+  }
+}

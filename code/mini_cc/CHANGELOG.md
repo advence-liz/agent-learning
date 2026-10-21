@@ -189,3 +189,13 @@
 - `compact.py`：压缩后原样挂回本会话调用过的 skill 正文（每个 ≤2 万字符）。
 - `subagent.py`：`NEVER_FOR_CHILDREN` 加入 `Skill`。
 - 测试：`tests/test_ch20_skills.py`（9 个）。
+
+## 第 21 章 · 先规划再动手 / plan 模式（21-plan.md）
+
+- 新增 `plan_mode.py`：`plan_check()`（挂 `extra_checks`，排在 bypass 之前：只读放行、计划文件可写免审批、非只读命令 / MCP 要问、其余编辑拒绝并说明出路）、`plan_mode_provider()`（扫描历史：进入时完整规则、每 5 次请求精简提醒、退出时一次「已退出」提醒）、`ExitPlanModeTool`（读计划文件 → 审批三选一：acceptEdits / default / 继续规划 + 反馈；批准文案参考 Claude Code 原文）、`EnterPlanModeTool`（模型主动进入，免审批）、`PlanController`。
+- `permissions.py`：Shift+Tab 循环改为 `default → acceptEdits → plan → auto`。
+- `subagent.py`：内置 `Plan` agent 类型（只读架构师）；plan 模式下派出的 sub agent 一律只读；`NEVER_FOR_CHILDREN` 加入 `ExitPlanMode` / `EnterPlanMode`。
+- `ui.py`：`ask_plan_approval()`。
+- `cli.py`：`App.plan_file`（`<home>/plans/<会话 id>.md`）、注册关卡 / provider / 两个工具 / `ctx.extras["plan"]`；新命令 `/plan [需求]`；`--fake` 时剧本可用 `{plan_file}` 占位符。
+- `model.py`：`FakeClient.vars`（剧本占位符，值可以是函数）。
+- 测试：`tests/test_ch21_plan.py`（11 个）；`test_ch06_auto_mode.py::test_cycle_includes_auto` 改为显式传入第 6 章时的循环。

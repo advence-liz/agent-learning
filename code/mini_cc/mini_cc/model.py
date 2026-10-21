@@ -226,6 +226,8 @@ class FakeClient:
         self.responder = responder
         self.requests: list[ModelRequest] = []
         self.model = model
+        # 第 21 章：离线剧本里的 {name} 占位符（比如 {plan_file}），发出前替换成运行时的值（值可以是函数）
+        self.vars: dict[str, Any] = {}
 
     def push(self, *turns: Script) -> None:
         self.script.extend(turns)
@@ -271,7 +273,21 @@ class FakeClient:
             raise step
         if callable(step) and not isinstance(step, FakeTurn):
             step = step(req)
-        return step
+        return self._fill(step) if self.vars else step
+
+    def _fill(self, turn: FakeTurn) -> FakeTurn:
+        def sub(v: Any) -> Any:
+            if isinstance(v, str):
+                for k, val in self.vars.items():
+                    v = v.replace("{" + k + "}", str(val() if callable(val) else val))
+                return v
+            if isinstance(v, dict):
+                return {k: sub(x) for k, x in v.items()}
+            if isinstance(v, list):
+                return [sub(x) for x in v]
+            return v
+
+        return FakeTurn(sub(turn.content), turn.stop_reason, turn.usage, turn.fail_after, turn.fail_with)
 
     def stream(self, req: ModelRequest) -> Iterator[ModelEvent]:
         turn = self._next(req)

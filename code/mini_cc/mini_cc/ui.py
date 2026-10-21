@@ -73,6 +73,22 @@ class BufferUI:
         for k, v in rows:
             self._emit(f"{k.ljust(w)}  {v}")
 
+    def ask_plan_approval(self, plan: str) -> tuple[str, str]:
+        """第 21 章：ExitPlanMode 的审批界面。返回 (auto | manual | keep, 反馈)。"""
+        self.info("─" * 20 + " 计划 " + "─" * 20)
+        for line in plan.splitlines():
+            self.info(f"  {line}")
+        self.info("─" * 46)
+        self.info("  1. 批准，之后的编辑自动通过（acceptEdits）")
+        self.info("  2. 批准，每次编辑仍然逐个确认（default）")
+        self.info("  3. 继续规划（可以附一句话说要改什么）")
+        ans = self.ask("选择 [1/2/3]: ").strip()
+        if ans.startswith("1"):
+            return "auto", ""
+        if ans.startswith("2"):
+            return "manual", ""
+        return "keep", ans[1:].lstrip(":： ").strip() if ans.startswith("3") else ans
+
     def ask_questions(self, questions: list[Question]) -> list[Answer]:
         """AskUserQuestion 的界面：逐题显示选项，读答案；输入无效就重问一次，再无效当作跳过。"""
         answers = []

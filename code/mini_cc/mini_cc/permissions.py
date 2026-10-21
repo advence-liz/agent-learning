@@ -60,7 +60,7 @@ class PermissionManager:
     allow_rules: set[str] = field(default_factory=set)
     deny_rules: set[str] = field(default_factory=set)
     # Shift+Tab 循环的顺序（第 21 章加入 plan）
-    cycle: list[str] = field(default_factory=lambda: [DEFAULT, ACCEPT_EDITS, AUTO])
+    cycle: list[str] = field(default_factory=lambda: [DEFAULT, ACCEPT_EDITS, PLAN, AUTO])
     extra_checks: list[Check] = field(default_factory=list)
     # 第 6 章：auto 模式下由它判定，签名 (tool, args) -> Decision
     classifier: Callable[[Tool, dict[str, Any]], Decision] | None = None

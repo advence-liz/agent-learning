@@ -21,7 +21,8 @@ from .permissions import Decision, PermissionManager
 from .tools.base import Tool, ToolContext, ToolResult
 
 # 子 agent 不能用的工具：再派 agent（防止无限递归）、问用户（它没有用户）、父会话自己的状态
-NEVER_FOR_CHILDREN = {"Agent", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskList", "Memory", "TaskStop", "Monitor", "Skill"}
+NEVER_FOR_CHILDREN = {"Agent", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskList", "Memory", "TaskStop", "Monitor", "Skill",
+                      "ExitPlanMode", "EnterPlanMode"}
 
 BASE_PROMPT = """You are a sub agent of mini-cc, started by the main agent to do one self-contained task.
 You cannot see the main conversation: everything you know about the task is in the first user message.
@@ -33,6 +34,10 @@ does not (no raw file dumps)."""
 EXPLORE_PROMPT = """You are an Explore agent: a fast, read-only code search specialist.
 You MUST NOT change anything: no writing or editing files, no commands that modify state. Use Read and
 read-only Bash commands (grep, find, ls, git log/show/diff, cat). Search broadly first, then read only what you need."""
+
+PLAN_PROMPT = """You are a Plan agent: a read-only software architect. Explore the code that the task touches, then
+return a concrete implementation plan: the approach and why, the files to change and what changes in each, risks
+and open questions, and how to verify the result. Do not modify anything."""
 
 GENERAL_PROMPT = """You are a general-purpose agent: research complex questions, search code and carry out multi-step
 tasks, including editing files and running commands when the task asks for it."""
@@ -51,6 +56,9 @@ class AgentType:
 
 BUILTIN = [
     AgentType("general-purpose", "Research, search code and execute multi-step tasks; can edit files.", GENERAL_PROMPT),
+    AgentType("Plan", "Read-only software architect: designs an implementation approach and returns a step-by-step "
+                      "plan with the files to change. Use it in plan mode for non-trivial designs.",
+              PLAN_PROMPT, ["Read", "Bash"], read_only=True, load_instructions=False),
     AgentType("Explore", "Read-only, fast codebase search: find files, symbols and answer questions about the code.",
               EXPLORE_PROMPT, ["Read", "Bash"], read_only=True, load_instructions=False, effort="low"),
 ]
@@ -120,7 +128,7 @@ def run_subagent(parent: Any, kind: AgentType, prompt: str, client: Any, *, agen
     child.ctx = ToolContext(cwd=parent.ctx.cwd)
     child.permissions = PermissionManager(parent.ctx.cwd, mode=parent.permissions.mode,
                                           allow_rules=set(parent.permissions.allow_rules))
-    if kind.read_only:
+    if kind.read_only or parent.permissions.mode == "plan":  # 第 21 章：plan 模式下派出的 agent 一律只读
         child.permissions.extra_checks.append(_read_only_check)
     child.approver = approver  # 后台 agent 没有 approver：需要审批的调用一律拒绝
     if transcript is not None:

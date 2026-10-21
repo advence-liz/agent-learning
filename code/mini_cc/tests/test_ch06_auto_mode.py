@@ -21,7 +21,7 @@ def _auto_app(make_app, main_script, reviewer_script):
 
 
 def test_cycle_includes_auto(tmp_path):
-    pm = PermissionManager(tmp_path)
+    pm = PermissionManager(tmp_path, cycle=[DEFAULT, ACCEPT_EDITS, AUTO])  # 第 6 章时的循环；第 21 章起中间多了 plan
     assert [pm.next_mode(), pm.next_mode(), pm.next_mode()] == [ACCEPT_EDITS, AUTO, DEFAULT]
 
 
