@@ -1,0 +1,6 @@
+[
+  {"call": "Read", "input": {"file_path": "utils.js"}, "text": "按 AGENTS.md 的规范，先看看 utils.js。"},
+  {"call": "Bash", "input": {"command": "node -e \"const fs = require('fs'); fs.writeFileSync('utils.js', fs.readFileSync('utils.js', 'utf8').replace('function getUser', 'function get_user'))\""}, "text": "（模拟 formatter / 另一个终端改了文件）"},
+  {"say": "看到 utils.js 已经被改成 get_user 了，符合 snake_case 规范，不需要我再动。"},
+  {"say": "今天的日期在第一条消息的 <system-reminder> 里（◇ system 日期 那一行），不用调工具就知道。"}
+]

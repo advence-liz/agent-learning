@@ -10,48 +10,102 @@
 
 如果会，那 `/clear` 本身就自相矛盾——为了清空上下文，先往上下文里塞一句「请清空上下文」。
 
-答案是不会。带着这个答案，我们从这一章开始在 `code/mini_cc/` 里从零手搓一个 mini Claude Code：不用 agent 框架，只用 `anthropic` SDK，让循环的每一行都摆在你面前。21 章之后它会有权限审批、会话恢复、压缩、MCP、sub agent、plan 模式。但第一步，是先有一个能聊、能调工具、能敲 `/help` 的壳。
+答案是不会。带着这个答案，我们从这一章开始在 `code/mini_cc-node/`（Python 版 `code/mini_cc/`）里从零手搓一个 mini Claude Code：不用 agent 框架，只用 Anthropic 官方 SDK（Node 版 `@anthropic-ai/sdk`，Python 版 `anthropic`），让循环的每一行都摆在你面前。21 章之后它会有权限审批、会话恢复、压缩、MCP、sub agent、plan 模式。但第一步，是先有一个能聊、能调工具、能敲 `/help` 的壳。
 
 ## 先跑起来看看
 
 离线 fake 模型（`examples/ch01.json` 是一份两步剧本：先调 `Bash(ls examples)`，再回答），不发任何 API 请求：
 
-```console
-$ printf '/help\n/stauts\n列一下 examples 目录\n/status\n/new\n/status\n/exit\n' \
-    | uv run python -m mini_cc --fake examples/ch01.json
-› /help
-/exit    退出（别名 /quit）
-/help    显示所有命令
-/model   查看或切换模型：/model claude-sonnet-5-5
-/new     开启新会话，清空对话历史（别名 /clear）
-/status  查看模型、消息数与 token 消耗
-› /stauts
-✗ 未知命令 /stauts，你是不是想输入 /status？
-› 列一下 examples 目录
-⏺ Bash(ls examples)
-examples 目录里有若干演示脚本。
-› /status
-model     claude-opus-5-5
-effort    medium
-cwd       /Users/liz/liz/agent-learn/code/mini_cc
-messages  4
-context   100 tokens（最近一次请求的输入）
-total     in 200 / out 40 / 2 requests
-› /new
-已开启新会话
-› /status
-...
-messages  0
-context   0 tokens（最近一次请求的输入）
-total     in 0 / out 0 / 0 requests
-› /exit
-```
+=== "Node"
 
-（这是第 1 章当时的真实输出；token 数是 FakeClient 写死的 100/20。第 2 章起提示符改成了 `❯`。）
+    ```console
+    $ printf '/help\n/stauts\n列一下 examples 目录\n/status\n/new\n/status\n/exit\n' \
+        | node mini_cc/cli.ts --fake examples/ch01.json
+    ❯ /help
+    /context  查看上下文里都放了什么（system 段落、注入的提醒、历史）
+    /exit     退出（别名 /quit）
+    /help     显示所有命令
+    /mode     查看或切换权限模式：/mode acceptEdits（REPL 里也可按 Shift+Tab 循环切换）
+    /model    查看或切换模型：/model claude-sonnet-5-5
+    /new      开启新会话，清空对话历史（别名 /clear）
+    /resume   列出本项目的历史会话；/resume <序号|id 前缀> 恢复
+    /status   查看模型、消息数与 token 消耗
+    ❯ /stauts
+    ✗ 未知命令 /stauts，你是不是想输入 /status？
+    ❯ 列一下 examples 目录
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    ● 我先看看目录。
+    ⏺ Bash(ls examples)
+    ✔ Bash -> ch01.json
+      ch02.json
+      ch03.json  …(+8 lines)
+    ● examples 目录里有若干演示脚本。
+    ❯ /status
+    model     claude-opus-5-5
+    effort    medium
+    cwd       /Users/liz/liz/agent-learn/code/mini_cc-node
+    session   00a5bf3f-d016-4eb3-88e7-627fb0fd12f0
+    mode      default
+    allow     -
+    reviewer  0 calls
+    messages  4
+    context   100 tokens（最近一次请求的输入）
+    total     in 200 / out 40 / 2 requests
+    ❯ /new
+    已开启新会话 abc70aaa（旧会话仍在磁盘上，可用 /resume 找回）
+    ❯ /status
+    model     claude-opus-5-5
+    effort    medium
+    cwd       /Users/liz/liz/agent-learn/code/mini_cc-node
+    session   abc70aaa-2650-4f3d-a149-eaa7007e718f
+    mode      default
+    allow     -
+    reviewer  0 calls
+    messages  0
+    context   0 tokens（最近一次请求的输入）
+    total     in 0 / out 0 / 0 requests
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    $ printf '/help\n/stauts\n列一下 examples 目录\n/status\n/new\n/status\n/exit\n' \
+        | uv run python -m mini_cc --fake examples/ch01.json
+    › /help
+    /exit    退出（别名 /quit）
+    /help    显示所有命令
+    /model   查看或切换模型：/model claude-sonnet-5-5
+    /new     开启新会话，清空对话历史（别名 /clear）
+    /status  查看模型、消息数与 token 消耗
+    › /stauts
+    ✗ 未知命令 /stauts，你是不是想输入 /status？
+    › 列一下 examples 目录
+    ⏺ Bash(ls examples)
+    examples 目录里有若干演示脚本。
+    › /status
+    model     claude-opus-5-5
+    effort    medium
+    cwd       /Users/liz/liz/agent-learn/code/mini_cc
+    messages  4
+    context   100 tokens（最近一次请求的输入）
+    total     in 200 / out 40 / 2 requests
+    › /new
+    已开启新会话
+    › /status
+    ...
+    messages  0
+    context   0 tokens（最近一次请求的输入）
+    total     in 0 / out 0 / 0 requests
+    › /exit
+    ```
+
+（Python 版是第 1 章当时的真实输出；token 数是 FakeClient 写死的 100/20。第 2 章起提示符改成了 `❯`。Node 版是在实现到第 10 章的代码上跑的，所以多了几条命令、两行 `◇ system` 注入（第 9 章），模型调工具前那句「我先看看目录。」也已经显示出来了（第 2 章）。）
 
 七行输入，只有「列一下 examples 目录」这一行真正进了模型，`/status` 显示的 2 次请求都来自它。其余六行全在本地处理完了。
 
-还有个细节先记下：剧本第一步里模型说了一句「我先看看目录。」，屏幕上却没有。这是下一章的事。
+还有个细节先记下：剧本第一步里模型说了一句「我先看看目录。」，第 1 章的屏幕上却没有。这是下一章的事。
 
 ## 入口分流：一个 if 决定花不花钱
 
@@ -80,77 +134,157 @@ flowchart LR
 
 ## 项目骨架
 
-```
-code/mini_cc/
-├── mini_cc/
-│   ├── __main__.py     # uv run python -m mini_cc
-│   ├── config.py       # Settings：所有可调旋钮
-│   ├── model.py        # ModelClient 协议 + AnthropicClient + FakeClient
-│   ├── loop.py         # Agent 循环
-│   ├── cli.py          # REPL + CommandRegistry
-│   ├── ui.py           # ConsoleUI（rich） / BufferUI（测试）
-│   └── tools/          # registry + 每个工具一个文件：Read / Write / Bash
-├── tests/              # pytest，全部用 FakeClient，不发真实请求
-└── examples/           # 离线演示剧本（--fake）
-```
+下文提到的 `mini_cc/xxx.py`，Node 版就是同名的 `mini_cc/xxx.ts`；标识符从 snake_case 换成 camelCase（`run_turn` → `runTurn`），发给 API 的字段（`tool_use_id`、`max_tokens`）保持原样。
+
+=== "Node"
+
+    ```
+    code/mini_cc-node/
+    ├── mini_cc/
+    │   ├── cli.ts          # node mini_cc/cli.ts：REPL + CommandRegistry + main()
+    │   ├── config.ts       # Settings：所有可调旋钮
+    │   ├── model.ts        # ModelClient 接口 + AnthropicClient + FakeClient
+    │   ├── loop.ts         # Agent 循环
+    │   ├── ui.ts           # ConsoleUI（ANSI 转义） / BufferUI（测试）
+    │   └── tools/          # registry + 每个工具一个文件：Read / Write / Bash
+    ├── tests/              # node:test，全部用 FakeClient，不发真实请求
+    └── examples/           # 离线演示剧本（--fake）
+    ```
+
+=== "Python"
+
+    ```
+    code/mini_cc/
+    ├── mini_cc/
+    │   ├── __main__.py     # uv run python -m mini_cc
+    │   ├── config.py       # Settings：所有可调旋钮
+    │   ├── model.py        # ModelClient 协议 + AnthropicClient + FakeClient
+    │   ├── loop.py         # Agent 循环
+    │   ├── cli.py          # REPL + CommandRegistry
+    │   ├── ui.py           # ConsoleUI（rich） / BufferUI（测试）
+    │   └── tools/          # registry + 每个工具一个文件：Read / Write / Bash
+    ├── tests/              # pytest，全部用 FakeClient，不发真实请求
+    └── examples/           # 离线演示剧本（--fake）
+    ```
 
 ## 模型层：一个很窄的接口
 
-`mini_cc/model.py` 里，循环和模型之间只交换两个 dataclass：
+`mini_cc/model.ts`（Python 版 `model.py`）里，循环和模型之间只交换两个 interface（Python 版是两个 dataclass）：
 
-```python
-@dataclass
-class ModelRequest:
-    system: list[Block]
-    messages: list[dict[str, Any]]
-    tools: list[dict[str, Any]] = field(default_factory=list)
-    max_tokens: int = 64000
-    output_config: dict[str, Any] | None = None   # effort / 结构化输出
+=== "Node"
 
-@dataclass
-class ModelResponse:
-    content: list[Block]      # 纯 dict，能直接 json.dumps 落盘
-    stop_reason: str
-    usage: dict[str, int]
-```
+    ```ts
+    export interface ModelRequest {
+      system: Block[];
+      messages: Message[];
+      tools?: Block[];
+      maxTokens?: number;                         // 默认 64000
+      outputConfig?: Record<string, any> | null;  // effort / 结构化输出
+    }
 
-`AnthropicClient.create()` 是 `client.messages.create(...)` 的薄包装，最后一步把 SDK 的 Pydantic 对象转成纯 dict（`b.to_dict()`）。这样循环、持久化、测试都不依赖 SDK 类型。
+    export interface ModelResponse {
+      content: Block[];      // 纯对象，能直接 JSON.stringify 落盘
+      stopReason: string;
+      usage: Record<string, any>;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    @dataclass
+    class ModelRequest:
+        system: list[Block]
+        messages: list[dict[str, Any]]
+        tools: list[dict[str, Any]] = field(default_factory=list)
+        max_tokens: int = 64000
+        output_config: dict[str, Any] | None = None   # effort / 结构化输出
+
+    @dataclass
+    class ModelResponse:
+        content: list[Block]      # 纯 dict，能直接 json.dumps 落盘
+        stop_reason: str
+        usage: dict[str, int]
+    ```
+
+`AnthropicClient.create()` 是 `client.messages.create(...)` 的薄包装，最后一步把 SDK 的 Pydantic 对象转成纯 dict（`b.to_dict()`；Node 版 SDK 返回的本来就是普通对象，JSON 往返一次即可）。这样循环、持久化、测试都不依赖 SDK 类型。
 
 `FakeClient` 是整个系列的测试基石。构造时给一份「剧本」，每次请求弹出一步，同时把收到的请求深拷贝进 `self.requests`，测试可以断言「模型到底看到了什么」：
 
-```python
-client = FakeClient([
-    call("Bash", {"command": "echo hello"}),   # 第 1 次请求：模型说要调 Bash
-    say("命令输出了 hello"),                    # 第 2 次请求：模型给出最终回答
-])
-```
+=== "Node"
+
+    ```ts
+    const client = new FakeClient([
+      call("Bash", { command: "echo hello" }),   // 第 1 次请求：模型说要调 Bash
+      say("命令输出了 hello"),                    // 第 2 次请求：模型给出最终回答
+    ]);
+    ```
+
+=== "Python"
+
+    ```python
+    client = FakeClient([
+        call("Bash", {"command": "echo hello"}),   # 第 1 次请求：模型说要调 Bash
+        say("命令输出了 hello"),                    # 第 2 次请求：模型给出最终回答
+    ])
+    ```
 
 说白了，FakeClient 就是一个「只会背台词的演员」。它在哪里不像真模型？它不会因为你改了 prompt 就换台词——所以它测的是**循环逻辑**，不是 prompt 效果。
 
 ## Agent 循环：三十行
 
-`mini_cc/loop.py:Agent.run`（第 1 章版本，阻塞式）：
+`mini_cc/loop.ts:Agent.run`（Python 版 `loop.py:Agent.run`；第 1 章版本，要等整轮跑完才返回。Node 版的模型调用是 `await`，Python 版是阻塞式）：
 
-```python
-def run(self, prompt: str) -> TurnResult:
-    self.messages.append({"role": "user", "content": prompt})
-    steps: list[str] = []
-    for _ in range(self.settings.max_iterations):
-        resp = self.client.create(self._request())
-        self.usage.add(resp.usage)
-        self.messages.append({"role": "assistant", "content": resp.content})
-        tool_uses = [b for b in resp.content if b["type"] == "tool_use"]
-        if resp.stop_reason != "tool_use" or not tool_uses:
-            return TurnResult("".join(b["text"] for b in resp.content if b["type"] == "text"), steps)
-        results = []
-        for tu in tool_uses:
-            steps.append(self.tools.get(tu["name"]).summary(tu["input"]))
-            r = self.tools.execute(tu["name"], tu["input"], self.ctx)
-            results.append({"type": "tool_result", "tool_use_id": tu["id"],
-                            "content": r.content, "is_error": r.is_error})
-        self.messages.append({"role": "user", "content": results})
-    return TurnResult("[stopped: max_iterations reached]", steps)
-```
+=== "Node"
+
+    ```ts
+    async run(prompt: string): Promise<TurnResult> {
+      this.messages.push({ role: "user", content: prompt });
+      const steps: string[] = [];
+      for (let i = 0; i < this.settings.maxIterations; i++) {
+        const resp = await this.client.create(this.request());
+        this.usage.add(resp.usage);
+        this.messages.push({ role: "assistant", content: resp.content });
+        const toolUses = resp.content.filter((b) => b.type === "tool_use");
+        if (resp.stopReason !== "tool_use" || !toolUses.length) {
+          const text = resp.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+          return new TurnResult(text, steps);
+        }
+        const results = [];
+        for (const tu of toolUses) {
+          steps.push(this.tools.get(tu.name)!.summary(tu.input));
+          const r = await this.tools.execute(tu.name, tu.input, this.ctx);
+          results.push({ type: "tool_result", tool_use_id: tu.id,
+                         content: r.content, is_error: r.isError });
+        }
+        this.messages.push({ role: "user", content: results });
+      }
+      return new TurnResult("[stopped: max_iterations reached]", steps);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def run(self, prompt: str) -> TurnResult:
+        self.messages.append({"role": "user", "content": prompt})
+        steps: list[str] = []
+        for _ in range(self.settings.max_iterations):
+            resp = self.client.create(self._request())
+            self.usage.add(resp.usage)
+            self.messages.append({"role": "assistant", "content": resp.content})
+            tool_uses = [b for b in resp.content if b["type"] == "tool_use"]
+            if resp.stop_reason != "tool_use" or not tool_uses:
+                return TurnResult("".join(b["text"] for b in resp.content if b["type"] == "text"), steps)
+            results = []
+            for tu in tool_uses:
+                steps.append(self.tools.get(tu["name"]).summary(tu["input"]))
+                r = self.tools.execute(tu["name"], tu["input"], self.ctx)
+                results.append({"type": "tool_result", "tool_use_id": tu["id"],
+                                "content": r.content, "is_error": r.is_error})
+            self.messages.append({"role": "user", "content": results})
+        return TurnResult("[stopped: max_iterations reached]", steps)
+    ```
 
 两条容易写错的规则：
 
@@ -165,46 +299,93 @@ def run(self, prompt: str) -> TurnResult:
 
 五个是可以。但这个系列后面会陆续加 `/resume`、`/mode`、`/tasks`，以及第 12–21 章的 `/memory`、`/rewind`、`/compact`、`/mcp`……每加一个都去改分发函数，那个函数很快会变成几百行。所以命令做成数据：`Command(name, help, handler, aliases)` 放进注册表，`/help` 只是遍历打印。
 
-`mini_cc/cli.py:CommandRegistry.dispatch`：
+`mini_cc/cli.ts:CommandRegistry.dispatch`（Python 版 `cli.py:CommandRegistry.dispatch`）：
 
-```python
-def dispatch(self, app: "App", line: str) -> str | None:
-    name, _, arg = line.strip().partition(" ")
-    cmd = self.lookup(name)               # 先查别名表
-    if cmd is None:
-        close = difflib.get_close_matches(name, self.all_names(), n=1)
-        hint = f"，你是不是想输入 {close[0]}？" if close else "，输入 /help 查看全部命令"
-        app.ui.error(f"未知命令 {name}{hint}")
-        return None
-    return cmd.handler(app, arg.strip())
-```
+=== "Node"
 
-注册一个命令只要一个装饰器：
+    ```ts
+    async dispatch(app: App, line: string): Promise<string | null> {
+      const trimmed = line.trim();
+      const sp = trimmed.indexOf(" ");
+      const [name, arg] = sp < 0 ? [trimmed, ""] : [trimmed.slice(0, sp), trimmed.slice(sp + 1)];
+      const cmd = this.lookup(name);                // 先查别名表
+      if (cmd === undefined) {
+        const close = getCloseMatches(name, this.allNames(), 1);
+        const hint = close.length ? `，你是不是想输入 ${close[0]}？` : "，输入 /help 查看全部命令";
+        app.ui.error(`未知命令 ${name}${hint}`);
+        return null;
+      }
+      return (await cmd.handler(app, arg.trim())) ?? null;
+    }
+    ```
 
-```python
-@COMMANDS.register("/new", "开启新会话，清空对话历史", aliases=("/clear",))
-def _new(app: App, arg: str) -> None:
-    app.agent.reset()
-    app.ui.info("已开启新会话")
-```
+=== "Python"
+
+    ```python
+    def dispatch(self, app: "App", line: str) -> str | None:
+        name, _, arg = line.strip().partition(" ")
+        cmd = self.lookup(name)               # 先查别名表
+        if cmd is None:
+            close = difflib.get_close_matches(name, self.all_names(), n=1)
+            hint = f"，你是不是想输入 {close[0]}？" if close else "，输入 /help 查看全部命令"
+            app.ui.error(f"未知命令 {name}{hint}")
+            return None
+        return cmd.handler(app, arg.strip())
+    ```
+
+注册一个命令只要一个装饰器（Node 没有装饰器语法，直接调 `COMMANDS.register(name, help, handler, aliases)`）：
+
+=== "Node"
+
+    ```ts
+    COMMANDS.register("/new", "开启新会话，清空对话历史", (app) => {
+      app.agent.reset();
+      app.ui.info("已开启新会话");
+    }, ["/clear"]);
+    ```
+
+=== "Python"
+
+    ```python
+    @COMMANDS.register("/new", "开启新会话，清空对话历史", aliases=("/clear",))
+    def _new(app: App, arg: str) -> None:
+        app.agent.reset()
+        app.ui.info("已开启新会话")
+    ```
 
 handler 拿到的是 `App`，也就是整个客户端状态：Agent（messages、usage）、Settings、UI。命令能做的事，就是读写这些状态。
 
 本章装了五个：`/help`、`/new`（别名 `/clear`）、`/status`、`/model`、`/exit`（别名 `/quit`）。`/status` 的 `context` 取的是**最近一次请求的输入 token**（`input_tokens + cache_read + cache_creation`），这是「当前上下文有多大」最直接的读数。第 14 章做自动压缩时，触发阈值就看它。
 
-`App.handle_line()` 是唯一入口，REPL（`prompt_toolkit`，带命令补全）和测试都只调它。stdin 不是终端时（管道），退化成逐行读取并回显，上面那段演示就是这么录的。
+`App.handle_line()` 是唯一入口，REPL（`prompt_toolkit`，带命令补全；Node 版用 `node:readline`）和测试都只调它。stdin 不是终端时（管道），退化成逐行读取并回显，上面那段演示就是这么录的。
 
 ## 测试
 
-`tests/test_ch01_commands.py` 覆盖：普通输入进模型、工具循环把结果回传、斜杠命令**不触发模型请求**（`client.requests == []`）、`/new` 清空历史、别名、未知命令纠错、`/status` 读数、`/model` 切换。
+`tests/ch01_commands.test.ts`（Python 版 `tests/test_ch01_commands.py`）覆盖：普通输入进模型、工具循环把结果回传、斜杠命令**不触发模型请求**（`client.requests == []`）、`/new` 清空历史、别名、未知命令纠错、`/status` 读数、`/model` 切换。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........                                                                 [100%]
-8 passed in 0.02s
-```
+=== "Node"
 
-去掉 `--fake`、设好 `ANTHROPIC_API_KEY`（或用 `ANTHROPIC_BASE_URL` 指向中转站），`uv run python -m mini_cc` 就是真模型。
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch01*.test.ts'
+    ℹ tests 8
+    ℹ suites 0
+    ℹ pass 8
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 630.533084
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........                                                                 [100%]
+    8 passed in 0.02s
+    ```
+
+去掉 `--fake`、设好 `ANTHROPIC_API_KEY`（或用 `ANTHROPIC_BASE_URL` 指向中转站），`node mini_cc/cli.ts`（Python 版 `uv run python -m mini_cc`）就是真模型。
 
 ## 和真实 Claude Code 比一比
 

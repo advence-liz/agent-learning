@@ -38,46 +38,87 @@
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch12a.json` 和 `ch12b.json`），**两个独立进程**，中间什么都不传，只共享 `MINI_CC_HOME` 目录。演示项目是一个暂存了 `posts.py` 改动的 git 仓库；路径前缀替换成了 `$DEMO`，项目 slug 写成 `<slug>`（终端里工具结果按 100 字符截断，替换路径后我补全了文件名）：
+离线 fake 模型（`examples/ch12a.json` 和 `ch12b.json`），**两个独立进程**，中间什么都不传，只共享 `MINI_CC_HOME` 目录。演示项目是一个暂存了 `posts.py`（Node 版是 `posts.js`）改动的 git 仓库；路径前缀替换成了 `$DEMO`，项目 slug 写成 `<slug>`（终端里工具结果按 100 字符截断，替换路径后我补全了文件名）：
 
-```console
-$ printf '以后 commit message 都要带 feat:/fix: 这类前缀，别再写光秃秃的一句话了\n/memory\n/exit\n' \
-    | uv run python -m mini_cc --fake examples/ch12a.json
-❯ 以后 commit message 都要带 feat:/fix: 这类前缀，别再写光秃秃的一句话了
-◇ system  项目说明 0 个文件、git 快照
-◇ system  日期 2026-10-21
-● 这是一条以后每次都要遵守的偏好，记进长期记忆。
-⏺ Memory(save commit message 前缀)
-✔ Memory -> Saved memory commit-message-071596ac to $DEMO/home/projects/<slug>/memory/commit-message-071596ac.md…
-● 记住了。以后写 commit message 都会带 feat: / fix: 这类前缀，换个会话也一样。
-❯ /memory
-记忆目录：$DEMO/home/projects/<slug>/memory（1 条，下个会话开始时进上下文）
-commit-message-071596ac  commit message 前缀 — 写 commit message 时用 feat:/fix:/docs: 这类前缀
-❯ /exit
+=== "Node"
 
-$ printf '/context\n帮我给暂存区的改动写个 commit message\n/exit\n' \
-    | uv run python -m mini_cc --fake examples/ch12b.json
-❯ /context
-system[0]       1278 chars  You are mini-cc, an interactive coding a
-system[1]        239 chars  # Environment
-system[2]       1427 chars  # Memory
-reminders          0 chars  0 个 <system-reminder> 块
-messages           0 chars  0 条消息（不含提醒）
-last request       0 tokens
-❯ 帮我给暂存区的改动写个 commit message
-◇ system  项目说明 0 个文件、git 快照
-◇ system  日期 2026-10-21
-● 先看看暂存区改了什么。
-⏺ Bash(git diff --cached --stat)
-✔ Bash ->  posts.py | 5 +++--
-   1 file changed, 3 insertions(+), 2 deletions(-)
-● 按记忆里的约定加前缀：
+    ```console
+    $ printf '以后 commit message 都要带 feat:/fix: 这类前缀，别再写光秃秃的一句话了\n/memory\n/exit\n' \
+        | node mini_cc/cli.ts --fake examples/ch12a.json
+    ❯ 以后 commit message 都要带 feat:/fix: 这类前缀，别再写光秃秃的一句话了
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    ● 这是一条以后每次都要遵守的偏好，记进长期记忆。
+    ⏺ Memory(save commit message 前缀)
+    ✔ Memory -> Saved memory commit-message-071596ac to $DEMO/home/projects/<slug>/memory/commit-message-071596ac.md…
+    ● 记住了。以后写 commit message 都会带 feat: / fix: 这类前缀，换个会话也一样。
+    ❯ /memory
+    记忆目录：$DEMO/home/projects/<slug>/memory（1 条，下个会话开始时进上下文）
+    commit-message-071596ac  commit message 前缀 — 写 commit message 时用 feat:/fix:/docs: 这类前缀
+    ❯ /exit
 
-feat: list_posts 支持 page / page_size 分页参数
-❯ /exit
-```
+    $ printf '/context\n帮我给暂存区的改动写个 commit message\n/exit\n' \
+        | node mini_cc/cli.ts --fake examples/ch12b.json
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        239 chars  # Environment
+    system[2]       1427 chars  # Memory
+    reminders          0 chars  0 个 <system-reminder> 块
+    messages           0 chars  0 条消息（不含提醒）
+    last request       0 tokens
+    ❯ 帮我给暂存区的改动写个 commit message
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    ● 先看看暂存区改了什么。
+    ⏺ Bash(git diff --cached --stat)
+    ✔ Bash ->  posts.js | 5 +++--
+       1 file changed, 3 insertions(+), 2 deletions(-)
+    ● 按记忆里的约定加前缀：
 
-第二个进程的 `/context` 里多了一段 `system[2] # Memory`，这就是上一个进程留下的东西。磁盘上是两个普通文件：
+    feat: list_posts 支持 page / page_size 分页参数
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    $ printf '以后 commit message 都要带 feat:/fix: 这类前缀，别再写光秃秃的一句话了\n/memory\n/exit\n' \
+        | uv run python -m mini_cc --fake examples/ch12a.json
+    ❯ 以后 commit message 都要带 feat:/fix: 这类前缀，别再写光秃秃的一句话了
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-21
+    ● 这是一条以后每次都要遵守的偏好，记进长期记忆。
+    ⏺ Memory(save commit message 前缀)
+    ✔ Memory -> Saved memory commit-message-071596ac to $DEMO/home/projects/<slug>/memory/commit-message-071596ac.md…
+    ● 记住了。以后写 commit message 都会带 feat: / fix: 这类前缀，换个会话也一样。
+    ❯ /memory
+    记忆目录：$DEMO/home/projects/<slug>/memory（1 条，下个会话开始时进上下文）
+    commit-message-071596ac  commit message 前缀 — 写 commit message 时用 feat:/fix:/docs: 这类前缀
+    ❯ /exit
+
+    $ printf '/context\n帮我给暂存区的改动写个 commit message\n/exit\n' \
+        | uv run python -m mini_cc --fake examples/ch12b.json
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        239 chars  # Environment
+    system[2]       1427 chars  # Memory
+    reminders          0 chars  0 个 <system-reminder> 块
+    messages           0 chars  0 条消息（不含提醒）
+    last request       0 tokens
+    ❯ 帮我给暂存区的改动写个 commit message
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-21
+    ● 先看看暂存区改了什么。
+    ⏺ Bash(git diff --cached --stat)
+    ✔ Bash ->  posts.py | 5 +++--
+       1 file changed, 3 insertions(+), 2 deletions(-)
+    ● 按记忆里的约定加前缀：
+
+    feat: list_posts 支持 page / page_size 分页参数
+    ❯ /exit
+    ```
+
+第二个进程的 `/context` 里多了一段 `system[2] # Memory`，这就是上一个进程留下的东西。磁盘上是两个普通文件（Node 版写出来的逐字相同）：
 
 ```console
 $ cat $DEMO/home/projects/<slug>/memory/MEMORY.md
@@ -130,26 +171,49 @@ sequenceDiagram
 
 目录位置是 `<home>/projects/<slug>/memory/`。这里的 slug 按**仓库根**算（`git_root(cwd) or cwd`），而不是按 cwd，所以你在 `apps/web/` 子目录和仓库根启动，读写的是同一份记忆。Claude Code 也是这么做的（文档：记忆目录由 git 仓库推出，所有 worktree 和子目录共用）。
 
-```python
-@classmethod
-def for_project(cls, home: Path, cwd: Path) -> "MemoryStore":
-    from .context import git_root
-    from .session import project_slug
-    return cls(home / "projects" / project_slug(git_root(cwd) or cwd) / "memory")
-```
+=== "Node"
+
+    ```ts
+    static forProject(home: string, cwd: string): MemoryStore {
+      return new MemoryStore(join(home, "projects", projectSlug(gitRoot(cwd) ?? cwd), "memory"));
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    @classmethod
+    def for_project(cls, home: Path, cwd: Path) -> "MemoryStore":
+        from .context import git_root
+        from .session import project_slug
+        return cls(home / "projects" / project_slug(git_root(cwd) or cwd) / "memory")
+    ```
 
 `save()` 做两件事：写主题文件（frontmatter + 正文），然后在索引里**加一行或改一行**：
 
-```python
-line = f"- [{name}]({slug}.md) — {description}"
-lines = self._lines()
-hit = [i for i, ln in enumerate(lines) if f"]({slug}.md)" in ln]
-if hit:
-    lines[hit[0]] = line          # 同一个 slug：原地更新那一行，索引里不会重复
-else:
-    lines.append(line)
-self._write_index(lines)          # 先写 .tmp 再 replace，崩溃不留半个文件
-```
+=== "Node"
+
+    ```ts
+    const line = `- [${name}](${slug}.md) — ${description}`;
+    const lines = this.lines();
+    const hit = lines.findIndex((ln) => ln.includes(`](${slug}.md)`));
+    if (hit >= 0) lines[hit] = line; // 同一个 slug：原地更新那一行，索引里不会重复
+    else lines.push(line);
+    this.writeIndex(lines); // 先写 .tmp 再 rename，崩溃不留半个文件
+    ```
+
+=== "Python"
+
+    ```python
+    line = f"- [{name}]({slug}.md) — {description}"
+    lines = self._lines()
+    hit = [i for i, ln in enumerate(lines) if f"]({slug}.md)" in ln]
+    if hit:
+        lines[hit[0]] = line          # 同一个 slug：原地更新那一行，索引里不会重复
+    else:
+        lines.append(line)
+    self._write_index(lines)          # 先写 .tmp 再 replace，崩溃不留半个文件
+    ```
 
 你可能会问：slug 为什么不直接用 `name`？
 
@@ -157,21 +221,45 @@ self._write_index(lines)          # 先写 .tmp 再 replace，崩溃不留半个
 
 ### 读：索引截断要说出来
 
-```python
-def load_index(self) -> str:
-    lines = self._lines()
-    kept, size = [], 0
-    for ln in lines[:MAX_LINES]:                 # 200 行
-        n = len(ln.encode("utf-8")) + 1
-        if size + n > MAX_BYTES:                 # 25KB
-            break
-        kept.append(ln); size += n
-    text = "\n".join(kept)
-    if len(kept) < len(lines):
-        text += (f"\n\n(MEMORY.md is truncated: {len(lines) - len(kept)} more lines were not loaded. "
-                 "Condense the index.)")
-    return text
-```
+=== "Node"
+
+    ```ts
+    loadIndex(): string {
+      const lines = this.lines();
+      const kept: string[] = [];
+      let size = 0;
+      for (const ln of lines.slice(0, MAX_LINES)) { // 200 行
+        const n = Buffer.byteLength(ln, "utf8") + 1;
+        if (size + n > MAX_BYTES) break; // 25KB
+        kept.push(ln);
+        size += n;
+      }
+      let text = kept.join("\n");
+      if (kept.length < lines.length) {
+        text += `\n\n(MEMORY.md is truncated: ${lines.length - kept.length} more lines were not loaded. ` +
+          "Condense the index.)";
+      }
+      return text;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def load_index(self) -> str:
+        lines = self._lines()
+        kept, size = [], 0
+        for ln in lines[:MAX_LINES]:                 # 200 行
+            n = len(ln.encode("utf-8")) + 1
+            if size + n > MAX_BYTES:                 # 25KB
+                break
+            kept.append(ln); size += n
+        text = "\n".join(kept)
+        if len(kept) < len(lines):
+            text += (f"\n\n(MEMORY.md is truncated: {len(lines) - len(kept)} more lines were not loaded. "
+                     "Condense the index.)")
+        return text
+    ```
 
 200 行 / 25KB 这两个数沿用了 Claude Code 官方文档的说法。截断本身不难，关键是**截断了要告诉模型**。否则第 201 条记忆就静悄悄地「不存在」了，模型还以为自己看到的是全部。
 
@@ -181,11 +269,21 @@ def load_index(self) -> str:
 
 `MemoryStore.system_section()` 挂在第 9 章预留的 `ContextBuilder.system_sections` 上。`cli.py:App.__init__`：
 
-```python
-self.memory = MemoryStore.for_project(settings.home, settings.cwd)
-self.agent.ctx.extras["memory"] = self.memory
-self.agent.context.system_sections.append(self.memory.system_section)
-```
+=== "Node"
+
+    ```ts
+    this.memory = MemoryStore.forProject(settings.home, settings.cwd);
+    this.agent.ctx.extras.memory = this.memory;
+    this.agent.context.systemSections.push(() => this.memory.systemSection());
+    ```
+
+=== "Python"
+
+    ```python
+    self.memory = MemoryStore.for_project(settings.home, settings.cwd)
+    self.agent.ctx.extras["memory"] = self.memory
+    self.agent.context.system_sections.append(self.memory.system_section)
+    ```
 
 你可能会问：项目说明（`AGENTS.md`）是注入在第一条 user 消息里的，记忆为什么放 system？
 
@@ -207,24 +305,46 @@ duplicate, and delete memories that turn out to be wrong.
 
 ### 写：一个专用的 Memory 工具
 
-`mini_cc/tools/memory_tool.py:MemoryTool`，两个动作：
+`mini_cc/tools/memory_tool.ts:MemoryTool`（Python 版 `memory_tool.py:MemoryTool`），两个动作：
 
-```python
-input_schema = {
-    "type": "object",
-    "properties": {
-        "action": {"type": "string", "enum": ["save", "delete"]},
-        "type": {"type": "string", "enum": list(TYPES)},
-        "name": {"type": "string"}, "description": {"type": "string"},
-        "body": {"type": "string"}, "slug": {"type": "string"},
-    },
-    "required": ["action"],
-    "additionalProperties": False,
-}
+=== "Node"
 
-def self_check(self, args) -> str | None:
-    return "allow"   # 不是只读，但只写 agent 自己的记忆目录、不碰项目文件：和任务清单一样免审批
-```
+    ```ts
+    override inputSchema = {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["save", "delete"] },
+        type: { type: "string", enum: [...TYPES] },
+        name: { type: "string" }, description: { type: "string" },
+        body: { type: "string" }, slug: { type: "string" },
+      },
+      required: ["action"],
+      additionalProperties: false,
+    };
+
+    override selfCheck(_args: Args): "allow" {
+      return "allow"; // 不是只读，但只写 agent 自己的记忆目录、不碰项目文件：和任务清单一样免审批
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "action": {"type": "string", "enum": ["save", "delete"]},
+            "type": {"type": "string", "enum": list(TYPES)},
+            "name": {"type": "string"}, "description": {"type": "string"},
+            "body": {"type": "string"}, "slug": {"type": "string"},
+        },
+        "required": ["action"],
+        "additionalProperties": False,
+    }
+
+    def self_check(self, args) -> str | None:
+        return "allow"   # 不是只读，但只写 agent 自己的记忆目录、不碰项目文件：和任务清单一样免审批
+    ```
 
 你可能会问：Claude Code 没有专用的记忆工具，用的是普通的 Write / Edit（[自动记忆那章](../p3-agent-internals/06-auto-memory.md)有本机证据），我们为什么要单独做一个？
 
@@ -244,7 +364,7 @@ def self_check(self, args) -> str | None:
 
 ## 测试
 
-`tests/test_ch12_memory.py`，8 个：
+`tests/ch12_memory.test.ts`（Python 版 `tests/test_ch12_memory.py`），8 个：
 
 - `MemoryStore` 的保存、同 slug 更新不重复、删除；`slugify` 对中英文的处理。
 - 索引超过 200 行时截断并提示；接近上限时保存结果里有「condense」提醒。
@@ -252,14 +372,30 @@ def self_check(self, args) -> str | None:
 - 同一会话 system 不变、新进程 / `/new` 后索引进入 system。
 - `/memory` 列表和删除；非法 type、删不存在的 slug 都是工具错误。
 
-另外 `test_ch09_context.py` 里一个断言原来假定 `# Environment` 是 system 的最后一段，现在 `# Memory` 排在它后面，改成了按标题查找。
+另外 `test_ch09_context.py`（Node 版 `ch09_context.test.ts`）里一个断言原来假定 `# Environment` 是 system 的最后一段，现在 `# Memory` 排在它后面，改成了按标题查找。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 55%]
-..........................................................               [100%]
-130 passed in 4.44s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[0-2]*.test.ts tests/extension_points.test.ts
+    ℹ tests 130
+    ℹ suites 0
+    ℹ pass 130
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 5079.0485
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 55%]
+    ..........................................................               [100%]
+    130 passed in 4.44s
+    ```
 
 ## 和真实 Claude Code 的差异
 

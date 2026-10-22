@@ -18,37 +18,72 @@
 
 离线 fake 模型（`examples/ch19.json`）。项目里有一张截图 `Screen Shot 2026-10-21.png`（1280×800）和一张设计稿 `design/login.png`（1440×900），都是测试脚本生成的灰色 PNG。截图用「拖进终端」的方式输入，也就是一个空格被转义的绝对路径：
 
-```console
-❯ $DEMO/proj/Screen\ Shot\ 2026-10-21.png 这个登录按钮为什么跟设计稿不一样
-  ⎿ 已附加 @Screen Shot 2026-10-21.png（图片 png 1280×800，≈1334 visual tokens）
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-● 截图收到了，再对照一下设计稿。
-⏺ Read(design/login.png)
-✔ Read -> Image: design/login.png (png, 1440x900, 3KB, ≈1716 visual tokens)
-  [image]
-● 对比两张图：截图里登录按钮比设计稿宽，右侧多出一截留白，像是按钮用了 width: 100% 而设计稿是固定宽度。去看看样式文件？
-❯ /context
-system[0]       1278 chars  You are mini-cc, an interactive coding a
-system[1]        240 chars  # Environment
-system[2]       1364 chars  # Memory
-reminders        420 chars  3 个 <system-reminder> 块
-messages         609 chars  4 条消息（不含提醒）
-images          3050 tokens（估算）  2 张图片
-last request     100 tokens
-```
+=== "Node"
+
+    ```console
+    ❯ $DEMO/proj/Screen\ Shot\ 2026-10-21.png 这个登录按钮为什么跟设计稿不一样
+      ⎿ 已附加 @Screen Shot 2026-10-21.png（图片 png 1280×800，≈1334 visual tokens）
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 截图收到了，再对照一下设计稿。
+    ⏺ Read(design/login.png)
+    ✔ Read -> Image: design/login.png (png, 1440x900, 3KB, ≈1716 visual tokens)
+      [image]
+    ● 对比两张图：截图里登录按钮比设计稿宽，右侧多出一截留白，像是按钮用了 width: 100% 而设计稿是固定宽度。去看看样式文件？
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        240 chars  # Environment
+    system[2]       1364 chars  # Memory
+    reminders        411 chars  3 个 <system-reminder> 块
+    messages         582 chars  4 条消息（不含提醒）
+    images          3050 tokens（估算）  2 张图片
+    last request     100 tokens
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ $DEMO/proj/Screen\ Shot\ 2026-10-21.png 这个登录按钮为什么跟设计稿不一样
+      ⎿ 已附加 @Screen Shot 2026-10-21.png（图片 png 1280×800，≈1334 visual tokens）
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ● 截图收到了，再对照一下设计稿。
+    ⏺ Read(design/login.png)
+    ✔ Read -> Image: design/login.png (png, 1440x900, 3KB, ≈1716 visual tokens)
+      [image]
+    ● 对比两张图：截图里登录按钮比设计稿宽，右侧多出一截留白，像是按钮用了 width: 100% 而设计稿是固定宽度。去看看样式文件？
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        240 chars  # Environment
+    system[2]       1364 chars  # Memory
+    reminders        420 chars  3 个 <system-reminder> 块
+    messages         609 chars  4 条消息（不含提醒）
+    images          3050 tokens（估算）  2 张图片
+    last request     100 tokens
+    ```
 
 （fake 模型看不到图，那段「对比两张图」是剧本写死的台词。本章能离线验证的是：图片以什么形状、在什么位置进了请求。真模型的判断，你本地设了 key 后自己看。）
 
 一张图进了用户消息，一张图进了 `Read` 的工具结果。`/context` 把它们单独列成一行，按 visual token 估算，而不是按 base64 字符数。
 
-用户消息里实际发出去的块是这样的（`build_user_content` 的真实输出，base64 截断显示）：
+用户消息里实际发出去的块是这样的（`build_user_content` 的真实输出，base64 截断显示；Node 版 `buildUserContent` 每块打印一行 `JSON.stringify`）：
 
-```python
-{'type': 'text', 'text': '<system-reminder>\nThe user attached the image @design/login.png (png, 1440x900, 3KB, ≈1716 visual tokens). It follows this note.\n</system-reminder>'}
-{'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/png', 'data': 'iVBORw0KGgoA…'}}
-{'type': 'text', 'text': '@design/login.png 按钮对齐了吗'}
-```
+=== "Node"
+
+    ```json
+    {"type":"text","text":"<system-reminder>\nThe user attached the image @design/login.png (png, 1440x900, 3KB, ≈1716 visual tokens). It follows this note.\n</system-reminder>"}
+    {"type":"image","source":{"type":"base64","media_type":"image/png","data":"iVBORw0KGgoA…"}}
+    {"type":"text","text":"@design/login.png 按钮对齐了吗"}
+    ```
+
+=== "Python"
+
+    ```python
+    {'type': 'text', 'text': '<system-reminder>\nThe user attached the image @design/login.png (png, 1440x900, 3KB, ≈1716 visual tokens). It follows this note.\n</system-reminder>'}
+    {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/png', 'data': 'iVBORw0KGgoA…'}}
+    {'type': 'text', 'text': '@design/login.png 按钮对齐了吗'}
+    ```
 
 ## 原理：两条入口，一道关卡
 
@@ -77,45 +112,80 @@ flowchart LR
 
 ### 1. 识别：看文件头，不看扩展名
 
-`mini_cc/images.py:sniff`：
+`mini_cc/images.ts:sniff`（Python 版 `images.py:sniff`）：
 
-```python
-def sniff(data: bytes) -> str | None:
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png"
-    if data.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
-    if data[:6] in (b"GIF87a", b"GIF89a"):
-        return "image/gif"
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp"
-    return None
-```
+=== "Node"
+
+    ```ts
+    export function sniff(data: Uint8Array): string | null {
+      if (startsWith(data, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+      if (startsWith(data, [0xff, 0xd8, 0xff])) return "image/jpeg";
+      if (startsWith(data, "GIF87a") || startsWith(data, "GIF89a")) return "image/gif";
+      if (startsWith(data, "RIFF") && startsWith(data, "WEBP", 8)) return "image/webp";
+      return null;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def sniff(data: bytes) -> str | None:
+        if data.startswith(b"\x89PNG\r\n\x1a\n"):
+            return "image/png"
+        if data.startswith(b"\xff\xd8\xff"):
+            return "image/jpeg"
+        if data[:6] in (b"GIF87a", b"GIF89a"):
+            return "image/gif"
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            return "image/webp"
+        return None
+    ```
 
 API 只支持这四种格式。你可能会问：扩展名不就够了？
 
 不够。截图工具、设计工具导出的文件，扩展名和实际编码对不上是常事（比如 `.png` 里其实是 JPEG）。`media_type` 填错，API 会直接拒绝这次请求。测试 `test_wrong_extension_and_oversized` 里就有一个「`.png` 扩展名、JPEG 内容」的文件，发出去的 `media_type` 是 `image/jpeg`。
 
-尺寸也只解析文件头：PNG 的 IHDR、JPEG 的 SOF 段、GIF 的逻辑屏幕描述符、WebP 的 VP8X/VP8/VP8L。这样不用装 Pillow，也不用把像素解码出来。
+尺寸也只解析文件头：PNG 的 IHDR、JPEG 的 SOF 段、GIF 的逻辑屏幕描述符、WebP 的 VP8X/VP8/VP8L。这样不用装 Pillow（Node 版同样不需要任何图像库，用 `Buffer.readUInt32BE` 这类方法读文件头），也不用把像素解码出来。
 
 ### 2. 把关：三个硬限制
 
-```python
-def load_image(path):
-    data = path.read_bytes()
-    info = image_info(data)
-    if info is None:
-        raise ImageError(f"{path.name} is not a supported image (JPEG, PNG, GIF or WebP).")
-    media, w, h = info
-    if max(w, h) > MAX_DIMENSION:                         # 8000
-        raise ImageError(f"{path.name} is {w}x{h}; images must be at most 8000x8000 px. "
-                         "Resize it first (e.g. `sips -Z 2576 file.png` on macOS).")
-    b64 = base64.standard_b64encode(data).decode("ascii")
-    if len(b64) > MAX_BASE64_BYTES:                       # 10MB，按 base64 后的大小算
-        raise ImageError(...)
-    meta = ImageMeta(media, w, h, len(data), estimate_visual_tokens(w, h))
-    return {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}, meta
-```
+=== "Node"
+
+    ```ts
+    export function loadImage(path: string): [ImageBlock, ImageMeta] {
+      const data = readFileSync(path);
+      const info = imageInfo(data);
+      if (info === null) throw new ImageError(`${basename(path)} is not a supported image (JPEG, PNG, GIF or WebP).`);
+      const [media, w, h] = info;
+      if (Math.max(w, h) > MAX_DIMENSION) { // 8000
+        throw new ImageError(`${basename(path)} is ${w}x${h}; images must be at most 8000x8000 px. ` +
+          "Resize it first (e.g. `sips -Z 2576 file.png` on macOS).");
+      }
+      const b64 = data.toString("base64");
+      if (b64.length > MAX_BASE64_BYTES) throw new ImageError(...); // 10MB，按 base64 后的大小算
+      const meta = new ImageMeta(media, w, h, data.length, estimateVisualTokens(w, h));
+      return [{ type: "image", source: { type: "base64", media_type: media, data: b64 } }, meta];
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def load_image(path):
+        data = path.read_bytes()
+        info = image_info(data)
+        if info is None:
+            raise ImageError(f"{path.name} is not a supported image (JPEG, PNG, GIF or WebP).")
+        media, w, h = info
+        if max(w, h) > MAX_DIMENSION:                         # 8000
+            raise ImageError(f"{path.name} is {w}x{h}; images must be at most 8000x8000 px. "
+                             "Resize it first (e.g. `sips -Z 2576 file.png` on macOS).")
+        b64 = base64.standard_b64encode(data).decode("ascii")
+        if len(b64) > MAX_BASE64_BYTES:                       # 10MB，按 base64 后的大小算
+            raise ImageError(...)
+        meta = ImageMeta(media, w, h, len(data), estimate_visual_tokens(w, h))
+        return {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}, meta
+    ```
 
 这三条在官方文档里都写着：单张图片直连 API 时 base64 后最多 10MB（Bedrock、Vertex 是 5MB），尺寸最多 8000×8000。
 
@@ -127,15 +197,31 @@ def load_image(path):
 
 ### 3. 估价：28×28 一个 token
 
-```python
-def estimate_visual_tokens(w, h):
-    s = min(1.0, MAX_LONG_EDGE / max(w, h))                # 2576
-    w2, h2 = max(1, round(w * s)), max(1, round(h * s))
-    tokens = math.ceil(w2 / 28) * math.ceil(h2 / 28)
-    while tokens > MAX_VISUAL_TOKENS:                      # 4784
-        ...                                                # 再按面积等比缩
-    return tokens
-```
+=== "Node"
+
+    ```ts
+    export function estimateVisualTokens(w: number, h: number): number {
+      let s = Math.min(1.0, MAX_LONG_EDGE / Math.max(w, h)); // 2576
+      let w2 = Math.max(1, pyRound(w * s)), h2 = Math.max(1, pyRound(h * s)); // pyRound：同 Python round() 的银行家舍入
+      let tokens = Math.ceil(w2 / 28) * Math.ceil(h2 / 28);
+      while (tokens > MAX_VISUAL_TOKENS) { // 4784
+        ... // 再按面积等比缩
+      }
+      return tokens;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def estimate_visual_tokens(w, h):
+        s = min(1.0, MAX_LONG_EDGE / max(w, h))                # 2576
+        w2, h2 = max(1, round(w * s)), max(1, round(h * s))
+        tokens = math.ceil(w2 / 28) * math.ceil(h2 / 28)
+        while tokens > MAX_VISUAL_TOKENS:                      # 4784
+            ...                                                # 再按面积等比缩
+        return tokens
+    ```
 
 文档的规则是：每 28×28 像素一个 visual token；高分辨率档的模型（Claude 4.7 及以后，`claude-opus-5-5` 在这一档）长边超过 2576px 或者超过 4784 个 token，服务端会等比缩小。测试 `test_visual_token_estimate_matches_docs_table` 用文档表格里的三个例子校验：1000×1000 → 1296，1920×1080 → 2691，3840×2160 → 缩到 2576×1449 → 4784。
 
@@ -145,18 +231,36 @@ def estimate_visual_tokens(w, h):
 
 第 8 章的 `_file_attachment` 遇到图片扩展名时改走 `image_attachment`：
 
-```python
-return Attachment("image", f"@{ref}（图片 {meta.short} {meta.width}×{meta.height}，≈{meta.tokens} visual tokens）",
-                  f"The user attached the image @{ref} ({meta.note()}). It follows this note.", [block])
-```
+=== "Node"
+
+    ```ts
+    return new Attachment("image", `@${ref}（图片 ${meta.short} ${meta.width}×${meta.height}，≈${meta.tokens} visual tokens）`,
+      `The user attached the image @${ref} (${meta.note()}). It follows this note.`, [block]);
+    ```
+
+=== "Python"
+
+    ```python
+    return Attachment("image", f"@{ref}（图片 {meta.short} {meta.width}×{meta.height}，≈{meta.tokens} visual tokens）",
+                      f"The user attached the image @{ref} ({meta.note()}). It follows this note.", [block])
+    ```
 
 `Attachment` 多了一个 `blocks` 字段放图片块，`build_user_content` 把它紧跟在说明后面：
 
-```python
-for a in attachments:
-    blocks += [render(a), *a.blocks]          # 说明 → 图片
-return blocks + [{"type": "text", "text": text}]   # 原话放最后
-```
+=== "Node"
+
+    ```ts
+    return [...attachments.flatMap((a) => [render(a), ...a.blocks]), // 说明 → 图片
+      { type: "text", text }]; // 原话放最后
+    ```
+
+=== "Python"
+
+    ```python
+    for a in attachments:
+        blocks += [render(a), *a.blocks]          # 说明 → 图片
+    return blocks + [{"type": "text", "text": text}]   # 原话放最后
+    ```
 
 顺序是有讲究的：官方文档建议图片放在问题之前（和长文档放在问题之前是一个道理）。说明放在图片前面，是为了让模型知道「下面这张图是哪个文件、多大」，它之后要提这张图时有名字可叫。
 
@@ -166,14 +270,30 @@ return blocks + [{"type": "text", "text": text}]   # 原话放最后
 
 ### 5. 入口二：`Read` 一张图
 
-```python
-if is_image_path(path) or sniff(raw[:16]):
-    try:
-        block, meta = load_image(path)
-    except ImageError as e:
-        return ToolResult(str(e), True)
-    return ToolResult([{"type": "text", "text": f"Image: {ctx.rel(path)} ({meta.note()})"}, block])
-```
+=== "Node"
+
+    ```ts
+    if (isImagePath(path) || sniff(raw.subarray(0, 16))) {
+      try {
+        const [block, meta] = loadImage(path);
+        return new ToolResult([{ type: "text", text: `Image: ${ctx.rel(path)} (${meta.note()})` }, block]);
+      } catch (e) {
+        if (e instanceof ImageError) return new ToolResult(e.message, true);
+        throw e;
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    if is_image_path(path) or sniff(raw[:16]):
+        try:
+            block, meta = load_image(path)
+        except ImageError as e:
+            return ToolResult(str(e), True)
+        return ToolResult([{"type": "text", "text": f"Image: {ctx.rel(path)} ({meta.note()})"}, block])
+    ```
 
 第 1 章就定义了 `ToolResult.content` 可以是块列表，第 15 章 MCP 的图片结果第一次用到，这里是第二次。`tool_result` 的 `content` 放图片块，是 API 支持的形状（computer use 的截图就是这么回传的）。
 
@@ -189,7 +309,7 @@ if is_image_path(path) or sniff(raw[:16]):
 
 ## 测试
 
-`tests/test_ch19_image.py`，8 个。测试图片用纯标准库生成（`zlib` + `struct` 拼 PNG），JPEG / GIF / WebP 只构造文件头：
+`tests/ch19_image.test.ts`（Python 版 `tests/test_ch19_image.py`），8 个。测试图片用纯标准库生成（`zlib` + `struct` 拼 PNG；Node 版用 `node:zlib` 的 `deflateSync` / `crc32` 加 `Buffer`），JPEG / GIF / WebP 只构造文件头：
 
 - 四种格式的识别和尺寸；visual token 估算对上文档表格的三个例子。
 - 拖进来的路径（转义空格、引号）能找到，不存在的路径忽略。
@@ -197,13 +317,29 @@ if is_image_path(path) or sniff(raw[:16]):
 - 以 `/` 开头的拖入路径不被当成命令；`Read` 图片返回 `[text, image]`。
 - 扩展名错的按文件头走；8000px 以上的拒绝并说明；`/context` 统计图片。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 39%]
-........................................................................ [ 78%]
-........................................                                 [100%]
-184 passed in 13.14s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1*.test.ts tests/extension_points.test.ts
+    ℹ tests 184
+    ℹ suites 0
+    ℹ pass 184
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 7471.606583
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 39%]
+    ........................................................................ [ 78%]
+    ........................................                                 [100%]
+    184 passed in 13.14s
+    ```
 
 ## 和真实 Claude Code 的差异
 

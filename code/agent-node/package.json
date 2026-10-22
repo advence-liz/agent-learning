@@ -1,0 +1,26 @@
+{
+  "name": "agent-lab-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test \"**/*.test.ts\"",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.308",
+    "@anthropic-ai/sdk": "^1.1.0",
+    "@langchain/core": "^1.2.20",
+    "@langchain/langgraph": "^1.5.2",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "ai": "^7.0.148",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}

@@ -60,3 +60,25 @@ jobs:
         if: matrix.project == 'agent'
         working-directory: code/agent
         run: uv run --frozen python -m unittest discover -s http_analyzer/tests
+
+  # Node 版（TypeScript）：Node 24 直接跑 .ts，tsc 只做类型检查
+  test-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [agent-node, mini_cc-node]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: code/${{ matrix.project }}/package-lock.json
+      - name: typecheck + test
+        working-directory: code/${{ matrix.project }}
+        run: |
+          npm ci
+          npm run typecheck
+          npm test

@@ -18,62 +18,149 @@
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch05.json`），在一个临时项目目录里跑，弹窗的回答也从管道喂进去：
+离线 fake 模型（`examples/ch05.json`；Node 版剧本写的是 `hello.js`、跑 `node hello.js`），在一个临时项目目录里跑，弹窗的回答也从管道喂进去：
 
-```console
-❯ 写个 hello.py 跑一下
-● 先看看目录。
-⏺ Bash(ls)
-✔ Bash -> build
-● 写一个 hello.py。
-⏺ Write(hello.py)
-是否允许 Write(hello.py)？（needs approval）
-  1. 允许
-  2. 允许，且本会话不再询问 Write
-  3. 拒绝（可以附一句话告诉模型该怎么做）
-选择 [1/2/3]: 1
-✔ Write -> Wrote 15 chars to hello.py
-● 跑一下。
-⏺ Bash(python3 hello.py)
-是否允许 Bash(python3 hello.py)？（needs approval）
-  ...
-选择 [1/2/3]: 2
-✔ Bash -> hello
-● 再跑一次确认。
-⏺ Bash(python3 hello.py)
-✔ Bash -> hello
-● 顺手清理 build 目录。
-⏺ Bash(rm -rf build)
-是否允许 Bash(rm -rf build)？（needs approval）
-  ...
-选择 [1/2/3]: 3
-说明（可留空，回车跳过）: build 里有缓存，别删
-✘ Bash -> The user doesn't want to proceed with this tool use. The tool use was rejected (it was NOT executed)
-  build 里有缓存，别删
-● 明白，build 目录保留不动。hello.py 已创建并运行通过。
-❯ /status
-...
-mode      default
-allow     Bash(python3 hello.py)
-```
+=== "Node"
+
+    ```console
+    ❯ 写个 hello.js 跑一下
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 先看看目录。
+    ⏺ Bash(ls)
+    ✔ Bash -> build
+    ● 写一个 hello.js。
+    ⏺ Write(hello.js)
+    是否允许 Write(hello.js)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Write
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 1
+    ✔ Write -> Created hello.js (1 lines)
+    ● 跑一下。
+    ⏺ Bash(node hello.js)
+    是否允许 Bash(node hello.js)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Bash(node hello.js)
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 2
+    ✔ Bash -> hello
+    ● 再跑一次确认。
+    ⏺ Bash(node hello.js)
+    ✔ Bash -> hello
+    ● 顺手清理 build 目录。
+    ⏺ Bash(rm -rf build)
+    是否允许 Bash(rm -rf build)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Bash(rm -rf build)
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 3
+    说明（可留空，回车跳过）: build 里有缓存，别删
+    ✘ Bash -> The user doesn't want to proceed with this tool use. The tool use was rejected (it was NOT executed)
+      build 里有缓存，别删
+    ● 明白，build 目录保留不动。hello.js 已创建并运行通过。
+    ❯ /status
+    model     claude-opus-5-5
+    effort    medium
+    cwd       $SCRATCH/demo_proj
+    session   d3f9c327-7544-40be-97ec-1615156d504a
+    mode      default
+    allow     Bash(node hello.js)
+    reviewer  0 calls
+    messages  12
+    context   100 tokens（最近一次请求的输入）
+    total     in 600 / out 120 / 6 requests
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 写个 hello.py 跑一下
+    ● 先看看目录。
+    ⏺ Bash(ls)
+    ✔ Bash -> build
+    ● 写一个 hello.py。
+    ⏺ Write(hello.py)
+    是否允许 Write(hello.py)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Write
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 1
+    ✔ Write -> Wrote 15 chars to hello.py
+    ● 跑一下。
+    ⏺ Bash(python3 hello.py)
+    是否允许 Bash(python3 hello.py)？（needs approval）
+      ...
+    选择 [1/2/3]: 2
+    ✔ Bash -> hello
+    ● 再跑一次确认。
+    ⏺ Bash(python3 hello.py)
+    ✔ Bash -> hello
+    ● 顺手清理 build 目录。
+    ⏺ Bash(rm -rf build)
+    是否允许 Bash(rm -rf build)？（needs approval）
+      ...
+    选择 [1/2/3]: 3
+    说明（可留空，回车跳过）: build 里有缓存，别删
+    ✘ Bash -> The user doesn't want to proceed with this tool use. The tool use was rejected (it was NOT executed)
+      build 里有缓存，别删
+    ● 明白，build 目录保留不动。hello.py 已创建并运行通过。
+    ❯ /status
+    ...
+    mode      default
+    allow     Bash(python3 hello.py)
+    ```
 
 四个细节：`ls` 没问就放行了（只读）；第二次 `python3 hello.py` 没问（选过「不再询问」）；`rm -rf build` 被拒，**拒绝理由原样交给了模型**，模型据此改了主意。
 
 同一份剧本用 `--permission-mode acceptEdits` 再跑一次：
 
-```console
-⏺ Write(hello.py)
-✔ Write -> Wrote 15 chars to hello.py
-● 跑一下。
-⏺ Bash(python3 hello.py)
-是否允许 Bash(python3 hello.py)？（needs approval）
-选择 [1/2/3]: 1
-...
-⏺ Bash(python3 hello.py)
-选择 [1/2/3]: 3
-说明（可留空，回车跳过）:
-✘ Bash -> The user doesn't want to proceed with this tool use. The tool use was rejected (it was NOT executed)
-```
+=== "Node"
+
+    ```console
+    ❯ 写个 hello.js 跑一下
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 先看看目录。
+    ⏺ Bash(ls)
+    ✔ Bash -> build
+    ● 写一个 hello.js。
+    ⏺ Write(hello.js)
+    ✔ Write -> Created hello.js (1 lines)
+    ● 跑一下。
+    ⏺ Bash(node hello.js)
+    是否允许 Bash(node hello.js)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Bash(node hello.js)
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 1
+    ✔ Bash -> hello
+    ● 再跑一次确认。
+    ⏺ Bash(node hello.js)
+    是否允许 Bash(node hello.js)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Bash(node hello.js)
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 3
+    说明（可留空，回车跳过）: 
+    ✘ Bash -> The user doesn't want to proceed with this tool use. The tool use was rejected (it was NOT executed)
+    ```
+
+=== "Python"
+
+    ```console
+    ⏺ Write(hello.py)
+    ✔ Write -> Wrote 15 chars to hello.py
+    ● 跑一下。
+    ⏺ Bash(python3 hello.py)
+    是否允许 Bash(python3 hello.py)？（needs approval）
+    选择 [1/2/3]: 1
+    ...
+    ⏺ Bash(python3 hello.py)
+    选择 [1/2/3]: 3
+    说明（可留空，回车跳过）:
+    ✘ Bash -> The user doesn't want to proceed with this tool use. The tool use was rejected (it was NOT executed)
+    ```
 
 写文件不再问了，跑命令照问。最后一次拒绝**没给理由**，这一轮就直接结束了——模型没有机会再说话，等你下一句指令。
 
@@ -118,30 +205,56 @@ flowchart TB
 
 `decide()` 的代码几乎就是上面那张图的直译：
 
-```python
-def decide(self, tool, args) -> Decision:
-    key = tool.rule_key(args)
-    if key in self.deny_rules or tool.name in self.deny_rules:
-        return Decision("deny", f"matches deny rule {key}", "rule")
-    for check in self.extra_checks:
-        d = check(tool, args, self)
-        if d is not None:
-            return d
-    if self.mode == BYPASS:
-        return Decision("allow", "bypassPermissions mode", "mode")
-    verdict = tool.self_check(args)
-    if verdict == "ask":
-        return Decision("ask", "high-risk operation", "tool")
-    if tool.read_only or verdict == "allow":
-        return Decision("allow", "read-only", "tool")
-    if key in self.allow_rules or tool.name in self.allow_rules:
-        return Decision("allow", f"session rule {key}", "rule")
-    if self.mode == ACCEPT_EDITS and tool.kind == "edit" and self._inside_project(tool, args):
-        return Decision("allow", "acceptEdits: edit inside project", "mode")
-    if self.mode == AUTO and self.classifier is not None:
-        return self.classifier(tool, args)
-    return Decision("ask", "needs approval", "mode")
-```
+=== "Node"
+
+    ```ts
+    async decide(tool: Tool, args: Args): Promise<Decision> {
+      const key = tool.ruleKey(args);
+      if (this.denyRules.has(key) || this.denyRules.has(tool.name))
+        return new Decision("deny", `matches deny rule ${key}`, "rule");
+      for (const check of this.extraChecks) {
+        const d = await check(tool, args, this);
+        if (d !== null) return d;
+      }
+      if (this.mode === BYPASS) return new Decision("allow", "bypassPermissions mode", "mode");
+      const verdict = tool.selfCheck(args);
+      if (verdict === "ask") return new Decision("ask", "high-risk operation", "tool");
+      if (tool.readOnly || verdict === "allow") return new Decision("allow", "read-only", "tool");
+      if (this.allowRules.has(key) || this.allowRules.has(tool.name))
+        return new Decision("allow", `session rule ${key}`, "rule");
+      if (this.mode === ACCEPT_EDITS && tool.kind === "edit" && this.insideProject(tool, args))
+        return new Decision("allow", "acceptEdits: edit inside project", "mode");
+      if (this.mode === AUTO && this.classifier !== null) return this.classifier(tool, args);
+      return new Decision("ask", "needs approval", "mode");
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def decide(self, tool, args) -> Decision:
+        key = tool.rule_key(args)
+        if key in self.deny_rules or tool.name in self.deny_rules:
+            return Decision("deny", f"matches deny rule {key}", "rule")
+        for check in self.extra_checks:
+            d = check(tool, args, self)
+            if d is not None:
+                return d
+        if self.mode == BYPASS:
+            return Decision("allow", "bypassPermissions mode", "mode")
+        verdict = tool.self_check(args)
+        if verdict == "ask":
+            return Decision("ask", "high-risk operation", "tool")
+        if tool.read_only or verdict == "allow":
+            return Decision("allow", "read-only", "tool")
+        if key in self.allow_rules or tool.name in self.allow_rules:
+            return Decision("allow", f"session rule {key}", "rule")
+        if self.mode == ACCEPT_EDITS and tool.kind == "edit" and self._inside_project(tool, args):
+            return Decision("allow", "acceptEdits: edit inside project", "mode")
+        if self.mode == AUTO and self.classifier is not None:
+            return self.classifier(tool, args)
+        return Decision("ask", "needs approval", "mode")
+    ```
 
 你可能会问：为什么 deny 要排第一，比 bypass 还早？
 
@@ -155,19 +268,32 @@ def decide(self, tool, args) -> Decision:
 
 模式只知道「这是编辑类」「这是执行类」，但 `Bash` 里的 `ls` 和 `rm` 天差地别。所以每个工具可以实现一个 `self_check(args)`，返回 `'allow'`（我确定这次安全）、`'ask'`（这次很危险）或 `None`（交给模式决定）。
 
-`mini_cc/tools/bash.py:BashTool.self_check` 做了两件事：
+`mini_cc/tools/bash.ts:BashTool.selfCheck`（Python 版 `bash.py:BashTool.self_check`）做了两件事：
 
-```python
-def self_check(self, args):
-    cmd = args.get("command", "")
-    if any(p.search(cmd) for p in DANGEROUS):   # rm -rf / ~ *、sudo、mkfs、curl | sh、git push --force…
-        return "ask"
-    if is_read_only(cmd):                         # ls、cat、grep、git status……
-        return "allow"
-    return None
-```
+=== "Node"
 
-`is_read_only()` 的核心是 `split_commands()`：用 `shlex` 按 `|`、`&&`、`||`、`;` 拆成子命令，**每一段**都在只读白名单里才算只读。这里我坚持一个原则：**看不懂就不放行**。只要出现重定向 `>`、命令替换 `$(...)` 或反引号、后台 `&`，直接返回 `False`：
+    ```ts
+    selfCheck(args: Args): "allow" | "ask" | null {
+      const cmd: string = args.command ?? "";
+      if (DANGEROUS.some((p) => p.test(cmd))) return "ask";   // rm -rf / ~ *、sudo、mkfs、curl | sh、git push --force…
+      if (isReadOnly(cmd)) return "allow";                     // ls、cat、grep、git status……
+      return null;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def self_check(self, args):
+        cmd = args.get("command", "")
+        if any(p.search(cmd) for p in DANGEROUS):   # rm -rf / ~ *、sudo、mkfs、curl | sh、git push --force…
+            return "ask"
+        if is_read_only(cmd):                         # ls、cat、grep、git status……
+            return "allow"
+        return None
+    ```
+
+`is_read_only()` 的核心是 `split_commands()`：用 `shlex`（Node 没有 shlex，`bash.ts` 里写了一个按同样规则分词的小函数）按 `|`、`&&`、`||`、`;` 拆成子命令，**每一段**都在只读白名单里才算只读。这里我坚持一个原则：**看不懂就不放行**。只要出现重定向 `>`、命令替换 `$(...)` 或反引号、后台 `&`，直接返回 `False`：
 
 | 命令 | 只读？ | 为什么 |
 |---|---|---|
@@ -183,24 +309,42 @@ def self_check(self, args):
 
 ## 关卡插在循环的哪里
 
-`mini_cc/loop.py:Agent._run_tools` 对每个工具调用依次做：
+`mini_cc/loop.ts:Agent.runTools`（Python 版 `loop.py:Agent._run_tools`）对每个工具调用依次做：
 
-```python
-bad = self.tools.check_input(tu["name"], tu["input"])   # ① 参数校验（上一章的防线 1）
-if bad is not None:
-    r = bad
-elif stop:
-    r = ToolResult("Skipped: an earlier tool call in this batch was rejected by the user.", True)
-else:
-    ok, r, stop_now = yield from self._authorize(tu)     # ② 权限关卡
-    stop = stop or stop_now
-    if ok:
-        r = self.tools.execute(...)                       # ③ 执行
-```
+=== "Node"
+
+    ```ts
+    const bad = this.tools.checkInput(tu.name, tu.input);   // ① 参数校验（上一章的防线 1）
+    let r: ToolResult;
+    if (bad !== null) {
+      r = bad;
+    } else if (stop) {
+      r = new ToolResult("Skipped: an earlier tool call in this batch was rejected by the user.", true);
+    } else {
+      const [ok, denied, stopNow] = yield* this.authorize(tu);  // ② 权限关卡
+      stop = stop || stopNow;
+      r = ok ? await this.tools.execute(...) : denied!;          // ③ 执行
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    bad = self.tools.check_input(tu["name"], tu["input"])   # ① 参数校验（上一章的防线 1）
+    if bad is not None:
+        r = bad
+    elif stop:
+        r = ToolResult("Skipped: an earlier tool call in this batch was rejected by the user.", True)
+    else:
+        ok, r, stop_now = yield from self._authorize(tu)     # ② 权限关卡
+        stop = stop or stop_now
+        if ok:
+            r = self.tools.execute(...)                       # ③ 执行
+    ```
 
 顺序有讲究：**先校验、再判权限**。拿着一个缺参数的调用去问用户「允许吗？」，既浪费用户的注意力，判定函数也可能因为缺字段而出错。
 
-`_authorize()` 是一个返回值的生成器（`yield from` 拿到返回值）。遇到 `ask` 时，它**同步**调用 `self.approver(req)`——也就是 UI 的弹窗——然后等着。这里第 2 章「生成器是惰性的」那个设计开始发挥作用：循环停在这一行，什么都不会继续发生，直到你按下数字。
+`_authorize()` 是一个返回值的生成器（`yield from` 拿到返回值；Node 版是 `yield*`）。遇到 `ask` 时，它**同步**调用 `self.approver(req)`——也就是 UI 的弹窗——然后等着（Node 版是 `await this.approver(req)`，效果一样：这一轮停在这里）。这里第 2 章「生成器是惰性的」那个设计开始发挥作用：循环停在这一行，什么都不会继续发生，直到你按下数字。
 
 用户的三种选择映射成：
 
@@ -214,22 +358,38 @@ else:
 
 ## 模式：Shift+Tab 和会话记录
 
-模式切换有三个入口：命令行 `--permission-mode acceptEdits`、命令 `/mode acceptEdits`、REPL 里按 **Shift+Tab** 循环（`default → acceptEdits → default`，底部状态栏显示 `▶▶ acceptEdits（Shift+Tab 切换）`）。`PermissionManager.cycle` 是一个列表，下一章会把 `auto` 加进去，第 21 章加 `plan`。
+模式切换有三个入口：命令行 `--permission-mode acceptEdits`、命令 `/mode acceptEdits`、REPL 里按 **Shift+Tab** 循环（`default → acceptEdits → default`，底部状态栏显示 `▶▶ acceptEdits（Shift+Tab 切换）`；Node 版的 `node:readline` 没有底部状态栏，模式显示在提示符前面：`[acceptEdits] ❯`）。`PermissionManager.cycle` 是一个列表，下一章会把 `auto` 加进去，第 21 章加 `plan`。
 
 每次模式变化都通过 `on_mode_change` 写一条 `{"type": "permission-mode", "permissionMode": ...}` 记录进会话文件。上一章说过，读取时这类记录会被忽略；它的用处是**审计**：事后回看，你能知道某个文件是在哪个模式下被改的。你本机的 Claude Code 会话里，这种记录有两千多条。
 
 ## 测试
 
-`tests/test_ch05_permissions.py`，20 个：
+`tests/ch05_permissions.test.ts`（Python 版 `tests/test_ch05_permissions.py`），20 个：
 
 - 只读命令判定（参数化 9 条）、完整的判定表（含 acceptEdits 不放行项目外路径 `../outside.txt` 和 `/etc/hosts`）、高危命令压过 allow 规则、`extra_checks` 优先于 bypass、模式循环。
 - 循环里的审批：允许一次、记住规则后第二次不再问、拒绝带理由后继续、**拒绝不带理由时整批跳过、不再请求模型**、deny 规则事件、没有 approver 时拒绝、`/mode` 命令与会话记录。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-.........................................................                [100%]
-57 passed in 1.61s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch0[1-5]*.test.ts'
+    ℹ tests 57
+    ℹ suites 0
+    ℹ pass 57
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 2232.285458
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    .........................................................                [100%]
+    57 passed in 1.61s
+    ```
 
 ## 回到开头
 

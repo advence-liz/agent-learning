@@ -12,32 +12,61 @@
 
 ## 先跑起来看看
 
-两个能离线跑的版本在 [`code/agent/sdk_compare/`](../code/agent/sdk_compare/)。我在 `code/agent` 里装了 `pydantic-ai-slim`（2.59.0）和 `langgraph`（1.2.16），两者都提供了不需要真模型的测试方式。
+两个能离线跑的版本在 [`code/agent-node/sdk_compare/`](../code/agent-node/sdk_compare/)（Python 版 [`code/agent/sdk_compare/`](../code/agent/sdk_compare/)）。我在 `code/agent` 里装了 `pydantic-ai-slim`（2.59.0）和 `langgraph`（1.2.16），Node 版在 `code/agent-node` 里装了 `ai`（7.0.148）和 `@langchain/langgraph`（1.5.2），都提供了不需要真模型的测试方式。
 
-**Pydantic AI**（[`pydantic_ai_agent.py`](../code/agent/sdk_compare/pydantic_ai_agent.py)，用官方的 `FunctionModel` 当离线模型）：
+**Pydantic AI**（Node 版 [`ai_sdk_agent.ts`](../code/agent-node/sdk_compare/ai_sdk_agent.ts)；Python 版 [`pydantic_ai_agent.py`](../code/agent/sdk_compare/pydantic_ai_agent.py)，用官方的 `FunctionModel` 当离线模型）：
 
-```text
-$ uv run python -m sdk_compare.pydantic_ai_agent
-output: fixed=True summary='把 a - b 改成 a + b'
-messages: ['ModelRequest', 'ModelResponse', 'ModelRequest', 'ModelResponse', 'ModelRequest', 'ModelResponse', 'ModelRequest']
-calc.py: return a + b
-usage: RunUsage(input_tokens=174, output_tokens=62, requests=3, tool_calls=2)
-```
+=== "Node"
+
+    Node 生态里对应 Pydantic AI 位置的是 Vercel AI SDK（npm 包 `ai`）：同样是模型无关的 `Agent` 抽象 + 类型化工具 + 结构化输出（用 zod 描述）。离线模型用官方 `ai/test` 里的 `MockLanguageModelV4`：
+
+    ```text
+    $ node sdk_compare/ai_sdk_agent.ts
+    output: { fixed: true, summary: '把 a - b 改成 a + b' }
+    messages: [ 'assistant', 'tool', 'assistant', 'tool', 'assistant' ]
+    calc.py: return a + b
+    usage: requests=3 tool_calls=2 input_tokens=150 output_tokens=30
+    ```
+
+    （token 数是 mock 模型里写死的，不是真实计费；`messages` 是 `responseMessages`，不含最初那条 user prompt。）
+
+=== "Python"
+
+    ```text
+    $ uv run python -m sdk_compare.pydantic_ai_agent
+    output: fixed=True summary='把 a - b 改成 a + b'
+    messages: ['ModelRequest', 'ModelResponse', 'ModelRequest', 'ModelResponse', 'ModelRequest', 'ModelResponse', 'ModelRequest']
+    calc.py: return a + b
+    usage: RunUsage(input_tokens=174, output_tokens=62, requests=3, tool_calls=2)
+    ```
 
 （`input_tokens=174` 是 `FunctionModel` 按文本长度估算的，不是真实计费。）
 
-**LangGraph**（[`langgraph_agent.py`](../code/agent/sdk_compare/langgraph_agent.py)，「模型」节点是一个按脚本返回决定的普通函数）：
+**LangGraph**（[`langgraph_agent.ts`](../code/agent-node/sdk_compare/langgraph_agent.ts)（Python 版 [`langgraph_agent.py`](../code/agent/sdk_compare/langgraph_agent.py)），「模型」节点是一个按脚本返回决定的普通函数）：
 
-```text
-$ uv run python -m sdk_compare.langgraph_agent
-[llm] {'role': 'assistant', 'tool': 'read_file', 'args': {'path': 'calc.py'}}
-[tools] {'role': 'tool', 'content': 'def add(a, b):\n    return a - b\n'}
-[llm] {'role': 'assistant', 'tool': 'write_file', 'args': {'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}}
-[tools] {'role': 'tool', 'content': 'ok'}
-[llm] {'role': 'assistant', 'text': '已修复：a - b → a + b'}
-```
+=== "Node"
 
-它还能把自己画出来（`app.get_graph().draw_mermaid()` 的真实输出，略去样式行）：
+    ```text
+    $ node sdk_compare/langgraph_agent.ts
+    [llm] {"role":"assistant","tool":"read_file","args":{"path":"calc.py"}}
+    [tools] {"role":"tool","content":"def add(a, b):\n    return a - b\n"}
+    [llm] {"role":"assistant","tool":"write_file","args":{"path":"calc.py","content":"def add(a, b):\n    return a + b\n"}}
+    [tools] {"role":"tool","content":"ok"}
+    [llm] {"role":"assistant","text":"已修复：a - b → a + b"}
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m sdk_compare.langgraph_agent
+    [llm] {'role': 'assistant', 'tool': 'read_file', 'args': {'path': 'calc.py'}}
+    [tools] {'role': 'tool', 'content': 'def add(a, b):\n    return a - b\n'}
+    [llm] {'role': 'assistant', 'tool': 'write_file', 'args': {'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}}
+    [tools] {'role': 'tool', 'content': 'ok'}
+    [llm] {'role': 'assistant', 'text': '已修复：a - b → a + b'}
+    ```
+
+它还能把自己画出来（`app.get_graph().draw_mermaid()` 的真实输出，略去样式行；Node 版是 `(await app.getGraphAsync()).drawMermaid()`，只有边的书写顺序不同）：
 
 ```mermaid
 graph TD;
@@ -53,33 +82,72 @@ graph TD;
 
 把这张图和第 2 章的流程图放一起看，你会发现它们**是同一张图**。
 
-```text
-$ uv run pytest -q sdk_compare
-..                                                                       [100%]
-2 passed, 1 warning in 0.36s
-```
+=== "Node"
 
-（warning 是 `pydantic_graph` 的一条 DeprecationWarning，和本例无关。）
+    ```text
+    $ node --test sdk_compare/*.test.ts
+    ✔ Vercel AI SDK 离线跑通（对应 Python 版的 Pydantic AI）
+    ✔ LangGraph 离线跑通
+    ℹ pass 2
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run pytest -q sdk_compare
+    ..                                                                       [100%]
+    2 passed, 1 warning in 0.36s
+    ```
+
+（Python 版的 warning 是 `pydantic_graph` 的一条 DeprecationWarning，和本例无关。）
 
 ## 四个 SDK，四种性格
 
 ### Pydantic AI：把类型安全带进 Agent
 
-```python
-class Report(BaseModel):
-    fixed: bool
-    summary: str
+=== "Node"
 
-agent = Agent(FunctionModel(scripted_model), instructions="你是编程 Agent。", output_type=Report)
+    Node 生态里这个位置用 Vercel AI SDK，写法几乎一一对应：
 
-@agent.tool_plain
-def read_file(path: str) -> str:
-    """读取文件内容。"""
-    return FILES[path]
+    ```ts
+    const Report = z.object({ fixed: z.boolean(), summary: z.string() });
 
-r = agent.run_sync("修好 calc.py")
-r.output        # Report(fixed=True, summary=...)，不是字符串
-```
+    const agent = new ToolLoopAgent({
+      model,                                       // MockLanguageModelV4（离线）或 anthropic("claude-opus-5-5")
+      instructions: "你是编程 Agent。",
+      output: Output.object({ schema: Report }),
+      tools: {
+        read_file: tool({
+          description: "读取文件内容。",
+          inputSchema: z.object({ path: z.string() }),
+          execute: async ({ path }) => FILES[path],
+        }),
+      },
+    });
+
+    const r = await agent.generate({ prompt: "修好 calc.py" });
+    r.output        // { fixed: true, summary: ... }，按 zod schema 校验过，不是字符串
+    ```
+
+    两处和 Pydantic AI 不同：工具的 schema 来自显式写的 zod 对象（TS 的类型在运行时不存在，没法从函数签名反射）；结构化输出不是一个「交卷工具」，而是请求里带 `responseFormat: json` + schema，模型最后一步直接输出 JSON 文本，框架再用 zod 校验。
+
+=== "Python"
+
+    ```python
+    class Report(BaseModel):
+        fixed: bool
+        summary: str
+
+    agent = Agent(FunctionModel(scripted_model), instructions="你是编程 Agent。", output_type=Report)
+
+    @agent.tool_plain
+    def read_file(path: str) -> str:
+        """读取文件内容。"""
+        return FILES[path]
+
+    r = agent.run_sync("修好 calc.py")
+    r.output        # Report(fixed=True, summary=...)，不是字符串
+    ```
 
 它最有特色的是两点。第一，工具的 JSON Schema 从**函数签名和 docstring** 自动生成，不用手写。第二，`output_type=Report` 让最终输出变成一个**校验过的 Pydantic 对象**。
 
@@ -89,42 +157,80 @@ r.output        # Report(fixed=True, summary=...)，不是字符串
 
 ### LangGraph：把循环画成状态图
 
-```python
-class State(TypedDict):
-    messages: Annotated[list[dict], operator.add]   # reducer：节点返回的列表会被「追加」
-    step: int
+=== "Node"
 
-g = StateGraph(State)
-g.add_node("llm", llm)
-g.add_node("tools", tools)
-g.add_edge(START, "llm")
-g.add_conditional_edges("llm", route, ["tools", END])   # ← 第 2 章 while 循环里的那个 if
-g.add_edge("tools", "llm")
-app = g.compile()
-```
+    ```ts
+    const State = Annotation.Root({
+      messages: Annotation<Msg[]>({ reducer: (a, b) => a.concat(b), default: () => [] }),  // reducer：节点返回的列表会被「追加」
+      step: Annotation<number>(),
+    });
 
-LangGraph 不关心你用什么模型，节点就是普通函数。它管的是**状态怎么在节点之间流动**：`Annotated[list, operator.add]` 声明了「每个节点返回的 messages 要追加，不是覆盖」。
+    const app = new StateGraph(State)
+      .addNode("llm", llm)
+      .addNode("tools", tools)
+      .addEdge(START, "llm")
+      .addConditionalEdges("llm", route, ["tools", END])   // ← 第 2 章 while 循环里的那个 if
+      .addEdge("tools", "llm")
+      .compile();
+    ```
+
+=== "Python"
+
+    ```python
+    class State(TypedDict):
+        messages: Annotated[list[dict], operator.add]   # reducer：节点返回的列表会被「追加」
+        step: int
+
+    g = StateGraph(State)
+    g.add_node("llm", llm)
+    g.add_node("tools", tools)
+    g.add_edge(START, "llm")
+    g.add_conditional_edges("llm", route, ["tools", END])   # ← 第 2 章 while 循环里的那个 if
+    g.add_edge("tools", "llm")
+    app = g.compile()
+    ```
+
+LangGraph 不关心你用什么模型，节点就是普通函数。它管的是**状态怎么在节点之间流动**：`Annotated[list, operator.add]`（Node 版是带 `reducer` 的 `Annotation`）声明了「每个节点返回的 messages 要追加，不是覆盖」。
 
 它的价值在 Agent 变复杂之后才显现：你想在「工具执行前」停下来等人审批？加一个中断点。想让「审查」和「修复」两个节点循环直到通过？加一条条件边。想崩溃后从第 7 步恢复？它有 checkpoint 机制。这其实是把上一章 Workflow 和 Agent 的光谱**显式化**了：哪些边是写死的（Workflow），哪些边由模型决定（Agent），图上一目了然。
 
 ### OpenAI Agents SDK：handoff 是一等公民
 
-这个我没有在本机装和运行，下面的写法来自它的官方 Quickstart 和 Handoffs 文档（安装：`pip install openai-agents`）：
+这个我没有在本机装和运行，下面的写法来自它的官方 Quickstart 和 Handoffs 文档（安装：`pip install openai-agents`；JS 版 `npm install @openai/agents`）：
 
-```python
-# 未在本机运行；API 依据 openai.github.io/openai-agents-python 的 quickstart / handoffs 页面
-from agents import Agent, Runner
+=== "Node"
 
-history_tutor_agent = Agent(name="History Tutor", instructions="...")
-math_tutor_agent = Agent(name="Math Tutor", instructions="...")
-triage_agent = Agent(
-    name="Triage Agent",
-    instructions="判断问题属于哪个学科，交给对应的老师",
-    handoffs=[history_tutor_agent, math_tutor_agent],
-)
-result = await Runner.run(triage_agent, "罗马帝国是什么时候灭亡的？")
-print(result.final_output)
-```
+    ```ts
+    // 未在本机运行；API 依据 openai.github.io/openai-agents-js 的 quickstart / handoffs 页面（npm install @openai/agents）
+    import { Agent, run } from "@openai/agents";
+
+    const historyTutorAgent = new Agent({ name: "History Tutor", instructions: "..." });
+    const mathTutorAgent = new Agent({ name: "Math Tutor", instructions: "..." });
+    const triageAgent = Agent.create({
+      name: "Triage Agent",
+      instructions: "判断问题属于哪个学科，交给对应的老师",
+      handoffs: [historyTutorAgent, mathTutorAgent],
+    });
+    const result = await run(triageAgent, "罗马帝国是什么时候灭亡的？");
+    console.log(result.finalOutput);
+    ```
+
+=== "Python"
+
+    ```python
+    # 未在本机运行；API 依据 openai.github.io/openai-agents-python 的 quickstart / handoffs 页面
+    from agents import Agent, Runner
+
+    history_tutor_agent = Agent(name="History Tutor", instructions="...")
+    math_tutor_agent = Agent(name="Math Tutor", instructions="...")
+    triage_agent = Agent(
+        name="Triage Agent",
+        instructions="判断问题属于哪个学科，交给对应的老师",
+        handoffs=[history_tutor_agent, math_tutor_agent],
+    )
+    result = await Runner.run(triage_agent, "罗马帝国是什么时候灭亡的？")
+    print(result.final_output)
+    ```
 
 它的招牌是 handoff：一个 Agent 把对话**整个交接**给另一个 Agent。官方文档原话是 handoff 对模型而言「表现为工具」，也就是说，模型调用一个名为「转给数学老师」的工具，框架就把后续对话切换到另一个 Agent 的 instructions 和工具集。
 
@@ -176,14 +282,15 @@ CrewAI 走的是「角色扮演 + 协作」路线：定义研究员、写手、�
 
 ## 练习
 
-1. 给 `langgraph_agent.py` 加一个「审批」节点：`write_file` 之前先经过它，如果 `content` 里含 `rm -rf` 就路由到 END。
-2. 把 `pydantic_ai_agent.py` 的 `Report` 加一个字段 `files_changed: list[str]`，让 fake 模型也填上，写测试断言。
+1. 给 `langgraph_agent.ts`（Python 版 `langgraph_agent.py`）加一个「审批」节点：`write_file` 之前先经过它，如果 `content` 里含 `rm -rf` 就路由到 END。
+2. 把 `ai_sdk_agent.ts` / `pydantic_ai_agent.py` 的 `Report` 加一个字段 `files_changed`（zod 里是 `z.array(z.string())`，Python 里是 `list[str]`），让 fake 模型也填上，写测试断言。
 3. 开放题：如果要把第 5 章的分诊系统上线，并且要求「每张工单创建前都要人工确认，且服务重启后能接着处理」，你会选哪个 SDK？为什么？
 
 ## 延伸阅读
 
 - Pydantic AI：<https://ai.pydantic.dev/>（`FunctionModel` / `TestModel` 见其 testing 文档）
-- LangGraph：<https://langchain-ai.github.io/langgraph/>
+- Vercel AI SDK：<https://ai-sdk.dev/>（`MockLanguageModelV4` 见其 testing 文档）
+- LangGraph：<https://langchain-ai.github.io/langgraph/>（JS 版：<https://langchain-ai.github.io/langgraphjs/>）
 - OpenAI Agents SDK：<https://openai.github.io/openai-agents-python/>（quickstart、handoffs）
 - 本库：上一章 [用 Agent SDK 简化开发](./06-agent-sdk.md) · [Workflow 和 Agent](./05-workflow-vs-agent.md) · 下一章 [给 Agent 加上可观测性](./08-agent-observability.md)
 

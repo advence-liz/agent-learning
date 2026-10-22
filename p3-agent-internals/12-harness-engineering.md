@@ -65,39 +65,90 @@ flowchart TB
 
 下面这个实验用一个离线假模型：它大部分时候守规矩，但有 8% 的概率「忘了」，直接执行 `git push --force`。两种方案的 system prompt 里都写了禁止，区别只在有没有 hook：
 
-```python
-import random
+=== "Node"
 
-def fake_model(step, rng):
-    """离线假模型：大部分时候守规矩，偶尔『忘了』规则直接 git push --force。"""
-    return "git push --force" if rng.random() < 0.08 else f"npm test -- --shard {step}"
+    ```ts
+    /** 可设种子的伪随机数（mulberry32）：Math.random 不能设种子，实验要可复现 */
+    function seeded(seed: number): () => number {
+      return () => {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
 
-def run(enforce_with_hook, steps=500, seed=7):
-    rng, violations, blocked = random.Random(seed), 0, 0
-    # 两种方案的 system prompt 里都写了「永远不要 force push」，区别只在有没有 hook
-    for step in range(steps):
-        cmd = fake_model(step, rng)
-        if enforce_with_hook and "push --force" in cmd:
-            blocked += 1                                 # PreToolUse 退出码 2：不执行，stderr 回灌给模型
-            continue
-        if "push --force" in cmd:
-            violations += 1
-    return violations, blocked
+    /** 离线假模型：大部分时候守规矩，偶尔『忘了』规则直接 git push --force。 */
+    function fakeModel(step: number, rng: () => number): string {
+      return rng() < 0.08 ? "git push --force" : `npm test -- --shard ${step}`;
+    }
 
-for hook in (False, True):
-    v, b = run(hook)
-    print(f"{'prompt + hook' if hook else 'prompt only  '}  violations executed: {v:>3}   blocked by hook: {b:>3}")
-```
+    function run(enforceWithHook: boolean, steps = 500, seed = 7): [number, number] {
+      const rng = seeded(seed);
+      let violations = 0, blocked = 0;
+      // 两种方案的 system prompt 里都写了「永远不要 force push」，区别只在有没有 hook
+      for (let step = 0; step < steps; step++) {
+        const cmd = fakeModel(step, rng);
+        if (enforceWithHook && cmd.includes("push --force")) {
+          blocked += 1;                                  // PreToolUse 退出码 2：不执行，stderr 回灌给模型
+          continue;
+        }
+        if (cmd.includes("push --force")) violations += 1;
+      }
+      return [violations, blocked];
+    }
 
-```text
-❯ uv run python harness_demo.py
-prompt only    violations executed:  49   blocked by hook:   0
-prompt + hook  violations executed:   0   blocked by hook:  49
-```
+    for (const hook of [false, true]) {
+      const [v, b] = run(hook);
+      console.log(`${hook ? "prompt + hook" : "prompt only  "}  violations executed: ${String(v).padStart(3)}   blocked by hook: ${String(b).padStart(3)}`);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    import random
+
+    def fake_model(step, rng):
+        """离线假模型：大部分时候守规矩，偶尔『忘了』规则直接 git push --force。"""
+        return "git push --force" if rng.random() < 0.08 else f"npm test -- --shard {step}"
+
+    def run(enforce_with_hook, steps=500, seed=7):
+        rng, violations, blocked = random.Random(seed), 0, 0
+        # 两种方案的 system prompt 里都写了「永远不要 force push」，区别只在有没有 hook
+        for step in range(steps):
+            cmd = fake_model(step, rng)
+            if enforce_with_hook and "push --force" in cmd:
+                blocked += 1                                 # PreToolUse 退出码 2：不执行，stderr 回灌给模型
+                continue
+            if "push --force" in cmd:
+                violations += 1
+        return violations, blocked
+
+    for hook in (False, True):
+        v, b = run(hook)
+        print(f"{'prompt + hook' if hook else 'prompt only  '}  violations executed: {v:>3}   blocked by hook: {b:>3}")
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node harness_demo.ts
+    prompt only    violations executed:  36   blocked by hook:   0
+    prompt + hook  violations executed:   0   blocked by hook:  36
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python harness_demo.py
+    prompt only    violations executed:  49   blocked by hook:   0
+    prompt + hook  violations executed:   0   blocked by hook:  49
+    ```
 
 （离线 fake 模型，8% 违规率是我设的参数，不代表任何真实模型的数据。）
 
-结果没什么悬念：只靠 prompt，500 步里 49 次违规全部被执行了；加了 hook，49 次全部被拦下。
+结果没什么悬念：只靠 prompt，500 步里 49 次违规全部被执行了；加了 hook，49 次全部被拦下。（Node 版换了一个可设种子的随机数生成器，同样的种子抽出来是 36 次，数字不同，结论一样。）
 
 这个实验的意义不在数字，在于它说明了两者的**性质**不同：prompt 改变的是违规的概率，hook 改变的是违规的后果。你可以把 prompt 写得再好，把概率从 8% 压到 0.8%，但只要不是 0，跑足够多步就一定会发生；而 hook 让「发生了也没事」。
 

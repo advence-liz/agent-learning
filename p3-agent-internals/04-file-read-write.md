@@ -109,87 +109,188 @@ Refusing to write <path> it is a symbolic link. Write to the link's target path 
 
 下面这段代码把三条规则落成一个类（只用标准库）。报错文案是我自己写的，不是 Claude Code 原文，只有「Found N matches」和「No changes to make」两条参考了上面本机见到的错误：
 
-```python
-import hashlib, os, tempfile
+=== "Node"
 
-class FileState:
-    """Read / Edit / Write 共享的一份「读取记录」：path -> (mtime_ns, sha1)"""
-    def __init__(self):
-        self.seen = {}
+    ```ts
+    import { createHash } from "node:crypto";
+    import { appendFileSync, existsSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
+    import { tmpdir } from "node:os";
+    import { basename, join } from "node:path";
 
-    def _stamp(self, path):
-        data = open(path, "rb").read()
-        return os.stat(path).st_mtime_ns, hashlib.sha1(data).hexdigest()
+    class FileState {
+      /** Read / Edit / Write 共享的一份「读取记录」：path -> "mtimeNs:sha1" */
+      seen = new Map<string, string>();
 
-    def read(self, path):
-        text = open(path, encoding="utf-8").read()
-        self.seen[path] = self._stamp(path)
-        return "".join(f"{i:>6}\t{l}" for i, l in enumerate(text.splitlines(True), 1))
+      private stamp(path: string): string {
+        const data = readFileSync(path);
+        return `${statSync(path, { bigint: true }).mtimeNs}:${createHash("sha1").update(data).digest("hex")}`;
+      }
 
-    def _check_fresh(self, path):
-        if path not in self.seen:
-            raise PermissionError("File has not been read yet. Read it first before writing to it.")
-        if self._stamp(path) != self.seen[path]:
-            raise PermissionError("File has been modified since read. Read it again before writing.")
+      read(path: string): string {
+        const text = readFileSync(path, "utf8");
+        this.seen.set(path, this.stamp(path));
+        return text.split(/(?<=\n)/).map((l, i) => `${String(i + 1).padStart(6)}\t${l}`).join("");
+      }
 
-    def edit(self, path, old, new, replace_all=False):
-        self._check_fresh(path)
-        text = open(path, encoding="utf-8").read()
-        n = text.count(old)
-        if old == new:
-            raise ValueError("No changes to make: old_string and new_string are exactly the same.")
-        if n == 0:
-            raise ValueError("String to replace not found in file.")
-        if n > 1 and not replace_all:
-            raise ValueError(f"Found {n} matches of the string to replace, but replace_all is false.")
-        text = text.replace(old, new) if replace_all else text.replace(old, new, 1)
-        open(path, "w", encoding="utf-8").write(text)
-        self.seen[path] = self._stamp(path)          # 自己写的不算「被别人改」
-        return f"The file {os.path.basename(path)} has been updated."
+      private checkFresh(path: string): void {
+        if (!this.seen.has(path))
+          throw new Error("File has not been read yet. Read it first before writing to it.");
+        if (this.stamp(path) !== this.seen.get(path))
+          throw new Error("File has been modified since read. Read it again before writing.");
+      }
 
-    def write(self, path, content):
-        if os.path.exists(path):
-            self._check_fresh(path)                  # 覆盖已有文件也必须先读
-        open(path, "w", encoding="utf-8").write(content)
-        self.seen[path] = self._stamp(path)
-        return f"File created successfully at: {os.path.basename(path)}"
+      edit(path: string, old: string, neu: string, replaceAll = false): string {
+        this.checkFresh(path);
+        let text = readFileSync(path, "utf8");
+        const n = text.split(old).length - 1;
+        if (old === neu)
+          throw new Error("No changes to make: old_string and new_string are exactly the same.");
+        if (n === 0)
+          throw new Error("String to replace not found in file.");
+        if (n > 1 && !replaceAll)
+          throw new Error(`Found ${n} matches of the string to replace, but replace_all is false.`);
+        text = replaceAll ? text.replaceAll(old, neu) : text.replace(old, () => neu);
+        writeFileSync(path, text, "utf8");
+        this.seen.set(path, this.stamp(path));        // 自己写的不算「被别人改」
+        return `The file ${basename(path)} has been updated.`;
+      }
 
-def tool(fs, name, *args, **kw):
-    try:
-        out = getattr(fs, name)(*args, **kw)
-        print(f"✔ {name}: {out.strip().splitlines()[0]}")
-    except Exception as e:
-        print(f"✘ {name}: <tool_use_error>{e}</tool_use_error>")
+      write(path: string, content: string): string {
+        if (existsSync(path))
+          this.checkFresh(path);                      // 覆盖已有文件也必须先读
+        writeFileSync(path, content, "utf8");
+        this.seen.set(path, this.stamp(path));
+        return `File created successfully at: ${basename(path)}`;
+      }
+    }
 
-d = tempfile.mkdtemp(); p = os.path.join(d, "app.py")
-open(p, "w").write("x = 1\nprint(x)\nprint(x)\n")
-fs = FileState()
-tool(fs, "edit", p, "x = 1", "x = 2")              # 没读过就改
-tool(fs, "read", p)
-tool(fs, "edit", p, "print(x)", "print(x + 1)")    # 不唯一
-tool(fs, "edit", p, "x = 1", "x = 2")              # 正常
-open(p, "a").write("# 用户在编辑器里加了一行\n")    # 外部修改
-os.utime(p, ns=(os.stat(p).st_atime_ns, os.stat(p).st_mtime_ns + 1000))
-tool(fs, "edit", p, "x = 2", "x = 3")              # 读完被别人改了
-tool(fs, "read", p)
-tool(fs, "edit", p, "x = 2", "x = 3")
-print(open(p).read())
-```
+    function tool(fs: FileState, name: "read" | "edit" | "write", ...args: any[]): void {
+      try {
+        const out: string = (fs[name] as Function)(...args);
+        console.log(`✔ ${name}: ${out.trim().split("\n")[0]}`);
+      } catch (e) {
+        console.log(`✘ ${name}: <tool_use_error>${(e as Error).message}</tool_use_error>`);
+      }
+    }
 
-```text
-❯ uv run python file_state_demo.py
-✘ edit: <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
-✔ read: 1	x = 1
-✘ edit: <tool_use_error>Found 2 matches of the string to replace, but replace_all is false.</tool_use_error>
-✔ edit: The file app.py has been updated.
-✘ edit: <tool_use_error>File has been modified since read. Read it again before writing.</tool_use_error>
-✔ read: 1	x = 2
-✔ edit: The file app.py has been updated.
-x = 3
-print(x)
-print(x)
-# 用户在编辑器里加了一行
-```
+    const d = mkdtempSync(join(tmpdir(), "fs-")); const p = join(d, "app.py");
+    writeFileSync(p, "x = 1\nprint(x)\nprint(x)\n");
+    const fs = new FileState();
+    tool(fs, "edit", p, "x = 1", "x = 2");                        // 没读过就改
+    tool(fs, "read", p);
+    tool(fs, "edit", p, "print(x)", "print(x + 1)");              // 不唯一
+    tool(fs, "edit", p, "x = 1", "x = 2");                        // 正常
+    appendFileSync(p, "# 用户在编辑器里加了一行\n");                // 外部修改
+    const st = statSync(p);
+    utimesSync(p, st.atime, new Date(st.mtimeMs + 1000));
+    tool(fs, "edit", p, "x = 2", "x = 3");                        // 读完被别人改了
+    tool(fs, "read", p);
+    tool(fs, "edit", p, "x = 2", "x = 3");
+    console.log(readFileSync(p, "utf8"));
+    ```
+
+=== "Python"
+
+    ```python
+    import hashlib, os, tempfile
+
+    class FileState:
+        """Read / Edit / Write 共享的一份「读取记录」：path -> (mtime_ns, sha1)"""
+        def __init__(self):
+            self.seen = {}
+
+        def _stamp(self, path):
+            data = open(path, "rb").read()
+            return os.stat(path).st_mtime_ns, hashlib.sha1(data).hexdigest()
+
+        def read(self, path):
+            text = open(path, encoding="utf-8").read()
+            self.seen[path] = self._stamp(path)
+            return "".join(f"{i:>6}\t{l}" for i, l in enumerate(text.splitlines(True), 1))
+
+        def _check_fresh(self, path):
+            if path not in self.seen:
+                raise PermissionError("File has not been read yet. Read it first before writing to it.")
+            if self._stamp(path) != self.seen[path]:
+                raise PermissionError("File has been modified since read. Read it again before writing.")
+
+        def edit(self, path, old, new, replace_all=False):
+            self._check_fresh(path)
+            text = open(path, encoding="utf-8").read()
+            n = text.count(old)
+            if old == new:
+                raise ValueError("No changes to make: old_string and new_string are exactly the same.")
+            if n == 0:
+                raise ValueError("String to replace not found in file.")
+            if n > 1 and not replace_all:
+                raise ValueError(f"Found {n} matches of the string to replace, but replace_all is false.")
+            text = text.replace(old, new) if replace_all else text.replace(old, new, 1)
+            open(path, "w", encoding="utf-8").write(text)
+            self.seen[path] = self._stamp(path)          # 自己写的不算「被别人改」
+            return f"The file {os.path.basename(path)} has been updated."
+
+        def write(self, path, content):
+            if os.path.exists(path):
+                self._check_fresh(path)                  # 覆盖已有文件也必须先读
+            open(path, "w", encoding="utf-8").write(content)
+            self.seen[path] = self._stamp(path)
+            return f"File created successfully at: {os.path.basename(path)}"
+
+    def tool(fs, name, *args, **kw):
+        try:
+            out = getattr(fs, name)(*args, **kw)
+            print(f"✔ {name}: {out.strip().splitlines()[0]}")
+        except Exception as e:
+            print(f"✘ {name}: <tool_use_error>{e}</tool_use_error>")
+
+    d = tempfile.mkdtemp(); p = os.path.join(d, "app.py")
+    open(p, "w").write("x = 1\nprint(x)\nprint(x)\n")
+    fs = FileState()
+    tool(fs, "edit", p, "x = 1", "x = 2")              # 没读过就改
+    tool(fs, "read", p)
+    tool(fs, "edit", p, "print(x)", "print(x + 1)")    # 不唯一
+    tool(fs, "edit", p, "x = 1", "x = 2")              # 正常
+    open(p, "a").write("# 用户在编辑器里加了一行\n")    # 外部修改
+    os.utime(p, ns=(os.stat(p).st_atime_ns, os.stat(p).st_mtime_ns + 1000))
+    tool(fs, "edit", p, "x = 2", "x = 3")              # 读完被别人改了
+    tool(fs, "read", p)
+    tool(fs, "edit", p, "x = 2", "x = 3")
+    print(open(p).read())
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node file_state_demo.ts
+    ✘ edit: <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
+    ✔ read: 1	x = 1
+    ✘ edit: <tool_use_error>Found 2 matches of the string to replace, but replace_all is false.</tool_use_error>
+    ✔ edit: The file app.py has been updated.
+    ✘ edit: <tool_use_error>File has been modified since read. Read it again before writing.</tool_use_error>
+    ✔ read: 1	x = 2
+    ✔ edit: The file app.py has been updated.
+    x = 3
+    print(x)
+    print(x)
+    # 用户在编辑器里加了一行
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python file_state_demo.py
+    ✘ edit: <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
+    ✔ read: 1	x = 1
+    ✘ edit: <tool_use_error>Found 2 matches of the string to replace, but replace_all is false.</tool_use_error>
+    ✔ edit: The file app.py has been updated.
+    ✘ edit: <tool_use_error>File has been modified since read. Read it again before writing.</tool_use_error>
+    ✔ read: 1	x = 2
+    ✔ edit: The file app.py has been updated.
+    x = 3
+    print(x)
+    print(x)
+    # 用户在编辑器里加了一行
+    ```
 
 （纯本地运行，不调用模型。）
 

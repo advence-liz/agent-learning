@@ -37,7 +37,7 @@ Rason，前端工程师（TypeScript/React，公司的 webapp 项目），**Clau
 ## 事实准确性（硬性）
 - Claude Code / Codex / MCP / SDK 的行为：以官方文档、本机实测（`~/.claude/` 下的真实文件、`claude --help`、`~/.claude/projects/*/*.jsonl`）为准。查不到就写「推测」并说明依据，**不许编造**配置字段、命令、事件名。
 - Claude 模型 ID：`claude-opus-5-5` / `claude-sonnet-5-5` / `claude-haiku-5-5`（写 Anthropic SDK 代码前先加载 `claude-api` skill 核对用法）。
-- 代码必须能跑：写完在 `uv run` 下实跑（或至少 `python -m py_compile` + 不需要 API key 的单测），把真实输出贴进文中。需要 API key 的地方用 `ANTHROPIC_API_KEY` 环境变量，并支持 `ANTHROPIC_BASE_URL`（中转站）。
+- 代码必须能跑：写完在 `uv run` / `node` 下实跑（或至少不需要 API key 的单测 + Node 版 `npm run typecheck`），把真实输出贴进文中。需要 API key 的地方用 `ANTHROPIC_API_KEY` 环境变量，并支持 `ANTHROPIC_BASE_URL`（中转站）。
 
 ## 结构（每章）
 1. `# 标题`
@@ -57,6 +57,7 @@ Rason，前端工程师（TypeScript/React，公司的 webapp 项目），**Clau
 - Agent 相关代码：`/Users/liz/liz/agent-learn/code/`，用 uv 管理（`uv init` 后 `uv add anthropic` 等），Python 3.12（`uv python install 3.12`）。
 - `p4-mini-cc` 的 mini Claude Code 在 `code/mini_cc/`，**每章是一次增量提交**：在 `code/mini_cc/CHANGELOG.md` 记录每章新增了什么，章节正文引用具体文件与函数。
 - ML 代码：`code/ml/`，用 numpy / torch，数据用 sklearn 自带数据集或脚本生成，不依赖外网下载大文件。
+- 第 0–4 部分的代码有 Node 版：`code/agent-node`、`code/mini_cc-node`（TypeScript，Node 24 直接跑 `.ts`），约定见 `code/agent-node/README.md`。正文里每段代码写成 `=== "Node"` / `=== "Python"` 两个标签页，Node 在前（默认展示），两版逻辑一致、输出都要实跑。
 - 三个 uv 项目已建好：`code/agent`（anthropic 1.17 / mcp / httpx / rich / numpy）、`code/mini_cc`（anthropic / mcp / rich / prompt_toolkit / pytest）、`code/ml`（numpy / scikit-learn / matplotlib / torch / pytest）。缺包就在**自己负责的项目**里 `uv add`。
 - **不要发起真实的 Anthropic API 调用**（用户规定不主动调用 Anthropic）。验证靠：可注入的 fake client / 录制好的响应 fixture + pytest。文中贴的「运行输出」必须是 fake 模式下的真实输出，并注明「离线 fake 模型」；真实模型输出只能写成「你本地设了 key 后会看到类似…」。
 - 不要 `git commit`、不要 push、不要动 `code/` 和你负责目录之外的文件。

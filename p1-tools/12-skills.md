@@ -6,11 +6,11 @@
 
 ## 54 万字符去哪了
 
-我在你机器上跑了一个统计。`~/.claude/skills` 下有 45 个 skill：
+我在你机器上跑了一个统计。`~/.claude/skills` 下有 46 个 skill：
 
-- SKILL.md 正文合计 541,303 字符。
+- SKILL.md 正文合计 562,277 字符。
 - `references/`、`scripts/` 这些支持文件合计 873 KB。
-- 常驻的 description 合计只有 12,635 字符。
+- 常驻的 description 合计只有 12,999 字符。
 
 你可能会问：正文加起来有一本小说那么长，为什么每次开新会话，上下文没被它们撑爆？
 
@@ -70,49 +70,88 @@ sequenceDiagram
 
 ## 先跑起来：一个一百多行的 skill 加载器
 
-`code/agent/skills_demo/skill_loader.py` 把上面三层实现了一遍，`skills_demo/skills/` 下放了两个示例 skill：
+[`code/agent-node/skills_demo/skill_loader.ts`](../code/agent-node/skills_demo/skill_loader.ts)（Python 版 [`skill_loader.py`](../code/agent/skills_demo/skill_loader.py)）把上面三层实现了一遍，`skills_demo/skills/` 下放了两个示例 skill：
 
-- `pr-summary`：带参数、带 `` !`python3 --version` `` 预处理、带一个 references 文件。
+- `pr-summary`：带参数、带 `` !`node --version` ``（Python 版是 `` !`python3 --version` ``）预处理、带一个 references 文件。
 - `release-note`：设置了 `disable-model-invocation: true`。
 
-运行 `uv run python skills_demo/skill_loader.py`（真实输出，路径已缩写）：
+真实输出，路径已缩写：
 
-```text
-== L1 listing（常驻）==
-- pr-summary: 汇总当前分支相对 main 的改动并写成 PR 描述。触发：「写 PR 描述」「总结这次改动」。
+=== "Node"
 
-== L1 listing，上下文只有 1.5k token 时（预算 60 字符）==
-- pr-summary
+    ```text
+    $ node skills_demo/skill_loader.ts
+    == L1 listing（常驻）==
+    - pr-summary: 汇总当前分支相对 main 的改动并写成 PR 描述。触发：「写 PR 描述」「总结这次改动」。
 
-== L2 调用 /pr-summary develop 后追加的消息 ==
-Base directory for this skill: <skills_demo/skills>/pr-summary
+    == L1 listing，上下文只有 1.5k token 时（预算 60 字符）==
+    - pr-summary
 
-# PR 描述生成
+    == L2 调用 /pr-summary develop 后追加的消息 ==
+    Base directory for this skill: <skills_demo/skills>/pr-summary
 
-基线分支：develop（默认 main）
+    # PR 描述生成
 
-## 当前环境
-Python 3.12.13
+    基线分支：develop（默认 main）
 
-## 步骤
-1. 读 `git diff develop...HEAD --stat` 看改动面。
-2. 按「动机 / 改动 / 验证」三段写。
-3. 涉及 UI 的改动，查 <skills_demo/skills>/pr-summary/references/ui-checklist.md。
-```
+    ## 当前环境
+    v24.14.1
+
+    ## 步骤
+    1. 读 `git diff develop...HEAD --stat` 看改动面。
+    2. 按「动机 / 改动 / 验证」三段写。
+    3. 涉及 UI 的改动，查 <skills_demo/skills>/pr-summary/references/ui-checklist.md。
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python skills_demo/skill_loader.py
+    == L1 listing（常驻）==
+    - pr-summary: 汇总当前分支相对 main 的改动并写成 PR 描述。触发：「写 PR 描述」「总结这次改动」。
+
+    == L1 listing，上下文只有 1.5k token 时（预算 60 字符）==
+    - pr-summary
+
+    == L2 调用 /pr-summary develop 后追加的消息 ==
+    Base directory for this skill: <skills_demo/skills>/pr-summary
+
+    # PR 描述生成
+
+    基线分支：develop（默认 main）
+
+    ## 当前环境
+    Python 3.12.13
+
+    ## 步骤
+    1. 读 `git diff develop...HEAD --stat` 看改动面。
+    2. 按「动机 / 改动 / 验证」三段写。
+    3. 涉及 UI 的改动，查 <skills_demo/skills>/pr-summary/references/ui-checklist.md。
+    ```
 
 对照输出看这几点：
 
 - `release-note` 没有出现在 listing 里，因为它是手动专用的。
 - 预算缩小以后，`pr-summary` 的描述被砍掉，只剩名字，模型从此「不知道什么时候该用它」。
-- 调用时，`$0` 变成了 `develop`，`` !`python3 --version` `` 变成了真实的版本号，`${CLAUDE_SKILL_DIR}` 变成了绝对路径。
+- 调用时，`$0` 变成了 `develop`，`` !`node --version` ``（`` !`python3 --version` ``）变成了真实的版本号，`${CLAUDE_SKILL_DIR}` 变成了绝对路径。
 - 那个 references 文件**没有**被加载，正文里只给了它的路径。
 
 调用这一步的代码只有一行，而且只追加，不改前面任何内容：
 
-```python
-def invoke(messages, skills, name, arguments=""):
-    messages.append({"role": "user", "content": render_body(skills[name], arguments)})
-```
+=== "Node"
+
+    ```ts
+    function invoke(messages, skills, name, args = "") {
+      messages.push({ role: "user", content: renderBody(skills[name], args) });
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def invoke(messages, skills, name, arguments=""):
+        messages.append({"role": "user", "content": render_body(skills[name], arguments)})
+    ```
 
 `Base directory for this skill:` 这个前缀不是我编的。我在你本机的 jsonl 里看到了真实的结构，一次 skill 调用会产生三条记录：
 
@@ -122,7 +161,7 @@ def invoke(messages, skills, name, arguments=""):
 
 此外，jsonl 里还有 `skill_listing` 类型的 attachment，字段有 `content`、`skillCount`、`isInitial`、`names`，这就是 L1 的那份目录。还有 `invoked_skills` 类型的 attachment，我**推测**它就是压缩后用来重新挂回 skill 的那份记录。依据是它只记录了已调用过的 skill 列表，和文档描述的压缩后重新挂载行为对得上，但我没有在一次压缩前后对比验证过。
 
-测试：`uv run pytest -q skills_demo`，结果 `6 passed`，覆盖了这几种情况：
+测试：`node --test 'skills_demo/*.test.ts'`，结果 `ℹ pass 6`（Python 版 `uv run pytest -q skills_demo`，结果 `6 passed`），覆盖了这几种情况：
 
 - 手动专用的 skill 不进 listing。
 - 预算不够时只砍描述、不砍名字。
@@ -130,19 +169,32 @@ def invoke(messages, skills, name, arguments=""):
 - 预处理命令失败时整个调用中止。
 - 调用只追加消息，不改动已有消息。
 
-统计你自己的 skill 目录，用 `uv run python skills_demo/measure_real.py`。它只输出数字，不输出任何 skill 的内容：
+统计你自己的 skill 目录，用 `node skills_demo/measure_real.ts`（Python 版 `uv run python skills_demo/measure_real.py`）。它只输出数字，不输出任何 skill 的内容。两版输出逐字一致（Node 版按 Unicode 码点数字符，和 Python 的 `len()` 对齐；直接用 `.length` 会把 emoji 算成 2 个）：
 
-```text
-skills: 45  (disable-model-invocation: 0, description 超 1536 字符: 0)
-L1 常驻 description 合计:    12,635 字符
-L2 SKILL.md 正文合计:       541,303 字符  (43x)
-L3 支持文件合计:            873,313 字节
-```
+=== "Node"
+
+    ```text
+    $ node skills_demo/measure_real.ts
+    skills: 46  (disable-model-invocation: 0, description 超 1536 字符: 0)
+    L1 常驻 description 合计:    12,999 字符
+    L2 SKILL.md 正文合计:       562,277 字符  (43x)
+    L3 支持文件合计:            873,321 字节
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python skills_demo/measure_real.py
+    skills: 46  (disable-model-invocation: 0, description 超 1536 字符: 0)
+    L1 常驻 description 合计:    12,999 字符
+    L2 SKILL.md 正文合计:       562,277 字符  (43x)
+    L3 支持文件合计:            873,321 字节
+    ```
 
 ## 对照你的环境
 
 - **43 倍。** 这是渐进式披露在你机器上的实测收益：如果把所有正文都写进 CLAUDE.md，常驻层要大 43 倍。这正是你 CLAUDE.md 原则 2「多步流程一律进 skill；常驻层只回答『走哪条轨』」能成立的原因。
-- **12,635 字符的 description 会不会超预算？** 预算是「上下文窗口的 1%」，所以答案取决于你当前模型的窗口有多大。它的单位我按「字符」理解，因为用来覆盖它的环境变量 `SLASH_COMMAND_TOOL_CHAR_BUDGET` 是一个字符数，但这一点属于**推测**。最可靠的办法是在会话里看 `/context` 的 Skills 一行，或者跑 `/doctor` 看 listing 的估算成本。你的 description 普遍很长：`doc-narrative` 的 description 就把整套方法论压缩了进去。窗口小的模型上，最先被擦掉描述的会是那些不常用的 skill。
+- **12,999 字符的 description 会不会超预算？** 预算是「上下文窗口的 1%」，所以答案取决于你当前模型的窗口有多大。它的单位我按「字符」理解，因为用来覆盖它的环境变量 `SLASH_COMMAND_TOOL_CHAR_BUDGET` 是一个字符数，但这一点属于**推测**。最可靠的办法是在会话里看 `/context` 的 Skills 一行，或者跑 `/doctor` 看 listing 的估算成本。你的 description 普遍很长：`doc-narrative` 的 description 就把整套方法论压缩了进去。窗口小的模型上，最先被擦掉描述的会是那些不常用的 skill。
 - **你的内部平台系列 skill 用了 `allowed-tools`。** 注意它的语义：它只是在**调用 skill 的那一轮**里免除权限确认，「The grant clears when you send your next message」。它不是这个 skill 的工具白名单，也不会限制模型使用别的工具。
 - **命名规范。** 你 CLAUDE.md 里规定「带项目前缀 `<project>-<能力>`」，这对 L1 也有好处：名字永远不会被预算砍掉，即使描述被擦掉了，`webapp-` 这个前缀也还能给模型一点提示。
 
@@ -160,9 +212,9 @@ L3 支持文件合计:            873,313 字节
 
 ## 练习
 
-1. 给 `skill_loader.py` 加上 `user-invocable: false` 的支持：这样的 skill 不出现在 `/` 菜单里，但仍然在 listing 中，可以被模型调用。写一条 pytest，断言它和 `disable-model-invocation` 的效果正好相反。
+1. 给 `skill_loader.ts`（`skill_loader.py`）加上 `user-invocable: false` 的支持：这样的 skill 不出现在 `/` 菜单里，但仍然在 listing 中，可以被模型调用。写一条测试（`node:test` 或 pytest），断言它和 `disable-model-invocation` 的效果正好相反。
 2. 实现压缩后的重新挂载：给定一份「调用历史」，每个 skill 只保留最近一次调用的前 N 个字符，总量不超过 M，优先保留最近调用的。用 N=5000、M=25000 的比例缩小后做测试。
-3. （开放题）你的 45 个 skill 里，哪 5 个的 description 最该重写？用 `measure_real.py` 找出最长的 description，判断它的前 200 个字符里有没有用户真正会说的那句话。如果要把其中一个的流程拆成「SKILL.md 导航 + references 细节」，你会怎么切分？
+3. （开放题）你的 46 个 skill 里，哪 5 个的 description 最该重写？用 `measure_real.ts`（`measure_real.py`）找出最长的 description，判断它的前 200 个字符里有没有用户真正会说的那句话。如果要把其中一个的流程拆成「SKILL.md 导航 + references 细节」，你会怎么切分？
 
 ## 延伸阅读
 

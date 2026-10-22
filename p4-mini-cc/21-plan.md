@@ -20,86 +20,166 @@ plan 模式把这三个漏洞分别交给程序去堵：拦截交给权限层，
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch21.json`）。项目里 `api/posts.py` 定义了 `list_posts(posts)`，`web/feed.py` 调用了它。你用 `/plan` 进入 plan 模式并直接给出需求（管道模式没法按 Shift+Tab）。计划文件的路径换成了 `$PLAN`（实际是 `<home>/plans/<会话 id>.md`）：
+离线 fake 模型（`examples/ch21.json`）。项目里 `api/posts.py` 定义了 `list_posts(posts)`，`web/feed.py` 调用了它（Node 版是 `api/posts.js` 和 `web/feed.js`，计划里的写法也相应换成了 JS）。你用 `/plan` 进入 plan 模式并直接给出需求（管道模式没法按 Shift+Tab）。计划文件的路径换成了 `$PLAN`（实际是 `<home>/plans/<会话 id>.md`）：
 
-```console
-❯ /plan 给 list_posts 加分页，别破坏现有调用方
-已进入 plan 模式：只读探索，计划写到 $PLAN，用 ExitPlanMode 交给你审批
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-◇ system  plan 模式规则（完整）
-● 现在是 plan 模式，先只读地摸清现状。调用方可能不止一处，派个 Explore 去找。
-⏺ Agent(Explore: 找 list_posts 调用方)
-  ⎿ Explore: Bash(grep -rn 'list_posts(' --include=*.py .)
-✔ Agent -> - api/posts.py:1 定义
-  - web/feed.py:4 list_posts(all_posts)，不传其他参数，期望拿到全部帖子
-    …(+1 lines)
-● 有一个会影响接口行为的取舍，问一下。
-⏺ AskUserQuestion(1 个问题：page_size)
-[page_size] (1/1) 分页默认每页多少条？
-  1. 20 (Recommended) — 和 list_users 一致
-  2. 50 — 减少翻页次数
-  或直接输入你自己的答案；回车跳过
-› 1
-✔ AskUserQuestion -> Your questions have been answered: "分页默认每页多少条？"="20 (Recommended)". You can now continue with these 
-● （演示：模型「忍不住」想先改签名）
-⏺ Edit(api/posts.py)
-  ⎿ 权限拒绝：plan mode is active; only the plan file $PLAN may be written. Finish the plan and call ExitPlanMode to ask the user for approval
-✘ Edit -> Permission denied: plan mode is active; only the plan file …
-● 被拦住了，按规矩把方案写进计划文件。
-⏺ Write($PLAN)
-✔ Write -> Created $PLAN …
-⏺ ExitPlanMode()
-──────────────────── 计划 ────────────────────
-  # 给 list_posts 加分页
+=== "Node"
 
-  目标：list_posts 支持分页，现有调用方行为不变。
+    ```console
+    ❯ /plan 给 list_posts 加分页，别破坏现有调用方
+    已进入 plan 模式：只读探索，计划写到 $PLAN，用 ExitPlanMode 交给你审批
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ◇ system  plan 模式规则（完整）
+    ● 现在是 plan 模式，先只读地摸清现状。调用方可能不止一处，派个 Explore 去找。
+    ⏺ Agent(Explore: 找 list_posts 调用方)
+      ⎿ Explore: Bash(grep -rn 'list_posts(' --include=*.js .)
+    ✔ Agent -> - api/posts.js:1 定义
+      - web/feed.js:4 list_posts(all_posts)，不传其他参数，期望拿到全部帖子
+        …(+1 lines)
+    ● 有一个会影响接口行为的取舍，问一下。
+    ⏺ AskUserQuestion(1 个问题：page_size)
+    [page_size] (1/1) 分页默认每页多少条？
+      1. 20 (Recommended) — 和 list_users 一致
+      2. 50 — 减少翻页次数
+      或直接输入你自己的答案；回车跳过
+    › 1
+    ✔ AskUserQuestion -> Your questions have been answered: "分页默认每页多少条？"="20 (Recommended)". You can now continue with these 
+    ● （演示：模型「忍不住」想先改签名）
+    ⏺ Edit(api/posts.js)
+      ⎿ 权限拒绝：plan mode is active; only the plan file $PLAN may be written. Finish the plan and call ExitPlanMode to ask the user for approval
+    ✘ Edit -> Permission denied: plan mode is active; only the plan file …
+    ● 被拦住了，按规矩把方案写进计划文件。
+    ⏺ Write($PLAN)
+    ✔ Write -> Created $PLAN …
+    ⏺ ExitPlanMode()
+    ──────────────────── 计划 ────────────────────
+      # 给 list_posts 加分页
 
-  改动：
-  1. api/posts.py：list_posts(posts, page=1, page_size=20)，切片返回
-  2. web/feed.py:4 的调用不传参数，默认值保证行为不变（只是从「全部」变成「前 20 条」，需要确认）
+      目标：list_posts 支持分页，现有调用方行为不变。
 
-  验证：断言 list_posts(range(50), 2) == range(20, 40)
-──────────────────────────────────────────────
-  1. 批准，之后的编辑自动通过（acceptEdits）
-  2. 批准，每次编辑仍然逐个确认（default）
-  3. 继续规划（可以附一句话说要改什么）
-选择 [1/2/3]: 3 旧调用方必须拿到全部数据，不能变成只有 20 条
-✔ ExitPlanMode -> The user reviewed the plan and wants you to keep planning (still in plan mode). Their feedback:
-  旧调用方必须拿到全部数据，不能变成只有 20 条
-◇ system  plan 模式提醒
-● 明白，旧调用方必须完全不受影响。改计划。
-⏺ Edit($PLAN)
-✔ Edit -> The file $PLAN has been updated (1 replacement). …
-⏺ ExitPlanMode()
-──────────────────── 计划 ────────────────────
-  ...
-  2. web/feed.py:4 显式传 page_size=None 表示不分页；list_posts 在 page_size=None 时返回全部，旧行为完全不变
-  ...
-选择 [1/2/3]: 1
-✔ ExitPlanMode -> User has approved your plan. You can now start coding. Start with updating your todo list if applica
+      改动：
+      1. api/posts.js：list_posts(posts, page = 1, page_size = 20)，slice 返回
+      2. web/feed.js:4 的调用不传参数，默认值保证行为不变（只是从「全部」变成「前 20 条」，需要确认）
 
-  ## Approved Plan:  …(+9 lines)
-◇ system  已退出 plan 模式
-⏺ Read(api/posts.py)
-...
-⏺ Edit(api/posts.py)
-✔ Edit -> The file api/posts.py has been updated (1 replacement). Snippet:
-       1        def list_posts(posts, page=1, page_size=20):
-       2            if page_size is None:  …(+3 lines)
-⏺ Read(web/feed.py)
-...
-⏺ Edit(web/feed.py)
-✔ Edit -> The file web/feed.py has been updated (1 replacement). Snippet:
-...
-● 按批准的计划改完了：list_posts 支持 page / page_size（默认 20），web/feed.py 显式不分页，旧行为不变。
-❯ /mode
-权限模式：acceptEdits（循环顺序：default → acceptEdits → plan → auto）
-```
+      验证：断言 list_posts([...Array(50).keys()], 2) 是 20..39
+    ──────────────────────────────────────────────
+      1. 批准，之后的编辑自动通过（acceptEdits）
+      2. 批准，每次编辑仍然逐个确认（default）
+      3. 继续规划（可以附一句话说要改什么）
+    选择 [1/2/3]: 3 旧调用方必须拿到全部数据，不能变成只有 20 条
+    ✔ ExitPlanMode -> The user reviewed the plan and wants you to keep planning (still in plan mode). Their feedback:
+      旧调用方必须拿到全部数据，不能变成只有 20 条
+    ◇ system  plan 模式提醒
+    ● 明白，旧调用方必须完全不受影响。改计划。
+    ⏺ Edit($PLAN)
+    ✔ Edit -> The file $PLAN has been updated (1 replacement). …
+    ⏺ ExitPlanMode()
+    ──────────────────── 计划 ────────────────────
+      ...
+      2. web/feed.js:4 显式传 page_size = null 表示不分页；list_posts 在 page_size === null 时返回全部，旧行为完全不变
+      ...
+    选择 [1/2/3]: 1
+    ✔ ExitPlanMode -> User has approved your plan. You can now start coding. Start with updating your todo list if applica
+
+      ## Approved Plan:  …(+9 lines)
+    ◇ system  已退出 plan 模式
+    ⏺ Read(api/posts.js)
+    ...
+    ⏺ Edit(api/posts.js)
+    ✔ Edit -> The file api/posts.js has been updated (1 replacement). Snippet:
+           1	function list_posts(posts, page = 1, page_size = 20) {
+           2	  if (page_size === null) return posts;  …(+5 lines)
+    ⏺ Read(web/feed.js)
+    ...
+    ⏺ Edit(web/feed.js)
+    ✔ Edit -> The file web/feed.js has been updated (1 replacement). Snippet:
+    ...
+    ● 按批准的计划改完了：list_posts 支持 page / page_size（默认 20），web/feed.js 显式不分页，旧行为不变。
+    ❯ /mode
+    权限模式：acceptEdits（循环顺序：default → acceptEdits → plan → auto）
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ /plan 给 list_posts 加分页，别破坏现有调用方
+    已进入 plan 模式：只读探索，计划写到 $PLAN，用 ExitPlanMode 交给你审批
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ◇ system  plan 模式规则（完整）
+    ● 现在是 plan 模式，先只读地摸清现状。调用方可能不止一处，派个 Explore 去找。
+    ⏺ Agent(Explore: 找 list_posts 调用方)
+      ⎿ Explore: Bash(grep -rn 'list_posts(' --include=*.py .)
+    ✔ Agent -> - api/posts.py:1 定义
+      - web/feed.py:4 list_posts(all_posts)，不传其他参数，期望拿到全部帖子
+        …(+1 lines)
+    ● 有一个会影响接口行为的取舍，问一下。
+    ⏺ AskUserQuestion(1 个问题：page_size)
+    [page_size] (1/1) 分页默认每页多少条？
+      1. 20 (Recommended) — 和 list_users 一致
+      2. 50 — 减少翻页次数
+      或直接输入你自己的答案；回车跳过
+    › 1
+    ✔ AskUserQuestion -> Your questions have been answered: "分页默认每页多少条？"="20 (Recommended)". You can now continue with these 
+    ● （演示：模型「忍不住」想先改签名）
+    ⏺ Edit(api/posts.py)
+      ⎿ 权限拒绝：plan mode is active; only the plan file $PLAN may be written. Finish the plan and call ExitPlanMode to ask the user for approval
+    ✘ Edit -> Permission denied: plan mode is active; only the plan file …
+    ● 被拦住了，按规矩把方案写进计划文件。
+    ⏺ Write($PLAN)
+    ✔ Write -> Created $PLAN …
+    ⏺ ExitPlanMode()
+    ──────────────────── 计划 ────────────────────
+      # 给 list_posts 加分页
+
+      目标：list_posts 支持分页，现有调用方行为不变。
+
+      改动：
+      1. api/posts.py：list_posts(posts, page=1, page_size=20)，切片返回
+      2. web/feed.py:4 的调用不传参数，默认值保证行为不变（只是从「全部」变成「前 20 条」，需要确认）
+
+      验证：断言 list_posts(range(50), 2) == range(20, 40)
+    ──────────────────────────────────────────────
+      1. 批准，之后的编辑自动通过（acceptEdits）
+      2. 批准，每次编辑仍然逐个确认（default）
+      3. 继续规划（可以附一句话说要改什么）
+    选择 [1/2/3]: 3 旧调用方必须拿到全部数据，不能变成只有 20 条
+    ✔ ExitPlanMode -> The user reviewed the plan and wants you to keep planning (still in plan mode). Their feedback:
+      旧调用方必须拿到全部数据，不能变成只有 20 条
+    ◇ system  plan 模式提醒
+    ● 明白，旧调用方必须完全不受影响。改计划。
+    ⏺ Edit($PLAN)
+    ✔ Edit -> The file $PLAN has been updated (1 replacement). …
+    ⏺ ExitPlanMode()
+    ──────────────────── 计划 ────────────────────
+      ...
+      2. web/feed.py:4 显式传 page_size=None 表示不分页；list_posts 在 page_size=None 时返回全部，旧行为完全不变
+      ...
+    选择 [1/2/3]: 1
+    ✔ ExitPlanMode -> User has approved your plan. You can now start coding. Start with updating your todo list if applica
+
+      ## Approved Plan:  …(+9 lines)
+    ◇ system  已退出 plan 模式
+    ⏺ Read(api/posts.py)
+    ...
+    ⏺ Edit(api/posts.py)
+    ✔ Edit -> The file api/posts.py has been updated (1 replacement). Snippet:
+           1        def list_posts(posts, page=1, page_size=20):
+           2            if page_size is None:  …(+3 lines)
+    ⏺ Read(web/feed.py)
+    ...
+    ⏺ Edit(web/feed.py)
+    ✔ Edit -> The file web/feed.py has been updated (1 replacement). Snippet:
+    ...
+    ● 按批准的计划改完了：list_posts 支持 page / page_size（默认 20），web/feed.py 显式不分页，旧行为不变。
+    ❯ /mode
+    权限模式：acceptEdits（循环顺序：default → acceptEdits → plan → auto）
+    ```
 
 （剧本里第三步那次 `Edit` 是故意写的，用来演示关卡；真模型在完整规则的约束下很少这么做，但「很少」不等于「不会」，这正是要有关卡的原因。）
 
-这一段里有一个细节最能说明 plan 模式的价值：第一版计划写着「默认值保证行为不变（只是从全部变成前 20 条）」。这句话自相矛盾，一旦直接动手，`web/feed.py` 会悄悄地只拿到 20 条帖子。因为有审批这一步，你在一行代码都没改的时候就把它拦了下来，模型带着你的反馈改了计划，第二版才被批准。
+这一段里有一个细节最能说明 plan 模式的价值：第一版计划写着「默认值保证行为不变（只是从全部变成前 20 条）」。这句话自相矛盾，一旦直接动手，`web/feed.py`（Node 版 `web/feed.js`）会悄悄地只拿到 20 条帖子。因为有审批这一步，你在一行代码都没改的时候就把它拦了下来，模型带着你的反馈改了计划，第二版才被批准。
 
 ## 原理：四个零件
 
@@ -133,26 +213,50 @@ flowchart TB
 
 ### 零件一：权限关卡
 
-`mini_cc/plan_mode.py:plan_check`，挂在第 5 章留下的 `PermissionManager.extra_checks` 上：
+`mini_cc/plan_mode.ts:planCheck`（Python 版 `plan_mode.py:plan_check`），挂在第 5 章留下的 `PermissionManager.extra_checks` 上：
 
-```python
-def check(tool, args, pm):
-    if pm.mode != PLAN:
-        return None
-    if tool.name in ("ExitPlanMode", "EnterPlanMode") or tool.read_only:
-        return None                                  # 交给后面的判定链（只读的会被放行）
-    plan = plan_file()
-    if tool.kind == "edit" and tool.path_arg and args.get(tool.path_arg):
-        target = ...resolve()
-        if target == plan.resolve():
-            return Decision("allow", "plan mode: writing the plan file", "check")
-    if tool.self_check(args) == "allow":
-        return None                                  # 只读命令、维护 agent 自己的状态（任务清单、记忆……）
-    if tool.kind in ("exec", "mcp"):
-        return Decision("ask", "plan mode: this is not read-only", "check")
-    return Decision("deny", f"plan mode is active; only the plan file {plan} may be written. Finish the plan "
-                            "and call ExitPlanMode to ask the user for approval", "check")
-```
+=== "Node"
+
+    ```ts
+    return (tool: Tool, args: Args, pm: PermissionManager): Decision | null => {
+      if (pm.mode !== PLAN) return null;
+      if (tool.name === "ExitPlanMode" || tool.name === "EnterPlanMode" || tool.readOnly) {
+        return null; // 交给后面的判定链（只读的会被放行）
+      }
+      const plan = planFile();
+      if (tool.kind === "edit" && tool.pathArg && args[tool.pathArg]) {
+        const target = realResolve(...);
+        if (target === realResolve(plan)) return new Decision("allow", "plan mode: writing the plan file", "check");
+      }
+      if (tool.selfCheck(args) === "allow") {
+        return null; // 只读命令、维护 agent 自己的状态（任务清单、记忆……）
+      }
+      if (tool.kind === "exec" || tool.kind === "mcp") return new Decision("ask", "plan mode: this is not read-only", "check");
+      return new Decision("deny", `plan mode is active; only the plan file ${plan} may be written. Finish the plan ` +
+        "and call ExitPlanMode to ask the user for approval", "check");
+    };
+    ```
+
+=== "Python"
+
+    ```python
+    def check(tool, args, pm):
+        if pm.mode != PLAN:
+            return None
+        if tool.name in ("ExitPlanMode", "EnterPlanMode") or tool.read_only:
+            return None                                  # 交给后面的判定链（只读的会被放行）
+        plan = plan_file()
+        if tool.kind == "edit" and tool.path_arg and args.get(tool.path_arg):
+            target = ...resolve()
+            if target == plan.resolve():
+                return Decision("allow", "plan mode: writing the plan file", "check")
+        if tool.self_check(args) == "allow":
+            return None                                  # 只读命令、维护 agent 自己的状态（任务清单、记忆……）
+        if tool.kind in ("exec", "mcp"):
+            return Decision("ask", "plan mode: this is not read-only", "check")
+        return Decision("deny", f"plan mode is active; only the plan file {plan} may be written. Finish the plan "
+                                "and call ExitPlanMode to ask the user for approval", "check")
+    ```
 
 四种结局，各有理由：
 
@@ -171,30 +275,60 @@ def check(tool, args, pm):
 
 ### 零件二：上下文提醒
 
-`plan_mode_provider` 是第 9 章 provider 机制的又一个应用：
+`plan_mode_provider`（Node 版 `planModeProvider`；三段提醒文本在 Node 版里是三个返回字符串的小函数 `FULL_TEXT(header, plan)` 等，Python 版是 `str.format` 模板）是第 9 章 provider 机制的又一个应用：
 
-```python
-def provide(st):
-    mode = st.agent.permissions.mode
-    last, gap = None, 0
-    for m in reversed(st.messages):          # 最近一条 plan 提醒，以及它之后有几次模型请求
-        if m["role"] == "assistant":
-            gap += 1
-            continue
-        kinds = [k for b in blocks if is_reminder(b) and (k := _plan_reminder_kind(b["text"]))]
-        if kinds:
-            last = kinds[-1]
-            break
-    if mode == PLAN:
-        if last in (None, "exit"):
-            return Attachment(..., FULL_TEXT)        # 刚进入：完整规则
-        if gap >= SPARSE_EVERY:
-            return Attachment(..., SPARSE_TEXT)      # 每 5 次请求：一句精简提醒
+=== "Node"
+
+    ```ts
+    return (st: InjectState) => {
+      const mode = st.agent.permissions.mode;
+      let last: string | null = null;
+      let gap = 0;
+      for (const m of [...st.messages].reverse()) { // 最近一条 plan 提醒，以及它之后有几次模型请求
+        if (m.role === "assistant") {
+          gap++;
+          continue;
+        }
+        const kinds = blocks.filter(isReminder).map((b) => planReminderKind(b.text)).filter((k) => k !== null);
+        if (kinds.length) {
+          last = kinds.at(-1)!;
+          break;
+        }
+      }
+      if (mode === PLAN) {
+        if (last === null || last === "exit") return new Attachment(..., FULL_TEXT(...)); // 刚进入：完整规则
+        if (gap >= SPARSE_EVERY) return new Attachment(..., SPARSE_TEXT(...)); // 每 5 次请求：一句精简提醒
+        return null;
+      }
+      if (last === "full" || last === "sparse") return new Attachment(..., EXIT_TEXT(...)); // 刚退出：明确告诉它可以动手了
+      return null;
+    };
+    ```
+
+=== "Python"
+
+    ```python
+    def provide(st):
+        mode = st.agent.permissions.mode
+        last, gap = None, 0
+        for m in reversed(st.messages):          # 最近一条 plan 提醒，以及它之后有几次模型请求
+            if m["role"] == "assistant":
+                gap += 1
+                continue
+            kinds = [k for b in blocks if is_reminder(b) and (k := _plan_reminder_kind(b["text"]))]
+            if kinds:
+                last = kinds[-1]
+                break
+        if mode == PLAN:
+            if last in (None, "exit"):
+                return Attachment(..., FULL_TEXT)        # 刚进入：完整规则
+            if gap >= SPARSE_EVERY:
+                return Attachment(..., SPARSE_TEXT)      # 每 5 次请求：一句精简提醒
+            return None
+        if last in ("full", "sparse"):
+            return Attachment(..., EXIT_TEXT)            # 刚退出：明确告诉它可以动手了
         return None
-    if last in ("full", "sparse"):
-        return Attachment(..., EXIT_TEXT)            # 刚退出：明确告诉它可以动手了
-    return None
-```
+    ```
 
 三种提醒，对应三种时刻：
 
@@ -214,19 +348,37 @@ def provide(st):
 
 `ExitPlanModeTool.run`：
 
-```python
-plan = path.read_text(encoding="utf-8").strip() if path.is_file() else ""
-if not plan:
-    return ToolResult(f"No plan found. Write your plan to {path} first, then call ExitPlanMode.", True)
-choice, feedback = plan_ctl.approve(plan)
-if choice in ("auto", "manual"):
-    plan_ctl.set_mode(ACCEPT_EDITS if choice == "auto" else DEFAULT)
-    return ToolResult("User has approved your plan. You can now start coding. Start with updating your todo "
-                      f"list if applicable. Your plan has been saved to: {path} You can refer back to it if "
-                      f"needed during implementation.\n\n## Approved Plan:\n{plan}")
-return ToolResult("The user reviewed the plan and wants you to keep planning (still in plan mode). "
-                  + (f"Their feedback:\n{feedback}" if feedback else "Ask what to change if it is unclear."))
-```
+=== "Node"
+
+    ```ts
+    const plan = existsSync(path) && statSync(path).isFile() ? readFileSync(path, "utf8").trim() : "";
+    if (!plan) return new ToolResult(`No plan found. Write your plan to ${path} first, then call ExitPlanMode.`, true);
+    const [choice, feedback] = await planCtl.approve(plan);
+    if (choice === "auto" || choice === "manual") {
+      planCtl.setMode(choice === "auto" ? ACCEPT_EDITS : DEFAULT);
+      return new ToolResult("User has approved your plan. You can now start coding. Start with updating your todo " +
+        `list if applicable. Your plan has been saved to: ${path} You can refer back to it if ` +
+        `needed during implementation.\n\n## Approved Plan:\n${plan}`);
+    }
+    return new ToolResult("The user reviewed the plan and wants you to keep planning (still in plan mode). " +
+      (feedback ? `Their feedback:\n${feedback}` : "Ask what to change if it is unclear."));
+    ```
+
+=== "Python"
+
+    ```python
+    plan = path.read_text(encoding="utf-8").strip() if path.is_file() else ""
+    if not plan:
+        return ToolResult(f"No plan found. Write your plan to {path} first, then call ExitPlanMode.", True)
+    choice, feedback = plan_ctl.approve(plan)
+    if choice in ("auto", "manual"):
+        plan_ctl.set_mode(ACCEPT_EDITS if choice == "auto" else DEFAULT)
+        return ToolResult("User has approved your plan. You can now start coding. Start with updating your todo "
+                          f"list if applicable. Your plan has been saved to: {path} You can refer back to it if "
+                          f"needed during implementation.\n\n## Approved Plan:\n{plan}")
+    return ToolResult("The user reviewed the plan and wants you to keep planning (still in plan mode). "
+                      + (f"Their feedback:\n{feedback}" if feedback else "Ask what to change if it is unclear."))
+    ```
 
 你可能会问：为什么计划要放在文件里，而不是作为 ExitPlanMode 的参数传进来？
 
@@ -248,10 +400,20 @@ return ToolResult("The user reviewed the plan and wants you to keep planning (st
 
 还有一条硬规则，加在 `run_subagent` 里：
 
-```python
-if kind.read_only or parent.permissions.mode == "plan":   # plan 模式下派出的 agent 一律只读
-    child.permissions.extra_checks.append(_read_only_check)
-```
+=== "Node"
+
+    ```ts
+    if (kind.readOnly || parent.permissions.mode === "plan") { // plan 模式下派出的 agent 一律只读
+      child.permissions.extraChecks.push(readOnlyCheck);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    if kind.read_only or parent.permissions.mode == "plan":   # plan 模式下派出的 agent 一律只读
+        child.permissions.extra_checks.append(_read_only_check)
+    ```
 
 没有这一条，plan 模式就有一个后门：模型派一个 general-purpose agent 去「顺便把代码改了」。子 agent 有自己的 `PermissionManager`，父亲的 `plan_check` 管不到它。测试 `test_subagents_are_read_only_in_plan_mode` 守着这个后门。
 
@@ -270,22 +432,38 @@ Codex（本机 0.153.4）也有 plan 模式，但思路很不一样。从它二�
 
 ## 测试
 
-`tests/test_ch21_plan.py`，11 个：
+`tests/ch21_plan.test.ts`（Python 版 `tests/test_ch21_plan.py`），11 个：
 
 - Shift+Tab 的循环包含 plan；plan 模式下 Read 和只读 Bash 照常、改源码被拒（理由里有计划文件路径）、写计划文件免审批；`npm install` 要问你，你的拒绝理由回到模型。
 - 提醒：首次完整规则（含路径和 ExitPlanMode）、第 5 次请求精简提醒、切回 default 后恰好一次退出提醒。
 - ExitPlanMode：批准 → acceptEdits、返回原文和计划、之后的编辑免审批、模式变化写进会话；打回 → 留在 plan、反馈回到模型；没有计划文件 → 报错并给出路径。
 - 模型主动 EnterPlanMode 后，同一批结果里就带上完整规则；plan 模式下派出的 Plan agent 改不了文件；`/plan <需求>`；离线剧本的 `{plan_file}` 占位符。
 
-第 6 章有一个测试原来断言 Shift+Tab 的循环是 `default → acceptEdits → auto`，现在中间多了 plan，改成显式传入第 6 章当时的循环（和第 5 章的做法一样）。
+第 6 章有一个测试（Node 版 `ch06_auto_mode.test.ts` 从一开始就这样写）原来断言 Shift+Tab 的循环是 `default → acceptEdits → auto`，现在中间多了 plan，改成显式传入第 6 章当时的循环（和第 5 章的做法一样）。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 35%]
-........................................................................ [ 70%]
-............................................................             [100%]
-204 passed in 13.74s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/*.test.ts
+    ℹ tests 204
+    ℹ suites 0
+    ℹ pass 204
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 9534.141084
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 35%]
+    ........................................................................ [ 70%]
+    ............................................................             [100%]
+    204 passed in 13.74s
+    ```
 
 ## 和真实 Claude Code 的差异
 

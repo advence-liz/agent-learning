@@ -14,22 +14,41 @@
 
 ## 同一个任务，两种写法
 
-任务：收到一条用户反馈，分诊。bug 就整理成工单草稿，咨询就查资料回答。代码在 [`code/agent/workflow/triage.py`](../code/agent/workflow/triage.py)，复用了第 2 章的 `run_agent` 和第 3 章的检索。
+任务：收到一条用户反馈，分诊。bug 就整理成工单草稿，咨询就查资料回答。代码在 [`code/agent-node/workflow/triage.ts`](../code/agent-node/workflow/triage.ts)（Python 版 [`triage.py`](../code/agent/workflow/triage.py)），复用了第 2 章的 `runAgent`（Python 版 `run_agent`）和第 3 章的检索。
 
-```text
-$ uv run python -m workflow.triage        # 离线 fake 模型
-=== Workflow：代码写死 classify → route → gate ===
-trace: classify → bug | gate ✗ → retry | gate ✓
-LLM 调用 3 次；输出：'## 复现步骤\n1. 设置-数据管理-导出\n## 期望\n收到下载链接\n## 实际\n一直转圈'
+=== "Node"
 
-=== Agent：模型自己决定先查资料、再建工单 ===
-trace:
-  ⏺ search_docs(query='Pro 导出次数')
-    ✔ 【数据导出】所有用户都可以导出自己的数据。在「设置 - 数据管理 - 导出」中选择导出范围，系统会打包成 zip 文件。
-  ⏺ create_ticket(title='Pro 用户导出卡在转圈', body='复现步骤…期望…实际…')
-    ✔ 已创建工单 #101：Pro 用户导出卡在转圈
-LLM 调用 3 次；输出：'Pro 会员导出不限次数；转圈的问题已建工单 #101 跟进。'
-```
+    ```text
+    $ node workflow/triage.ts                 # 离线 fake 模型
+    === Workflow：代码写死 classify → route → gate ===
+    trace: classify → bug | gate ✗ → retry | gate ✓
+    LLM 调用 3 次；输出："## 复现步骤\n1. 设置-数据管理-导出\n## 期望\n收到下载链接\n## 实际\n一直转圈"
+
+    === Agent：模型自己决定先查资料、再建工单 ===
+    trace:
+      ⏺ search_docs(query="Pro 导出次数")
+        ✔ 【数据导出】所有用户都可以导出自己的数据。在「设置 - 数据管理 - 导出」中选择导出范围，系统会打包成 zip 文件。
+      ⏺ create_ticket(title="Pro 用户导出卡在转圈", body="复现步骤…期望…实际…")
+        ✔ 已创建工单 #101：Pro 用户导出卡在转圈
+    LLM 调用 3 次；输出："Pro 会员导出不限次数；转圈的问题已建工单 #101 跟进。"
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m workflow.triage        # 离线 fake 模型
+    === Workflow：代码写死 classify → route → gate ===
+    trace: classify → bug | gate ✗ → retry | gate ✓
+    LLM 调用 3 次；输出：'## 复现步骤\n1. 设置-数据管理-导出\n## 期望\n收到下载链接\n## 实际\n一直转圈'
+
+    === Agent：模型自己决定先查资料、再建工单 ===
+    trace:
+      ⏺ search_docs(query='Pro 导出次数')
+        ✔ 【数据导出】所有用户都可以导出自己的数据。在「设置 - 数据管理 - 导出」中选择导出范围，系统会打包成 zip 文件。
+      ⏺ create_ticket(title='Pro 用户导出卡在转圈', body='复现步骤…期望…实际…')
+        ✔ 已创建工单 #101：Pro 用户导出卡在转圈
+    LLM 调用 3 次；输出：'Pro 会员导出不限次数；转圈的问题已建工单 #101 跟进。'
+    ```
 
 反馈是「我是 Pro 会员，导出时一直转圈，到底 Pro 能导出几次？」，它**既是 bug 又是咨询**。
 
@@ -41,32 +60,65 @@ Workflow 版的分类器只能输出一个标签，于是走了 bug 分支，咨
 
 ### Workflow 的骨架
 
-```python
-def workflow(client, index, feedback, trace):
-    label = json.loads(_text(classify(feedback)))["label"]     # 步骤 1：LLM 分类，代码解析
-    if label == "bug":                                          # 步骤 2：路由写在代码里
-        draft = _text(write_bug(feedback))
-        if not all(k in draft for k in ("复现步骤", "期望", "实际")):   # 步骤 3：代码闸门
-            draft = _text(retry(feedback, draft))
-        return draft
-    if label == "question":
-        hits = index.search(feedback, 2)                        # 检索是固定步骤，不是模型选的
-        return _text(answer(hits, feedback))
-    return "感谢反馈，我们已记录。"
-```
+=== "Node"
 
-（为了可读性这里把三次 `client.messages.create` 写成了 `classify` / `write_bug` / `answer`，实际代码是展开的。）
+    ```ts
+    async function workflow(client, index, feedback, trace) {
+      const label = JSON.parse(textOf(await classify(feedback))).label;  // 步骤 1：LLM 分类，代码解析
+      if (label === "bug") {                                             // 步骤 2：路由写在代码里
+        let draft = textOf(await writeBug(feedback));
+        if (!["复现步骤", "期望", "实际"].every((k) => draft.includes(k)))  // 步骤 3：代码闸门
+          draft = textOf(await retry(feedback, draft));
+        return draft;
+      }
+      if (label === "question") {
+        const hits = index.search(feedback, 2);                          // 检索是固定步骤，不是模型选的
+        return textOf(await answer(hits, feedback));
+      }
+      return "感谢反馈，我们已记录。";
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def workflow(client, index, feedback, trace):
+        label = json.loads(_text(classify(feedback)))["label"]     # 步骤 1：LLM 分类，代码解析
+        if label == "bug":                                          # 步骤 2：路由写在代码里
+            draft = _text(write_bug(feedback))
+            if not all(k in draft for k in ("复现步骤", "期望", "实际")):   # 步骤 3：代码闸门
+                draft = _text(retry(feedback, draft))
+            return draft
+        if label == "question":
+            hits = index.search(feedback, 2)                        # 检索是固定步骤，不是模型选的
+            return _text(answer(hits, feedback))
+        return "感谢反馈，我们已记录。"
+    ```
+
+（为了可读性这里把三次 `client.messages.create` 写成了 `classify` / `writeBug`（Python 版 `write_bug`）/ `answer`，实际代码是展开的。）
 
 注意 Workflow 的每次模型调用都**不带 `tools`**。模型只负责「把这段文字分个类」「把这段文字改写成工单」，不负责决定流程。
 
 ### Agent 的骨架
 
-```python
-def agent(client, index, feedback, trace):
-    tools = {"search_docs": search_docs, "create_ticket": create_ticket}
-    return run_agent(client, f"处理这条用户反馈：{feedback}", cwd=None,
-                     tools=tools, tool_specs=AGENT_TOOLS, system=AGENT_SYSTEM, log=trace.append)
-```
+=== "Node"
+
+    ```ts
+    async function agent(client, index, feedback, trace) {
+      const tools = { search_docs: searchDocs, create_ticket: createTicket };
+      return runAgent(client, `处理这条用户反馈：${feedback}`, ".",
+                      { tools, toolSpecs: AGENT_TOOLS, system: AGENT_SYSTEM, log: (s) => trace.push(s) });
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def agent(client, index, feedback, trace):
+        tools = {"search_docs": search_docs, "create_ticket": create_ticket}
+        return run_agent(client, f"处理这条用户反馈：{feedback}", cwd=None,
+                         tools=tools, tool_specs=AGENT_TOOLS, system=AGENT_SYSTEM, log=trace.append)
+    ```
 
 一行。所有的「先做什么、后做什么、做几次」都交给模型了。
 

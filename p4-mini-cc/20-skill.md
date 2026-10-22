@@ -21,43 +21,86 @@
 - 项目级 `.mini_cc/skills/pr-summary/`：正文里有参数 `$0`、预处理命令 `` !`git branch --show-current` ``，以及一个 `references/ui-checklist.md` 附录。
 - 用户级 `<home>/skills/release-note/`：`disable-model-invocation: true`，只能你手动调用。
 
-```console
-❯ /skills
-/pr-summary    project  自动  调用 0 次  把当前分支相对基线分支的改动写成 PR 描述。触发：写 PR 描述、总结这次改动
-/release-note  user     手动  调用 0 次  写发版说明
-❯ 帮我写个 PR 描述
-◇ system  项目说明 0 个文件、git 快照
-◇ system  日期 2026-10-21
-● 这正好有个 skill，先加载它。
-⏺ Skill(pr-summary main)
-✔ Skill -> Launching skill: pr-summary
-● 按 skill 的步骤，先看改动面。
-⏺ Bash(git diff --stat main...HEAD)
-✔ Bash ->  LoginButton.tsx | 2 +-
-   1 file changed, 1 insertion(+), 1 deletion(-)
-● 改了 .tsx，skill 说要过一遍 UI 检查清单。
-⏺ Read(.mini_cc/skills/pr-summary/references/ui-checklist.md)
-✔ Read ->      1        # UI 检查清单
-       2        - 375px / 1440px 两档截图
-       3        - 暗色模式  …(+1 lines)
-● PR 描述：
+=== "Node"
 
-**动机**：登录按钮在窄屏下溢出。
-**改动**：LoginButton.tsx 改为固定宽度 + 文本省略。
-**验证**：375px / 1440px 两档截图对比；暗色模式已检查。
-❯ /release-note v1.3.0
-  ⎿ 已加载 skill release-note（192 字符）
-● v1.3.0 发版说明：
-- 修复：登录按钮在窄屏下溢出
-❯ /context
-system[0]       1278 chars  You are mini-cc, an interactive coding a
-system[1]        239 chars  # Environment
-system[2]       1364 chars  # Memory
-system[3]        497 chars  # Skills
-reminders        422 chars  2 个 <system-reminder> 块
-messages        2015 chars  10 条消息（不含提醒）
-last request     100 tokens
-```
+    ```console
+    ❯ /skills
+    /pr-summary    project  自动  调用 0 次  把当前分支相对基线分支的改动写成 PR 描述。触发：写 PR 描述、总结这次改动
+    /release-note  user     手动  调用 0 次  写发版说明
+    ❯ 帮我写个 PR 描述
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    ● 这正好有个 skill，先加载它。
+    ⏺ Skill(pr-summary main)
+    ✔ Skill -> Launching skill: pr-summary
+    ● 按 skill 的步骤，先看改动面。
+    ⏺ Bash(git diff --stat main...HEAD)
+    ✔ Bash ->  LoginButton.tsx | 2 +-
+       1 file changed, 1 insertion(+), 1 deletion(-)
+    ● 改了 .tsx，skill 说要过一遍 UI 检查清单。
+    ⏺ Read(.mini_cc/skills/pr-summary/references/ui-checklist.md)
+    ✔ Read ->      1	# UI 检查清单
+           2	- 375px / 1440px 两档截图
+           3	- 暗色模式  …(+1 lines)
+    ● PR 描述：
+
+    **动机**：登录按钮在窄屏下溢出。
+    **改动**：LoginButton.tsx 改为固定宽度 + 文本省略。
+    **验证**：375px / 1440px 两档截图对比；暗色模式已检查。
+    ❯ /release-note v1.3.0
+      ⎿ 已加载 skill release-note（192 字符）
+    ● v1.3.0 发版说明：
+    - 修复：登录按钮在窄屏下溢出
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        239 chars  # Environment
+    system[2]       1364 chars  # Memory
+    system[3]        497 chars  # Skills
+    reminders        416 chars  2 个 <system-reminder> 块
+    messages        1941 chars  10 条消息（不含提醒）
+    last request     100 tokens
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ /skills
+    /pr-summary    project  自动  调用 0 次  把当前分支相对基线分支的改动写成 PR 描述。触发：写 PR 描述、总结这次改动
+    /release-note  user     手动  调用 0 次  写发版说明
+    ❯ 帮我写个 PR 描述
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-21
+    ● 这正好有个 skill，先加载它。
+    ⏺ Skill(pr-summary main)
+    ✔ Skill -> Launching skill: pr-summary
+    ● 按 skill 的步骤，先看改动面。
+    ⏺ Bash(git diff --stat main...HEAD)
+    ✔ Bash ->  LoginButton.tsx | 2 +-
+       1 file changed, 1 insertion(+), 1 deletion(-)
+    ● 改了 .tsx，skill 说要过一遍 UI 检查清单。
+    ⏺ Read(.mini_cc/skills/pr-summary/references/ui-checklist.md)
+    ✔ Read ->      1        # UI 检查清单
+           2        - 375px / 1440px 两档截图
+           3        - 暗色模式  …(+1 lines)
+    ● PR 描述：
+
+    **动机**：登录按钮在窄屏下溢出。
+    **改动**：LoginButton.tsx 改为固定宽度 + 文本省略。
+    **验证**：375px / 1440px 两档截图对比；暗色模式已检查。
+    ❯ /release-note v1.3.0
+      ⎿ 已加载 skill release-note（192 字符）
+    ● v1.3.0 发版说明：
+    - 修复：登录按钮在窄屏下溢出
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        239 chars  # Environment
+    system[2]       1364 chars  # Memory
+    system[3]        497 chars  # Skills
+    reminders        422 chars  2 个 <system-reminder> 块
+    messages        2015 chars  10 条消息（不含提醒）
+    last request     100 tokens
+    ```
 
 三层各露了一次面：
 
@@ -65,7 +108,7 @@ last request     100 tokens
 2. `Launching skill: pr-summary` 之后，模型拿到的是渲染过的**正文**（下面单独贴出来）。
 3. 模型读 `ui-checklist.md` 是它自己的决定。正文里只给了这个**附录**的路径，没有内容。
 
-`Skill` 调用时追加进上下文的那段正文（`render_body` 的真实输出，路径前缀换成了 `$DEMO`）：
+`Skill` 调用时追加进上下文的那段正文（`render_body` 的真实输出，路径前缀换成了 `$DEMO`；Node 版 `renderBody` 的输出逐字相同）：
 
 ```text
 Base directory for this skill: $DEMO/proj/.mini_cc/skills/pr-summary
@@ -108,23 +151,41 @@ sequenceDiagram
 
 ## 动手
 
-### 1. 发现与目录：`mini_cc/skills.py`
+### 1. 发现与目录：`mini_cc/skills.py`（Node 版 `mini_cc/skills.ts`）
 
 skill 放在 `<home>/skills/<name>/SKILL.md`（用户级）和 `<cwd>/.mini_cc/skills/<name>/SKILL.md`（项目级，同名覆盖用户级），frontmatter 读 `name`、`description`、`disable-model-invocation`。和 Claude Code 的 `~/.claude/skills/` 是同一个格式，你的 skill 拷过来就能用（`!`cmd`` 和参数语法是子集）。
 
 目录生成：
 
-```python
-def listing(skills, budget_chars, usage=None):
-    items = sorted((s for s in skills if s.model_invocable), key=lambda s: s.name)
-    desc = {s.name: s.description[:MAX_DESCRIPTION] for s in items}          # 单个最多 1536 字符
-    line = lambda s: f"- {s.name}: {desc[s.name]}" if desc[s.name] else f"- {s.name}"
-    for s in sorted(items, key=lambda s: (usage.get(s.name, 0), s.name)):    # 用得最少的先砍
-        if sum(len(line(x)) + 1 for x in items) <= budget_chars:
-            break
-        desc[s.name] = ""
-    ...
-```
+=== "Node"
+
+    ```ts
+    export function listing(skills: Iterable<Skill>, budgetChars: number, usage: Record<string, number> = {}): string {
+      const items = [...skills].filter((s) => s.modelInvocable).sort(byName);
+      const desc = new Map(items.map((s) => [s.name, s.description.slice(0, MAX_DESCRIPTION)])); // 单个最多 1536 字符
+      const line = (s: Skill) => (desc.get(s.name) ? `- ${s.name}: ${desc.get(s.name)}` : `- ${s.name}`);
+      const leastUsedFirst = [...items].sort((a, b) => (usage[a.name] ?? 0) - (usage[b.name] ?? 0) || byName(a, b));
+      for (const s of leastUsedFirst) { // 用得最少的先砍
+        if (items.reduce((n, x) => n + line(x).length + 1, 0) <= budgetChars) break;
+        desc.set(s.name, "");
+      }
+      ...
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def listing(skills, budget_chars, usage=None):
+        items = sorted((s for s in skills if s.model_invocable), key=lambda s: s.name)
+        desc = {s.name: s.description[:MAX_DESCRIPTION] for s in items}          # 单个最多 1536 字符
+        line = lambda s: f"- {s.name}: {desc[s.name]}" if desc[s.name] else f"- {s.name}"
+        for s in sorted(items, key=lambda s: (usage.get(s.name, 0), s.name)):    # 用得最少的先砍
+            if sum(len(line(x)) + 1 for x in items) <= budget_chars:
+                break
+            desc[s.name] = ""
+        ...
+    ```
 
 三条规则都来自 Claude Code 的 skills 文档（[Skills 那章](../p1-tools/12-skills.md)整理过）：
 
@@ -150,28 +211,51 @@ not loaded: Read or run them when needed.
 
 `render_body` 做三件事：
 
-```python
-text = skill.body.replace("${SKILL_DIR}", str(skill.dir))
-text = text.replace("$ARGUMENTS", args)
-text = _POS.sub(lambda m: parts[int(m[1])] if int(m[1]) < len(parts) else "", text)   # $0 $1 …
-text = _CMD.sub(run, text)                                                             # !`cmd` → 输出
-if args and not had_placeholder:
-    text = text.rstrip("\n") + f"\n\nARGUMENTS: {args}\n"
-return f"Base directory for this skill: {skill.dir}\n\n{text}"
-```
+=== "Node"
+
+    ```ts
+    let text = skill.body.replaceAll("${SKILL_DIR}", skill.dir);
+    text = text.replaceAll("$ARGUMENTS", () => args);
+    text = text.replace(POS, (_m, d: string) => parts[Number(d)] ?? ""); // $0 $1 …
+    for (const m of text.matchAll(CMD)) outputs.push(await runCommand(m[1], ...)); // !`cmd` 依次执行（失败就抛 SkillError）
+    text = text.replace(CMD, () => outputs[i++]); // !`cmd` → 输出
+    if (args && !hadPlaceholder) text = text.replace(/\n+$/, "") + `\n\nARGUMENTS: ${args}\n`;
+    return `Base directory for this skill: ${skill.dir}\n\n${text}`;
+    ```
+
+=== "Python"
+
+    ```python
+    text = skill.body.replace("${SKILL_DIR}", str(skill.dir))
+    text = text.replace("$ARGUMENTS", args)
+    text = _POS.sub(lambda m: parts[int(m[1])] if int(m[1]) < len(parts) else "", text)   # $0 $1 …
+    text = _CMD.sub(run, text)                                                             # !`cmd` → 输出
+    if args and not had_placeholder:
+        text = text.rstrip("\n") + f"\n\nARGUMENTS: {args}\n"
+    return f"Base directory for this skill: {skill.dir}\n\n{text}"
+    ```
 
 - **参数**：`$ARGUMENTS` 是整串，`$0`、`$1` 是按空格拆开的第几个。正文里没写占位符但你传了参数，就在末尾补一行 `ARGUMENTS: …`，不让参数丢掉。
-- **`` !`cmd` ``**：在本地先执行，用输出替换占位符。正文里的「当前分支」就这样变成了实时值。任何一条失败，整个调用失败，返回原因。说明书依赖的事实没拿到，宁可不加载，也不要给模型一份残缺的说明书。
+- **`` !`cmd` ``**：在本地先执行，用输出替换占位符。正文里的「当前分支」就这样变成了实时值。任何一条失败，整个调用失败，返回原因。（Node 版的 `renderBody` 是 async：命令用 `spawn` 依次执行，全部跑完再一次性替换。）说明书依赖的事实没拿到，宁可不加载，也不要给模型一份残缺的说明书。
 - **`Base directory for this skill:`**：这个前缀是 Claude Code 的原文。你此刻正在用的 Claude Code，每次加载 skill 后追加的那段文字就是这样开头的。它告诉模型附录的相对路径从哪里算起。
 
 `SkillTool.run` 的最后两行是本章最关键的设计：
 
-```python
-ctx.followup_blocks.append({"type": "text", "text": body})
-return ToolResult(f"Launching skill: {skill.name}")
-```
+=== "Node"
 
-工具结果只有一句 `Launching skill: pr-summary`（也是 Claude Code 的原文），正文作为**一段普通文本**，跟在这一批 `tool_result` 后面，同一条 user 消息里。为此 `ToolContext` 加了 `followup_blocks`，循环在一批工具调用结束后把它们追加在所有结果之后（API 要求 `tool_result` 块排在 user 消息最前面）。
+    ```ts
+    ctx.followupBlocks.push({ type: "text", text: body });
+    return new ToolResult(`Launching skill: ${skill.name}`);
+    ```
+
+=== "Python"
+
+    ```python
+    ctx.followup_blocks.append({"type": "text", "text": body})
+    return ToolResult(f"Launching skill: {skill.name}")
+    ```
+
+工具结果只有一句 `Launching skill: pr-summary`（也是 Claude Code 的原文），正文作为**一段普通文本**，跟在这一批 `tool_result` 后面，同一条 user 消息里。为此 `ToolContext` 加了 `followup_blocks`（Node 版 `followupBlocks`），循环在一批工具调用结束后把它们追加在所有结果之后（API 要求 `tool_result` 块排在 user 消息最前面）。
 
 你可能会问：正文直接放进 `tool_result` 不是更简单吗？
 
@@ -194,18 +278,39 @@ Claude Code 在本机 jsonl 里也是分开的：`tool_result` 是 `Launching sk
 
 第 1 章的 `CommandRegistry.dispatch` 找不到命令时，先看看是不是 skill：
 
-```python
-skills = getattr(app, "skill_rt", None)
-if cmd is None and skills and name[1:] in skills.skills:
-    return app.run_skill_command(name[1:], arg.strip())
-```
+=== "Node"
+
+    ```ts
+    const skills = app.skillRt;
+    if (cmd === undefined && skills?.skills.has(name.slice(1))) {
+      await app.runSkillCommand(name.slice(1), arg.trim());
+      return null;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    skills = getattr(app, "skill_rt", None)
+    if cmd is None and skills and name[1:] in skills.skills:
+        return app.run_skill_command(name[1:], arg.strip())
+    ```
 
 `App.run_skill_command` 渲染正文，再把它作为**这一轮的用户消息**发给模型：
 
-```python
-self._run([{"type": "text", "text": body},
-           {"type": "text", "text": f"<command-name>/{name}</command-name>\n<command-args>{arg}</command-args>"}])
-```
+=== "Node"
+
+    ```ts
+    await this.run([{ type: "text", text: body },
+      { type: "text", text: `<command-name>/${name}</command-name>\n<command-args>${arg}</command-args>` }]);
+    ```
+
+=== "Python"
+
+    ```python
+    self._run([{"type": "text", "text": body},
+               {"type": "text", "text": f"<command-name>/{name}</command-name>\n<command-args>{arg}</command-args>"}])
+    ```
 
 `<command-name>` 标记让模型知道「这一轮是用户敲命令触发的，说明书已经加载好了，不用再调 Skill 工具」。Claude Code 的 `Skill` 工具描述里也有一句「If a `<command-name>` block is already present this turn, the skill is loaded」，说的就是这个。
 
@@ -215,24 +320,40 @@ self._run([{"type": "text", "text": body},
 
 ### 5. 压缩之后：正文原样挂回
 
-skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精确的指令，被概括成「用户在用 pr-summary skill」就没用了。`SkillRuntime.invoked` 记录本会话调用过的每个 skill 的渲染结果，`compact._reattach_skills` 在压缩后原样挂回（每个最多 2 万字符）。Claude Code 文档的说法是每个 skill 最多 5000 token、合计最多 25000 token，只保留开头。所以 skill 里最重要的指令要写在最前面。
+skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精确的指令，被概括成「用户在用 pr-summary skill」就没用了。`SkillRuntime.invoked` 记录本会话调用过的每个 skill 的渲染结果，`compact._reattach_skills`（Node 版 `compact.ts` 的 `reattachSkills`）在压缩后原样挂回（每个最多 2 万字符）。Claude Code 文档的说法是每个 skill 最多 5000 token、合计最多 25000 token，只保留开头。所以 skill 里最重要的指令要写在最前面。
 
 ## 测试
 
-`tests/test_ch20_skills.py`，9 个：
+`tests/ch20_skills.test.ts`（Python 版 `tests/test_ch20_skills.py`），9 个：
 
 - 发现用户级和项目级 skill；手动专用的不进目录；预算不够时用得少的只剩名字。
 - 渲染：`$0`、`${SKILL_DIR}`、`` !`cmd` ``、无占位符时补 `ARGUMENTS`；附录不自动加载；预处理命令失败则调用失败。
 - 模型调 `Skill`：system 里只有目录；`tool_result` 是 `Launching skill: …`，正文是后面的文本块。
 - 手动专用 / 不存在的 skill 被拒；`/release-note v1.2.0` 展开成带 `<command-name>` 的用户消息；压缩后正文挂回；`/skills` 列表。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 37%]
-........................................................................ [ 74%]
-.................................................                        [100%]
-193 passed in 13.32s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1*.test.ts tests/ch20*.test.ts tests/extension_points.test.ts
+    ℹ tests 193
+    ℹ suites 0
+    ℹ pass 193
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 8439.783458
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 37%]
+    ........................................................................ [ 74%]
+    .................................................                        [100%]
+    193 passed in 13.32s
+    ```
 
 ## 和真实 Claude Code 的差异
 

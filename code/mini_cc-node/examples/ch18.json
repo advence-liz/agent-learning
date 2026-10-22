@@ -1,0 +1,8 @@
+[
+  {"call": "Monitor", "input": {"command": "tail -n 0 -F app.log | grep -E --line-buffered 'ERROR|Traceback|FATAL'", "description": "app.log 里的 ERROR / Traceback / FATAL", "timeout_ms": 1800000}, "text": "用 Monitor 盯着，过滤 ERROR，也带上 Traceback 和 FATAL，免得进程崩了却没动静。"},
+  {"say": "在盯着了。一有匹配的行我就告诉你，你可以先忙别的。"},
+  {"say": "app.log 出现了 ERROR：`db timeout after 3000ms`。看起来是数据库连接超时，要我查一下连接池配置吗？"},
+  {"say": "又一条：`Traceback (most recent call last)`，紧跟在超时之后，像是超时没被捕获、把 worker 带崩了。"},
+  {"call": "TaskStop", "input": {"task_id": "m1"}},
+  {"say": "已停止监听（m1）。"}
+]

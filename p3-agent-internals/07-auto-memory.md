@@ -126,58 +126,123 @@ sequenceDiagram
 
 下面用真实默认值模拟 Phase 1 的认领规则和读路径的截断（模型调用用假函数代替）：
 
-```python
-from datetime import datetime, timedelta
+=== "Node"
 
-# 默认值取自 codex-rs config/src/types.rs 的 DEFAULT_MEMORIES_*（commit c419fd0）
-MIN_IDLE = timedelta(hours=6)
-MAX_AGE = timedelta(days=10)
-MAX_PER_STARTUP = 2
-SUMMARY_TOKEN_LIMIT = 2_500
+    ```ts
+    const HOUR = 3600_000, DAY = 24 * HOUR;
 
-now = datetime(2026, 10, 21, 9, 0)
-rollouts = [  # (thread_id, 最后更新时间, 是否已处理过)
-    ("t-today", now - timedelta(hours=1), False),        # 太新：可能还在继续聊
-    ("t-yday", now - timedelta(hours=20), False),
-    ("t-3d", now - timedelta(days=3), False),
-    ("t-5d", now - timedelta(days=5), False),
-    ("t-old", now - timedelta(days=30), False),          # 太旧
-    ("t-done", now - timedelta(days=2), True),
-]
+    // 默认值取自 codex-rs config/src/types.rs 的 DEFAULT_MEMORIES_*（commit c419fd0）
+    const MIN_IDLE = 6 * HOUR;
+    const MAX_AGE = 10 * DAY;
+    const MAX_PER_STARTUP = 2;
+    const SUMMARY_TOKEN_LIMIT = 2_500;
 
-def phase1_claim(current_thread):
-    ok = [r for r in rollouts if r[0] != current_thread and not r[2]
-          and now - MAX_AGE <= r[1] <= now - MIN_IDLE]
-    ok.sort(key=lambda r: r[1], reverse=True)
-    return ok[:MAX_PER_STARTUP]
+    const now = new Date(2026, 9, 21, 9, 0).getTime();   // 月份从 0 开始：9 = 十月
+    const rollouts: [string, number, boolean][] = [  // [thread_id, 最后更新时间, 是否已处理过]
+      ["t-today", now - 1 * HOUR, false],              // 太新：可能还在继续聊
+      ["t-yday", now - 20 * HOUR, false],
+      ["t-3d", now - 3 * DAY, false],
+      ["t-5d", now - 5 * DAY, false],
+      ["t-old", now - 30 * DAY, false],                // 太旧
+      ["t-done", now - 2 * DAY, true],
+    ];
 
-def phase1_extract(thread_id):     # 真实实现：每个 rollout 一次低 effort 模型调用，输出严格 JSON
-    return {"rollout_slug": thread_id, "rollout_summary": f"{thread_id} 做了什么",
-            "raw_memory": f"- 从 {thread_id} 学到：测试命令是 pnpm test"}
+    function phase1Claim(currentThread: string) {
+      const ok = rollouts.filter((r) => r[0] !== currentThread && !r[2]
+        && now - MAX_AGE <= r[1] && r[1] <= now - MIN_IDLE);
+      ok.sort((a, b) => b[1] - a[1]);
+      return ok.slice(0, MAX_PER_STARTUP);
+    }
 
-def phase2_consolidate(raw):       # 真实实现：起一个只能写 memories 目录的内部 agent 合并
-    return "v1\n## User preferences\n" + "\n".join(sorted(set(r["raw_memory"] for r in raw)))
+    function phase1Extract(threadId: string) {   // 真实实现：每个 rollout 一次低 effort 模型调用，输出严格 JSON
+      return { rollout_slug: threadId, rollout_summary: `${threadId} 做了什么`,
+               raw_memory: `- 从 ${threadId} 学到：测试命令是 pnpm test` };
+    }
 
-def read_path(summary):            # 新会话：summary 截到 2500 token 放进 developer instructions
-    approx = summary[: SUMMARY_TOKEN_LIMIT * 4]
-    return f"========= MEMORY_SUMMARY BEGINS =========\n{approx}\n========= MEMORY_SUMMARY ENDS ========="
+    function phase2Consolidate(raw: { raw_memory: string }[]) {   // 真实实现：起一个只能写 memories 目录的内部 agent 合并
+      return "v1\n## User preferences\n" + [...new Set(raw.map((r) => r.raw_memory))].sort().join("\n");
+    }
 
-claimed = phase1_claim(current_thread="t-new")
-print("phase1 claimed:", [r[0] for r in claimed])
-raw = [phase1_extract(r[0]) for r in claimed]
-print(read_path(phase2_consolidate(raw)))
-```
+    function readPath(summary: string) {          // 新会话：summary 截到 2500 token 放进 developer instructions
+      const approx = summary.slice(0, SUMMARY_TOKEN_LIMIT * 4);
+      return `========= MEMORY_SUMMARY BEGINS =========\n${approx}\n========= MEMORY_SUMMARY ENDS =========`;
+    }
 
-```text
-❯ uv run python codex_memory_demo.py
-phase1 claimed: ['t-yday', 't-3d']
-========= MEMORY_SUMMARY BEGINS =========
-v1
-## User preferences
-- 从 t-3d 学到：测试命令是 pnpm test
-- 从 t-yday 学到：测试命令是 pnpm test
-========= MEMORY_SUMMARY ENDS =========
-```
+    const claimed = phase1Claim("t-new");
+    console.log("phase1 claimed:", claimed.map((r) => r[0]));
+    const raw = claimed.map((r) => phase1Extract(r[0]));
+    console.log(readPath(phase2Consolidate(raw)));
+    ```
+
+=== "Python"
+
+    ```python
+    from datetime import datetime, timedelta
+
+    # 默认值取自 codex-rs config/src/types.rs 的 DEFAULT_MEMORIES_*（commit c419fd0）
+    MIN_IDLE = timedelta(hours=6)
+    MAX_AGE = timedelta(days=10)
+    MAX_PER_STARTUP = 2
+    SUMMARY_TOKEN_LIMIT = 2_500
+
+    now = datetime(2026, 10, 21, 9, 0)
+    rollouts = [  # (thread_id, 最后更新时间, 是否已处理过)
+        ("t-today", now - timedelta(hours=1), False),        # 太新：可能还在继续聊
+        ("t-yday", now - timedelta(hours=20), False),
+        ("t-3d", now - timedelta(days=3), False),
+        ("t-5d", now - timedelta(days=5), False),
+        ("t-old", now - timedelta(days=30), False),          # 太旧
+        ("t-done", now - timedelta(days=2), True),
+    ]
+
+    def phase1_claim(current_thread):
+        ok = [r for r in rollouts if r[0] != current_thread and not r[2]
+              and now - MAX_AGE <= r[1] <= now - MIN_IDLE]
+        ok.sort(key=lambda r: r[1], reverse=True)
+        return ok[:MAX_PER_STARTUP]
+
+    def phase1_extract(thread_id):     # 真实实现：每个 rollout 一次低 effort 模型调用，输出严格 JSON
+        return {"rollout_slug": thread_id, "rollout_summary": f"{thread_id} 做了什么",
+                "raw_memory": f"- 从 {thread_id} 学到：测试命令是 pnpm test"}
+
+    def phase2_consolidate(raw):       # 真实实现：起一个只能写 memories 目录的内部 agent 合并
+        return "v1\n## User preferences\n" + "\n".join(sorted(set(r["raw_memory"] for r in raw)))
+
+    def read_path(summary):            # 新会话：summary 截到 2500 token 放进 developer instructions
+        approx = summary[: SUMMARY_TOKEN_LIMIT * 4]
+        return f"========= MEMORY_SUMMARY BEGINS =========\n{approx}\n========= MEMORY_SUMMARY ENDS ========="
+
+    claimed = phase1_claim(current_thread="t-new")
+    print("phase1 claimed:", [r[0] for r in claimed])
+    raw = [phase1_extract(r[0]) for r in claimed]
+    print(read_path(phase2_consolidate(raw)))
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node codex_memory_demo.ts
+    phase1 claimed: [ 't-yday', 't-3d' ]
+    ========= MEMORY_SUMMARY BEGINS =========
+    v1
+    ## User preferences
+    - 从 t-3d 学到：测试命令是 pnpm test
+    - 从 t-yday 学到：测试命令是 pnpm test
+    ========= MEMORY_SUMMARY ENDS =========
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python codex_memory_demo.py
+    phase1 claimed: ['t-yday', 't-3d']
+    ========= MEMORY_SUMMARY BEGINS =========
+    v1
+    ## User preferences
+    - 从 t-3d 学到：测试命令是 pnpm test
+    - 从 t-yday 学到：测试命令是 pnpm test
+    ========= MEMORY_SUMMARY ENDS =========
+    ```
 
 （离线 fake 模型。认领时按最近更新时间排序是我的简化，源码里的排序细节我没有逐行核对。）
 

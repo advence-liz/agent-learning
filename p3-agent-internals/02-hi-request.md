@@ -89,21 +89,49 @@ system 只有三块，加起来不到 1 万字符。第 0 块是一句 57 字符
 
 现在回到那个反直觉的账单。把同一个会话的前五轮连起来看（同样是本机 jsonl 原值，用 `session_stats.py cache` 打印）：
 
-```text
-❯ uv run python -m http_analyzer.session_stats cache 3
-session 3f9c2a1e   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
-  turn 1        2         78033           0     575
-  turn 2        2           733       78033     497   yes
-  turn 3        2          3056       78766     299   yes
-  turn 4        2          1048       81822     135   yes
-  turn 5        2          3677       82870     290   yes
-session 4aac0edb   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
-  turn 1        2         61002           0     240
-  turn 2        2           954       61002      92   yes
-  turn 3        2          6034       61956     268   yes
-  turn 4        2           676       67990     831   yes
-  turn 5        2          1417       68666     866   yes
-```
+=== "Node"
+
+    ```text
+    ❯ node http_analyzer/session_stats.ts cache 3
+    session 8d1e4b07   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
+      turn 1        2         39116       26594     395   
+      turn 2        2          2458       65710      82   yes
+      turn 3        2           181       68168     215   yes
+      turn 4        2          1425       68349     115   yes
+      turn 5        2           471       69774      82   yes
+    session 5c02f9a3   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
+      turn 1        2         54427       26987     307   
+      turn 2        2           386       81414     178   yes
+      turn 3        2           893       81800     234   yes
+      turn 4        2          4425       82693     287   yes
+      turn 5        2          3315       87118     262   yes
+    session 3f9c2a1e   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
+      turn 1        2         78033           0     575   
+      turn 2        2           733       78033     497   yes
+      turn 3        2          3056       78766     299   yes
+      turn 4        2          1048       81822     135   yes
+      turn 5        2          3677       82870     290   yes
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python -m http_analyzer.session_stats cache 3
+    session 3f9c2a1e   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
+      turn 1        2         78033           0     575
+      turn 2        2           733       78033     497   yes
+      turn 3        2          3056       78766     299   yes
+      turn 4        2          1048       81822     135   yes
+      turn 5        2          3677       82870     290   yes
+    session 4aac0edb   input  cache_create  cache_read  output   read(n)==read(n-1)+create(n-1)?
+      turn 1        2         61002           0     240
+      turn 2        2           954       61002      92   yes
+      turn 3        2          6034       61956     268   yes
+      turn 4        2           676       67990     831   yes
+      turn 5        2          1417       68666     866   yes
+    ```
+
+（`cache` 取的是「最近 N 个会话」，每次跑都会换一批。两个标签页是不同时间跑的，会话不同，规律一样。）
 
 规律非常干净：**这一轮的 cache_read = 上一轮的 cache_read + 上一轮的 cache_creation**。
 
@@ -117,26 +145,49 @@ session 4aac0edb   input  cache_create  cache_read  output   read(n)==read(n-1)+
 
 ## 动手：自己验证缓存链
 
-`code/agent/http_analyzer/session_stats.py` 的 `usage_chain()` 就二十来行：
+[`code/agent-node/http_analyzer/session_stats.ts`](../code/agent-node/http_analyzer/session_stats.ts) 的 `usageChain()`（Python 版 [`session_stats.py`](../code/agent/http_analyzer/session_stats.py) 的 `usage_chain()`）就二十来行：
 
-```python
-def usage_chain(path: Path, limit: int = 5):
-    """主线程（非 sidechain）每次 API 响应的 usage；同一 message.id 的多条记录只算一次。"""
-    seen, rows = set(), []
-    for _, r in iter_records([path]):
-        if r.get("type") != "assistant" or r.get("isSidechain"):
-            continue
-        m = r.get("message") or {}
-        u = m.get("usage")
-        if not u or m.get("id") in seen:
-            continue
-        seen.add(m.get("id"))
-        rows.append((u.get("input_tokens", 0), u.get("cache_creation_input_tokens", 0),
-                     u.get("cache_read_input_tokens", 0), u.get("output_tokens", 0)))
-        if len(rows) >= limit:
-            break
-    return rows
-```
+=== "Node"
+
+    ```ts
+    /** 主线程（非 sidechain）每次 API 响应的 usage；同一 message.id 的多条记录只算一次。 */
+    export function usageChain(path: string, limit = 5): [number, number, number, number][] {
+      const seen = new Set<unknown>();
+      const rows: [number, number, number, number][] = [];
+      for (const [, r] of iterRecords([path])) {
+        if (r.type !== "assistant" || r.isSidechain) continue;
+        const m = r.message || {};
+        const u = m.usage;
+        if (!u || seen.has(m.id)) continue;
+        seen.add(m.id);
+        rows.push([u.input_tokens ?? 0, u.cache_creation_input_tokens ?? 0,
+          u.cache_read_input_tokens ?? 0, u.output_tokens ?? 0]);
+        if (rows.length >= limit) break;
+      }
+      return rows;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def usage_chain(path: Path, limit: int = 5):
+        """主线程（非 sidechain）每次 API 响应的 usage；同一 message.id 的多条记录只算一次。"""
+        seen, rows = set(), []
+        for _, r in iter_records([path]):
+            if r.get("type") != "assistant" or r.get("isSidechain"):
+                continue
+            m = r.get("message") or {}
+            u = m.get("usage")
+            if not u or m.get("id") in seen:
+                continue
+            seen.add(m.get("id"))
+            rows.append((u.get("input_tokens", 0), u.get("cache_creation_input_tokens", 0),
+                         u.get("cache_read_input_tokens", 0), u.get("output_tokens", 0)))
+            if len(rows) >= limit:
+                break
+        return rows
+    ```
 
 有个小坑值得说：一次 API 响应如果有多个内容块（thinking + text + tool_use），jsonl 会把它拆成多条 assistant 记录，但它们的 `message.id` 相同、usage 也相同。不按 id 去重，你会把同一份 usage 算好几遍。
 

@@ -83,76 +83,156 @@ tools-reference 文档把 `ExitPlanMode` 描述为「展示计划供审批并退
 
 ## 动手：三种手段的最小组合
 
-```python
-ALL_TOOLS = ["Read", "Grep", "Bash", "Edit", "Write", "Agent", "ExitPlanMode"]
-WRITE_TOOLS = {"Edit", "Write", "NotebookEdit"}
-PLAN_FILE = "~/.claude/plans/session-abc.md"
-REMINDER = ("<system-reminder>Plan mode is active. Do not edit source files. "
-            "Explore, then write your plan to " + PLAN_FILE + " and call ExitPlanMode.</system-reminder>")
+=== "Node"
 
-class Harness:
-    def __init__(self):
-        self.mode, self.messages = "plan", []
+    ```ts
+    const ALL_TOOLS = ["Read", "Grep", "Bash", "Edit", "Write", "Agent", "ExitPlanMode"];
+    const WRITE_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
+    const PLAN_FILE = "~/.claude/plans/session-abc.md";
+    const REMINDER = "<system-reminder>Plan mode is active. Do not edit source files. " +
+      "Explore, then write your plan to " + PLAN_FILE + " and call ExitPlanMode.</system-reminder>";
 
-    # 手段 1：每轮往上下文里塞提醒（prompt 层）
-    def build_turn(self, user_text):
-        content = [{"type": "text", "text": user_text}]
-        if self.mode == "plan":
-            content.append({"type": "text", "text": REMINDER})
-        self.messages.append({"role": "user", "content": content})
+    class Harness {
+      mode = "plan";
+      messages: { role: string; content: { type: string; text: string }[] }[] = [];
 
-    # 手段 2：执行层拦截，只放行写 plan 文件（程序层）
-    def run_tool(self, name, args):
-        if self.mode == "plan" and name in WRITE_TOOLS and args.get("file_path") != PLAN_FILE:
-            return f"✘ {name} blocked: plan mode, only {PLAN_FILE} is writable"
-        if name == "ExitPlanMode":
-            ok = input_from_user(args["plan"])
-            if ok:
-                self.mode = "acceptEdits"
-                return "✔ User approved the plan. You can now edit files."
-            return "✘ User rejected the plan: keep planning."
-        return f"✔ {name} ok"
+      // 手段 1：每轮往上下文里塞提醒（prompt 层）
+      buildTurn(userText: string): void {
+        const content = [{ type: "text", text: userText }];
+        if (this.mode === "plan") content.push({ type: "text", text: REMINDER });
+        this.messages.push({ role: "user", content });
+      }
 
-    # 手段 3：给探索/设计用的子 agent 直接不给写工具（工具集裁剪）
-    @staticmethod
-    def subagent_tools(agent_type):
-        if agent_type in ("Explore", "Plan"):
-            return [t for t in ALL_TOOLS if t not in WRITE_TOOLS | {"Agent", "ExitPlanMode"}]
-        return ALL_TOOLS
+      // 手段 2：执行层拦截，只放行写 plan 文件（程序层）
+      runTool(name: string, args: Record<string, string>): string {
+        if (this.mode === "plan" && WRITE_TOOLS.has(name) && args.file_path !== PLAN_FILE)
+          return `✘ ${name} blocked: plan mode, only ${PLAN_FILE} is writable`;
+        if (name === "ExitPlanMode") {
+          const ok = inputFromUser(args.plan);
+          if (ok) {
+            this.mode = "acceptEdits";
+            return "✔ User approved the plan. You can now edit files.";
+          }
+          return "✘ User rejected the plan: keep planning.";
+        }
+        return `✔ ${name} ok`;
+      }
 
-def input_from_user(plan):
-    print("   [user sees plan]", plan.splitlines()[0], "→ approve")
-    return True
+      // 手段 3：给探索/设计用的子 agent 直接不给写工具（工具集裁剪）
+      static subagentTools(agentType: string): string[] {
+        if (["Explore", "Plan"].includes(agentType))
+          return ALL_TOOLS.filter((t) => !WRITE_TOOLS.has(t) && t !== "Agent" && t !== "ExitPlanMode");
+        return ALL_TOOLS;
+      }
+    }
 
-h = Harness()
-h.build_turn("把登录页的错误提示改成 i18n")
-print("reminder injected:", "Plan mode is active" in str(h.messages[-1]))
-print("Explore subagent tools:", h.subagent_tools("Explore"))
-for name, args in [("Grep", {"pattern": "errorMsg"}),
-                   ("Edit", {"file_path": "src/Login.tsx"}),
-                   ("Write", {"file_path": PLAN_FILE}),
-                   ("ExitPlanMode", {"plan": "# Plan: Login i18n\n1. 抽 key 2. 替换文案"}),
-                   ("Edit", {"file_path": "src/Login.tsx"})]:
-    print(f"⏺ {name}", "→", h.run_tool(name, args))
-print("mode now:", h.mode)
-```
+    function inputFromUser(plan: string): boolean {
+      console.log("   [user sees plan]", plan.split("\n")[0], "→ approve");
+      return true;
+    }
 
-```text
-❯ uv run python plan_mode_demo.py
-reminder injected: True
-Explore subagent tools: ['Read', 'Grep', 'Bash']
-⏺ Grep → ✔ Grep ok
-⏺ Edit → ✘ Edit blocked: plan mode, only ~/.claude/plans/session-abc.md is writable
-⏺ Write → ✔ Write ok
-   [user sees plan] # Plan: Login i18n → approve
-⏺ ExitPlanMode → ✔ User approved the plan. You can now edit files.
-⏺ Edit → ✔ Edit ok
-mode now: acceptEdits
-```
+    const h = new Harness();
+    h.buildTurn("把登录页的错误提示改成 i18n");
+    console.log("reminder injected:", JSON.stringify(h.messages.at(-1)).includes("Plan mode is active"));
+    console.log("Explore subagent tools:", Harness.subagentTools("Explore"));
+    for (const [name, args] of [["Grep", { pattern: "errorMsg" }],
+                                ["Edit", { file_path: "src/Login.tsx" }],
+                                ["Write", { file_path: PLAN_FILE }],
+                                ["ExitPlanMode", { plan: "# Plan: Login i18n\n1. 抽 key 2. 替换文案" }],
+                                ["Edit", { file_path: "src/Login.tsx" }]] as const)
+      console.log(`⏺ ${name}`, "→", h.runTool(name, args as Record<string, string>));
+    console.log("mode now:", h.mode);
+    ```
+
+=== "Python"
+
+    ```python
+    ALL_TOOLS = ["Read", "Grep", "Bash", "Edit", "Write", "Agent", "ExitPlanMode"]
+    WRITE_TOOLS = {"Edit", "Write", "NotebookEdit"}
+    PLAN_FILE = "~/.claude/plans/session-abc.md"
+    REMINDER = ("<system-reminder>Plan mode is active. Do not edit source files. "
+                "Explore, then write your plan to " + PLAN_FILE + " and call ExitPlanMode.</system-reminder>")
+
+    class Harness:
+        def __init__(self):
+            self.mode, self.messages = "plan", []
+
+        # 手段 1：每轮往上下文里塞提醒（prompt 层）
+        def build_turn(self, user_text):
+            content = [{"type": "text", "text": user_text}]
+            if self.mode == "plan":
+                content.append({"type": "text", "text": REMINDER})
+            self.messages.append({"role": "user", "content": content})
+
+        # 手段 2：执行层拦截，只放行写 plan 文件（程序层）
+        def run_tool(self, name, args):
+            if self.mode == "plan" and name in WRITE_TOOLS and args.get("file_path") != PLAN_FILE:
+                return f"✘ {name} blocked: plan mode, only {PLAN_FILE} is writable"
+            if name == "ExitPlanMode":
+                ok = input_from_user(args["plan"])
+                if ok:
+                    self.mode = "acceptEdits"
+                    return "✔ User approved the plan. You can now edit files."
+                return "✘ User rejected the plan: keep planning."
+            return f"✔ {name} ok"
+
+        # 手段 3：给探索/设计用的子 agent 直接不给写工具（工具集裁剪）
+        @staticmethod
+        def subagent_tools(agent_type):
+            if agent_type in ("Explore", "Plan"):
+                return [t for t in ALL_TOOLS if t not in WRITE_TOOLS | {"Agent", "ExitPlanMode"}]
+            return ALL_TOOLS
+
+    def input_from_user(plan):
+        print("   [user sees plan]", plan.splitlines()[0], "→ approve")
+        return True
+
+    h = Harness()
+    h.build_turn("把登录页的错误提示改成 i18n")
+    print("reminder injected:", "Plan mode is active" in str(h.messages[-1]))
+    print("Explore subagent tools:", h.subagent_tools("Explore"))
+    for name, args in [("Grep", {"pattern": "errorMsg"}),
+                       ("Edit", {"file_path": "src/Login.tsx"}),
+                       ("Write", {"file_path": PLAN_FILE}),
+                       ("ExitPlanMode", {"plan": "# Plan: Login i18n\n1. 抽 key 2. 替换文案"}),
+                       ("Edit", {"file_path": "src/Login.tsx"})]:
+        print(f"⏺ {name}", "→", h.run_tool(name, args))
+    print("mode now:", h.mode)
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node plan_mode_demo.ts
+    reminder injected: true
+    Explore subagent tools: [ 'Read', 'Grep', 'Bash' ]
+    ⏺ Grep → ✔ Grep ok
+    ⏺ Edit → ✘ Edit blocked: plan mode, only ~/.claude/plans/session-abc.md is writable
+    ⏺ Write → ✔ Write ok
+       [user sees plan] # Plan: Login i18n → approve
+    ⏺ ExitPlanMode → ✔ User approved the plan. You can now edit files.
+    ⏺ Edit → ✔ Edit ok
+    mode now: acceptEdits
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python plan_mode_demo.py
+    reminder injected: True
+    Explore subagent tools: ['Read', 'Grep', 'Bash']
+    ⏺ Grep → ✔ Grep ok
+    ⏺ Edit → ✘ Edit blocked: plan mode, only ~/.claude/plans/session-abc.md is writable
+    ⏺ Write → ✔ Write ok
+       [user sees plan] # Plan: Login i18n → approve
+    ⏺ ExitPlanMode → ✔ User approved the plan. You can now edit files.
+    ⏺ Edit → ✔ Edit ok
+    mode now: acceptEdits
+    ```
 
 （纯本地运行，「模型」的工具调用序列是写死的，用户审批也是写死的。）
 
-三种手段分别对应代码里的 `build_turn`（指令）、`run_tool` 里的拦截（权限层）、`subagent_tools`（工具裁剪）。拦截发生在模型**已经决定**要改文件之后，指令和裁剪则在它做决定之前起作用。
+三种手段分别对应代码里的 `build_turn`（指令）、`run_tool` 里的拦截（权限层）、`subagent_tools`（工具裁剪），Node 版对应 `buildTurn` / `runTool` / `subagentTools`。拦截发生在模型**已经决定**要改文件之后，指令和裁剪则在它做决定之前起作用。
 
 ## 对照你的环境
 

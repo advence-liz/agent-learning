@@ -18,25 +18,51 @@
 
 离线 fake 模型（`examples/ch08.json`），`--permission-mode acceptEdits`：
 
-```console
-❯ 把 @app/config.py 的超时改成 60
-  ⎿ 已附加 @app/config.py（2 行）
-● 文件内容已经在上下文里了，直接改。
-⏺ Edit(app/config.py)
-✔ Edit -> The file app/config.py has been updated (1 replacement). Snippet:
-       1        TIMEOUT = 60
-       2        RETRIES = 3
-● 已把 app/config.py 的 TIMEOUT 从 30 改成 60。
-```
+=== "Node"
+
+    ```console
+    ❯ 把 @app/config.py 的超时改成 60
+      ⎿ 已附加 @app/config.py（2 行）
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 文件内容已经在上下文里了，直接改。
+    ⏺ Edit(app/config.py)
+    ✔ Edit -> The file app/config.py has been updated (1 replacement). Snippet:
+           1	TIMEOUT = 60
+           2	RETRIES = 3
+    ● 已把 app/config.py 的 TIMEOUT 从 30 改成 60。
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 把 @app/config.py 的超时改成 60
+      ⎿ 已附加 @app/config.py（2 行）
+    ● 文件内容已经在上下文里了，直接改。
+    ⏺ Edit(app/config.py)
+    ✔ Edit -> The file app/config.py has been updated (1 replacement). Snippet:
+           1        TIMEOUT = 60
+           2        RETRIES = 3
+    ● 已把 app/config.py 的 TIMEOUT 从 30 改成 60。
+    ```
 
 注意模型第一步就是 `Edit`，没有 `Read`——而且没有撞上上一章的「File has not been read yet」。
 
 输入框里打 `@` 时的补全候选（`FileMentionCompleter`，模糊匹配，`node_modules` 被排除）：
 
-```console
-改一下 @cfg → ['app/config.py']
-看看 @app/ → ['app/', 'app/__init__.py', 'app/cli.py', 'app/config.py']
-```
+=== "Node"
+
+    ```console
+    改一下 @cfg → ["app/config.py"]
+    看看 @app/ → ["app/","app/__init__.py","app/cli.py","app/config.py"]
+    ```
+
+=== "Python"
+
+    ```console
+    改一下 @cfg → ['app/config.py']
+    看看 @app/ → ['app/', 'app/__init__.py', 'app/cli.py', 'app/config.py']
+    ```
 
 会话文件里，这条 user 消息长这样：
 
@@ -89,12 +115,21 @@ sequenceDiagram
 
 ### 提交时：解析 → 读取 → 附件
 
-`mini_cc/mentions.py:find_mentions` 用一个正则找出所有 `@路径`：
+`mini_cc/mentions.ts:findMentions`（Python 版 `mentions.py:find_mentions`）用一个正则找出所有 `@路径`：
 
-```python
-# @ 前面必须是开头或空白（避免误伤邮箱 a@b.com）；中文标点也视为路径结束
-MENTION = re.compile(r'(?:^|(?<=\s))@("[^"]+"|[^\s"，。；：！？（）、]+)')
-```
+=== "Node"
+
+    ```ts
+    // @ 前面必须是开头或空白（避免误伤邮箱 a@b.com）；中文标点也视为路径结束
+    const MENTION = /(?:^|(?<=\s))@("[^"]+"|[^\s"，。；：！？（）、]+)/gu;
+    ```
+
+=== "Python"
+
+    ```python
+    # @ 前面必须是开头或空白（避免误伤邮箱 a@b.com）；中文标点也视为路径结束
+    MENTION = re.compile(r'(?:^|(?<=\s))@("[^"]+"|[^\s"，。；：！？（）、]+)')
+    ```
 
 三个边界情况都写成了测试：`a@b.com` 不算引用；`@"my notes.txt"` 支持带空格的路径；「看看 @README.md，然后改」里的中文逗号不算路径的一部分（我第一版就漏了这个，测试当场挂掉）。
 
@@ -102,15 +137,29 @@ MENTION = re.compile(r'(?:^|(?<=\s))@("[^"]+"|[^\s"，。；：！？（）、]+
 
 文件附件由 `_file_attachment()` 生成，有三个细节：
 
-```python
-text = read_text(path)
-lines = text.splitlines()
-shown = lines[:max_lines]
-# 内容进了上下文 = 模型「读过」了：登记文件状态，模型可以直接 Edit，不用再 Read 一遍
-ctx.file_state.remember(path, text, partial=len(shown) < len(lines))
-...
-body = number_lines(shown, 1)     # 和 Read 工具完全相同的 cat -n 格式
-```
+=== "Node"
+
+    ```ts
+    const text = readText(path);
+    const lines = splitLines(text);
+    const shown = lines.slice(0, maxLines);
+    // 内容进了上下文 = 模型「读过」了：登记文件状态，模型可以直接 Edit，不用再 Read 一遍
+    ctx.fileState.remember(path, text, shown.length < lines.length);
+    ...
+    const body = numberLines(shown, 1);   // 和 Read 工具完全相同的 cat -n 格式
+    ```
+
+=== "Python"
+
+    ```python
+    text = read_text(path)
+    lines = text.splitlines()
+    shown = lines[:max_lines]
+    # 内容进了上下文 = 模型「读过」了：登记文件状态，模型可以直接 Edit，不用再 Read 一遍
+    ctx.file_state.remember(path, text, partial=len(shown) < len(lines))
+    ...
+    body = number_lines(shown, 1)     # 和 Read 工具完全相同的 cat -n 格式
+    ```
 
 1. **格式和 Read 一样**。模型已经熟悉 Read 的输出格式，附件用同一种格式，它就知道怎么引用行号、怎么构造 `old_string`。
 2. **登记文件状态**。这是本章和上一章的接口：附件让模型「看过」了文件，所以 `FileStateCache` 里要记一笔，否则模型接着 Edit 会被「先读后改」挡住，那 `@` 省下的一轮又白搭了。测试 `test_mentioned_file_counts_as_read_so_edit_works` 断言整个过程只有 2 次请求。
@@ -120,13 +169,25 @@ body = number_lines(shown, 1)     # 和 Read 工具完全相同的 cat -n 格式
 
 `build_user_content()`：
 
-```python
-def build_user_content(text, attachments):
-    """附件在前、用户原话在后：长资料放前面、问题放最后，是 Anthropic 长上下文提示的建议顺序。"""
-    if not attachments:
-        return text
-    return [render(a) for a in attachments] + [{"type": "text", "text": text}]
-```
+=== "Node"
+
+    ```ts
+    /** 附件在前、用户原话在后：长资料放前面、问题放最后，是 Anthropic 长上下文提示的建议顺序。 */
+    export function buildUserContent(text: string, attachments: Attachment[]): string | Block[] {
+      if (!attachments.length) return text;
+      return [...attachments.map(render), { type: "text", text }];
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def build_user_content(text, attachments):
+        """附件在前、用户原话在后：长资料放前面、问题放最后，是 Anthropic 长上下文提示的建议顺序。"""
+        if not attachments:
+            return text
+        return [render(a) for a in attachments] + [{"type": "text", "text": text}]
+    ```
 
 你可能会问：为什么不直接把文件内容拼接进用户那句话里？
 
@@ -136,28 +197,44 @@ def build_user_content(text, attachments):
 
 ### 输入时：模糊补全
 
-`FileMentionCompleter` 是一个 prompt_toolkit 的 `Completer`：光标前那个词以 `@` 开头时，列出模糊匹配的文件。
+`FileMentionCompleter` 是一个 prompt_toolkit 的 `Completer`（Node 版只负责算候选，`cli.ts` 把它接到 `node:readline` 的 `completer` 上）：光标前那个词以 `@` 开头时，列出模糊匹配的文件。
 
 文件列表来自 `list_project_files()`：**优先 `git ls-files -co --exclude-standard`**（自动尊重 `.gitignore`，几万个文件也很快），不是 git 仓库才自己 `os.walk`，跳过 `node_modules`、`.venv` 之类。列表缓存 5 秒，避免每敲一个字符就扫一遍磁盘。
 
 匹配用的是**子序列**（`fuzzy_score`）：`btn` 能匹配 `Button.tsx`，因为 b、t、n 按顺序出现了。分数是「字符之间隔了多少」，文件名本身包含 query 的再加一个大额奖励。这就是 VS Code `Cmd+P` 那种匹配的最朴素版本。
 
-REPL 里命令补全和文件补全用 `merge_completers` 合在一起：行首 `/` 补命令，`@` 补文件，互不干扰。
+REPL 里命令补全和文件补全用 `merge_completers` 合在一起（Node 版是同一个 `completer` 函数里按行首 `/` 和 `@` 分流）：行首 `/` 补命令，`@` 补文件，互不干扰。
 
 ## 测试
 
-`tests/test_ch08_mentions.py`，9 个：
+`tests/ch08_mentions.test.ts`（Python 版 `tests/test_ch08_mentions.py`），9 个：
 
 - 解析：多个引用、邮箱、引号路径、去重、中文标点。
 - 附件：在用户原话**之前**、带行号、`<system-reminder>` 包裹；引用后直接 Edit 成功且只有 2 次请求；不存在的 `@nobody` 原样保留、目录列出条目；大文件截断；会话标题跳过附件。
 - 补全：模糊排序、忽略 `node_modules`、`Document("看看 @app")` 的候选。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 79%]
-...................                                                      [100%]
-91 passed in 1.63s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch0[1-8]*.test.ts'
+    ℹ tests 91
+    ℹ suites 0
+    ℹ pass 91
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 2695.403375
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 79%]
+    ...................                                                      [100%]
+    91 passed in 1.63s
+    ```
 
 ## 回到开头
 

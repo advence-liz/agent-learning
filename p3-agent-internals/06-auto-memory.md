@@ -92,56 +92,119 @@ sequenceDiagram
 
 ## 动手：最小的索引式记忆
 
-```python
-import os, tempfile, textwrap
+=== "Node"
 
-MAX_LINES, MAX_BYTES = 200, 25_000        # 官方文档：MEMORY.md 启动时只加载前 200 行或前 25KB
+    ```ts
+    import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+    import { tmpdir } from "node:os";
+    import { join } from "node:path";
 
-def save_memory(mem_dir, slug, name, description, mtype, body):
-    """写路径：模型在对话中用普通的 Write/Edit 工具做两件事——写主题文件 + 在索引里加一行。"""
-    with open(os.path.join(mem_dir, f"{slug}.md"), "w") as f:
-        f.write(textwrap.dedent(f"""\
-            ---
-            name: {name}
-            description: {description}
-            metadata:
-              type: {mtype}
-            ---
-            {body}
-            """))
-    with open(os.path.join(mem_dir, "MEMORY.md"), "a") as f:
-        f.write(f"- [{name}]({slug}.md) — {description}\n")
+    const [MAX_LINES, MAX_BYTES] = [200, 25_000];   // 官方文档：MEMORY.md 启动时只加载前 200 行或前 25KB
 
-def load_index(mem_dir):
-    """读路径：新会话启动时只把索引截断后塞进上下文，主题文件留给模型按需 Read。"""
-    raw = open(os.path.join(mem_dir, "MEMORY.md"), encoding="utf-8").read()
-    lines, out, size = raw.splitlines(True), [], 0
-    for line in lines[:MAX_LINES]:
-        if size + len(line.encode()) > MAX_BYTES:
-            break
-        out.append(line); size += len(line.encode())
-    dropped = len(lines) - len(out)
-    note = f"\n(MEMORY.md truncated: {dropped} more lines not loaded)" if dropped else ""
-    return "".join(out) + note
+    /** 写路径：模型在对话中用普通的 Write/Edit 工具做两件事——写主题文件 + 在索引里加一行。 */
+    function saveMemory(memDir: string, slug: string, name: string, description: string, mtype: string, body: string) {
+      writeFileSync(join(memDir, `${slug}.md`), [
+        "---",
+        `name: ${name}`,
+        `description: ${description}`,
+        "metadata:",
+        `  type: ${mtype}`,
+        "---",
+        body,
+        "",
+      ].join("\n"));
+      appendFileSync(join(memDir, "MEMORY.md"), `- [${name}](${slug}.md) — ${description}\n`);
+    }
 
-d = tempfile.mkdtemp()
-open(os.path.join(d, "MEMORY.md"), "w").write("# Memory Index\n\n")
-save_memory(d, "test-before-deploy", "部署前跑测试", "部署前先 pnpm test，再 deploy", "feedback",
-            "规则：部署前必须先跑 pnpm test。\n**Why:** 上次跳过测试导致线上白屏。\n**How to apply:** 用户说『部署』时自动先跑测试。")
-for i in range(250):
-    save_memory(d, f"note-{i}", f"笔记 {i}", "某个一次性事实", "project", "...")
-ctx = load_index(d)
-print(ctx.splitlines()[0], "|", ctx.splitlines()[2][:40])
-print("entries loaded:", sum(l.startswith("- [") for l in ctx.splitlines()), "/ 251 | tail:", ctx.splitlines()[-1])
-print("topic file loaded at startup?", "How to apply" in ctx)
-```
+    /** 读路径：新会话启动时只把索引截断后塞进上下文，主题文件留给模型按需 Read。 */
+    function loadIndex(memDir: string): string {
+      const raw = readFileSync(join(memDir, "MEMORY.md"), "utf8");
+      const lines = raw.split(/(?<=\n)/), out: string[] = [];
+      let size = 0;
+      for (const line of lines.slice(0, MAX_LINES)) {
+        if (size + Buffer.byteLength(line) > MAX_BYTES) break;
+        out.push(line); size += Buffer.byteLength(line);
+      }
+      const dropped = lines.length - out.length;
+      const note = dropped ? `\n(MEMORY.md truncated: ${dropped} more lines not loaded)` : "";
+      return out.join("") + note;
+    }
 
-```text
-❯ uv run python memory_demo.py
-# Memory Index | - [部署前跑测试](test-before-deploy.md) — 部署前先
-entries loaded: 198 / 251 | tail: (MEMORY.md truncated: 53 more lines not loaded)
-topic file loaded at startup? False
-```
+    const d = mkdtempSync(join(tmpdir(), "mem-"));
+    writeFileSync(join(d, "MEMORY.md"), "# Memory Index\n\n");
+    saveMemory(d, "test-before-deploy", "部署前跑测试", "部署前先 pnpm test，再 deploy", "feedback",
+      "规则：部署前必须先跑 pnpm test。\n**Why:** 上次跳过测试导致线上白屏。\n**How to apply:** 用户说『部署』时自动先跑测试。");
+    for (let i = 0; i < 250; i++) saveMemory(d, `note-${i}`, `笔记 ${i}`, "某个一次性事实", "project", "...");
+    const ctx = loadIndex(d);
+    const ls = ctx.split("\n");
+    console.log(ls[0], "|", ls[2].slice(0, 40));
+    console.log("entries loaded:", ls.filter((l) => l.startsWith("- [")).length, "/ 251 | tail:", ls.at(-1));
+    console.log("topic file loaded at startup?", ctx.includes("How to apply"));
+    ```
+
+=== "Python"
+
+    ```python
+    import os, tempfile, textwrap
+
+    MAX_LINES, MAX_BYTES = 200, 25_000        # 官方文档：MEMORY.md 启动时只加载前 200 行或前 25KB
+
+    def save_memory(mem_dir, slug, name, description, mtype, body):
+        """写路径：模型在对话中用普通的 Write/Edit 工具做两件事——写主题文件 + 在索引里加一行。"""
+        with open(os.path.join(mem_dir, f"{slug}.md"), "w") as f:
+            f.write(textwrap.dedent(f"""\
+                ---
+                name: {name}
+                description: {description}
+                metadata:
+                  type: {mtype}
+                ---
+                {body}
+                """))
+        with open(os.path.join(mem_dir, "MEMORY.md"), "a") as f:
+            f.write(f"- [{name}]({slug}.md) — {description}\n")
+
+    def load_index(mem_dir):
+        """读路径：新会话启动时只把索引截断后塞进上下文，主题文件留给模型按需 Read。"""
+        raw = open(os.path.join(mem_dir, "MEMORY.md"), encoding="utf-8").read()
+        lines, out, size = raw.splitlines(True), [], 0
+        for line in lines[:MAX_LINES]:
+            if size + len(line.encode()) > MAX_BYTES:
+                break
+            out.append(line); size += len(line.encode())
+        dropped = len(lines) - len(out)
+        note = f"\n(MEMORY.md truncated: {dropped} more lines not loaded)" if dropped else ""
+        return "".join(out) + note
+
+    d = tempfile.mkdtemp()
+    open(os.path.join(d, "MEMORY.md"), "w").write("# Memory Index\n\n")
+    save_memory(d, "test-before-deploy", "部署前跑测试", "部署前先 pnpm test，再 deploy", "feedback",
+                "规则：部署前必须先跑 pnpm test。\n**Why:** 上次跳过测试导致线上白屏。\n**How to apply:** 用户说『部署』时自动先跑测试。")
+    for i in range(250):
+        save_memory(d, f"note-{i}", f"笔记 {i}", "某个一次性事实", "project", "...")
+    ctx = load_index(d)
+    print(ctx.splitlines()[0], "|", ctx.splitlines()[2][:40])
+    print("entries loaded:", sum(l.startswith("- [") for l in ctx.splitlines()), "/ 251 | tail:", ctx.splitlines()[-1])
+    print("topic file loaded at startup?", "How to apply" in ctx)
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node memory_demo.ts
+    # Memory Index | - [部署前跑测试](test-before-deploy.md) — 部署前先
+    entries loaded: 198 / 251 | tail: (MEMORY.md truncated: 53 more lines not loaded)
+    topic file loaded at startup? false
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python memory_demo.py
+    # Memory Index | - [部署前跑测试](test-before-deploy.md) — 部署前先
+    entries loaded: 198 / 251 | tail: (MEMORY.md truncated: 53 more lines not loaded)
+    topic file loaded at startup? False
+    ```
 
 （纯本地运行，不调用模型。最后那行截断提示是我的玩具实现加的，Claude Code 是否给模型类似提示我没有验证。）
 

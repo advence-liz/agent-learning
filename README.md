@@ -163,11 +163,18 @@ flowchart LR
 
 ## 配套代码
 
+第 0–4 部分的代码有 Node（TypeScript）和 Python 两版，逻辑一一对应，正文默认展示 Node 版，代码块上方的标签页可以切到 Python。
+第 5–6 部分是 PyTorch 训练，只有 Python 版。
+
 | 目录 | 内容 | 运行 |
 |---|---|---|
-| `code/agent/` | 第 1–3 部分的示例：hook 演示、chatbot、RAG、MCP server、抓包代理 | `cd code/agent && uv run pytest -q` |
-| `code/mini_cc/` | 第 4 部分的 mini Claude Code，`CHANGELOG.md` 记录每章增量 | `cd code/mini_cc && uv run python -m mini_cc` |
+| `code/agent-node/` | 第 0–3 部分的示例（Node 版）：hook 演示、chatbot、RAG、MCP server、抓包代理 | `cd code/agent-node && npm ci && npm test` |
+| `code/mini_cc-node/` | 第 4 部分的 mini Claude Code（Node 版） | `cd code/mini_cc-node && npm ci && node mini_cc/cli.ts` |
+| `code/agent/` | 同上，Python 版 | `cd code/agent && uv run pytest -q` |
+| `code/mini_cc/` | 同上，Python 版；`CHANGELOG.md` 记录每章增量 | `cd code/mini_cc && uv run python -m mini_cc` |
 | `code/ml/` | 第 5–6 部分的手写算法，均与 sklearn / torch 对拍 | `cd code/ml && uv run pytest -q` |
+
+Node 版需要 Node 24 以上，直接运行 `.ts` 文件，没有构建步骤。
 
 所有测试都跑离线 fake 模型，不消耗 API。要连真实模型，设置 `ANTHROPIC_API_KEY`（可选 `ANTHROPIC_BASE_URL`）。
 

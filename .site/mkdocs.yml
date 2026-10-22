@@ -17,6 +17,7 @@ theme:
     - search.highlight
     - search.suggest
     - content.code.copy
+    - content.tabs.link   # 同名标签页全站联动：选一次 Python，所有代码块都切到 Python
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -48,5 +49,6 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed: {alternate_style: true}   # 代码的 Node / Python 两个版本，第一个标签页（Node）默认展开
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js

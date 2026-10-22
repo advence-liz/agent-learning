@@ -98,16 +98,29 @@ hook 回话只有三个通道：退出码、stdout、stderr。规则很简单，
 
 说穿了，hook 对主循环的影响，就是 harness 在循环里预留了几个 `if`：
 
-```python
-verdict = run_hooks("PreToolUse", payload)   # 子进程 + stdin JSON
-if verdict.blocked:
-    messages.append(tool_result(error=verdict.reason))  # 模型看到理由，自己换路
-    continue
-if verdict.updated_input:
-    tool_input = verdict.updated_input
-```
+=== "Node"
 
-这段代码就是本章「动手」部分 `hook_runner.py` 的核心。
+    ```ts
+    const verdict = runHooks("PreToolUse", payload);   // 子进程 + stdin JSON
+    if (verdict.blocked) {
+      messages.push(toolResult({ error: verdict.reason }));  // 模型看到理由，自己换路
+      continue;
+    }
+    if (verdict.updatedInput) toolInput = verdict.updatedInput;
+    ```
+
+=== "Python"
+
+    ```python
+    verdict = run_hooks("PreToolUse", payload)   # 子进程 + stdin JSON
+    if verdict.blocked:
+        messages.append(tool_result(error=verdict.reason))  # 模型看到理由，自己换路
+        continue
+    if verdict.updated_input:
+        tool_input = verdict.updated_input
+    ```
+
+这段代码就是本章「动手」部分 `hook_runner.ts`（Python 版 `hook_runner.py`）的核心。
 
 **回到主线**：LLM 是一个按概率预测下一个 token 的模型，上下文里的规则只能「影响」它，不能「保证」它。hook 把一部分规则从上下文里搬到了上下文之外的确定性代码中。这样既省掉了常驻 token，也换来了概率给不了的可靠性。
 
@@ -115,42 +128,76 @@ if verdict.updated_input:
 
 测 hook 不需要启动 Claude Code。它就是一个读 stdin、写 stdout 的普通程序，用 echo 造一份 JSON 喂进去就能测。
 
-演示代码在 `code/agent/hooks_demo/` 下：
+演示代码在 [`code/agent-node/hooks_demo/`](../code/agent-node/hooks_demo/guard_bash.ts) 下（Python 版在 [`code/agent/hooks_demo/`](../code/agent/hooks_demo/guard_bash.py)，文件名相同，扩展名是 `.py`）：
 
-- `guard_bash.py`：PreToolUse 守卫，故意把四种拦法都演示一遍。
-- `stop_gate.py`：Stop 守卫，「没看到 passed 不许停」。
-- `hook_runner.py`：迷你调度器，模拟 harness 怎么按 matcher 选 hook、怎么解读三个通道。
-- `run_demo.sh`：用 echo 构造 stdin，把上面几个脚本挨个跑一遍。
+- `guard_bash.ts`：PreToolUse 守卫，故意把四种拦法都演示一遍。
+- `stop_gate.ts`：Stop 守卫，「没看到 passed 不许停」（Node 版同时认 `node --test` 的 `ℹ pass N`）。
+- `hook_runner.ts`：迷你调度器，模拟 harness 怎么按 matcher 选 hook、怎么解读三个通道。
+- `run_demo.sh`：用 echo 构造 stdin，把上面几个脚本挨个跑一遍（Node 版用 `node hooks_demo/guard_bash.ts` 这样的命令调 hook 脚本）。
 
-先看效果（`cd code/agent && bash hooks_demo/run_demo.sh`，真实输出）：
+先看效果（真实输出）：
 
-```text
-### PreToolUse: ls -la
-exit=0
+=== "Node"
 
-### PreToolUse: rm -rf /
-exit=2
-stderr=拒绝：`rm -rf /` 会删除根目录或家目录。请改成删除具体子目录。
+    ```text
+    $ cd code/agent-node && bash hooks_demo/run_demo.sh
+    ### PreToolUse: ls -la
+    exit=0
 
-### PreToolUse: git push origin main --force
-exit=0
-stdout={"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "禁止 --force，改用 --force-with-lease"}}
+    ### PreToolUse: rm -rf /
+    exit=2
+    stderr=拒绝：`rm -rf /` 会删除根目录或家目录。请改成删除具体子目录。
 
-### PreToolUse: npm publish
-exit=0
-stdout={"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "发包需要人工确认"}}
+    ### PreToolUse: git push origin main --force
+    exit=0
+    stdout={"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"禁止 --force，改用 --force-with-lease"}}
 
-### PreToolUse: python3 scripts/x.py
-exit=0
-stdout={"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "已自动加 -I 隔离模式", "updatedInput": {"command": "python3 -I scripts/x.py", "description": "demo"}}}
+    ### PreToolUse: npm publish
+    exit=0
+    stdout={"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"发包需要人工确认"}}
 
-### Stop（第一次，transcript 里没有 passed）
-{"decision": "block", "reason": "还没看到测试通过的输出。请运行 `uv run pytest -q` 并把结果贴出来再结束。"}
-exit=0
+    ### PreToolUse: python3 scripts/x.py
+    exit=0
+    stdout={"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"已自动加 -I 隔离模式","updatedInput":{"command":"python3 -I scripts/x.py","description":"demo"}}}
 
-### Stop（stop_hook_active=true，放行）
-exit=0 (stdout 为空 = 允许停)
-```
+    ### Stop（第一次，transcript 里没有 passed）
+    {"decision":"block","reason":"还没看到测试通过的输出。请运行 `npm test` 并把结果贴出来再结束。"}
+    exit=0
+
+    ### Stop（stop_hook_active=true，放行）
+    exit=0 (stdout 为空 = 允许停)
+    ```
+
+=== "Python"
+
+    ```text
+    $ cd code/agent && bash hooks_demo/run_demo.sh
+    ### PreToolUse: ls -la
+    exit=0
+
+    ### PreToolUse: rm -rf /
+    exit=2
+    stderr=拒绝：`rm -rf /` 会删除根目录或家目录。请改成删除具体子目录。
+
+    ### PreToolUse: git push origin main --force
+    exit=0
+    stdout={"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "禁止 --force，改用 --force-with-lease"}}
+
+    ### PreToolUse: npm publish
+    exit=0
+    stdout={"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "发包需要人工确认"}}
+
+    ### PreToolUse: python3 scripts/x.py
+    exit=0
+    stdout={"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "已自动加 -I 隔离模式", "updatedInput": {"command": "python3 -I scripts/x.py", "description": "demo"}}}
+
+    ### Stop（第一次，transcript 里没有 passed）
+    {"decision": "block", "reason": "还没看到测试通过的输出。请运行 `uv run pytest -q` 并把结果贴出来再结束。"}
+    exit=0
+
+    ### Stop（stop_hook_active=true，放行）
+    exit=0 (stdout 为空 = 允许停)
+    ```
 
 五条 Bash 命令得到了五种结果：
 
@@ -162,35 +209,65 @@ exit=0 (stdout 为空 = 允许停)
 
 最后一种最容易被忽略。hook 不只是个闸门，还能当中间件用，在工具执行前把参数改掉。
 
-再看 `guard_bash.py` 的核心。注意它是一个纯函数，返回 `(exit_code, stdout, stderr)` 三元组，所以不启动子进程也能单测：
+再看 `guard_bash.ts` 的核心。注意它是一个纯函数，返回 `[exitCode, stdout, stderr]` 三元组（Python 版是 `(exit_code, stdout, stderr)`），所以不启动子进程也能单测：
 
-```python
-def decide(payload: dict) -> tuple[int, str, str]:
-    if payload.get("hook_event_name") != "PreToolUse" or payload.get("tool_name") != "Bash":
-        return 0, "", ""
-    cmd = payload.get("tool_input", {}).get("command", "")
-    if re.search(r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f?\s+/(\s|$)", cmd) ...:
-        return 2, "", f"拒绝：`{cmd}` 会删除根目录或家目录。..."
-    if re.search(r"\bgit\s+push\b.*--force(?!-with-lease)", cmd):
-        out = {"hookSpecificOutput": {"hookEventName": "PreToolUse",
-               "permissionDecision": "deny", "permissionDecisionReason": "..."}}
-        return 0, json.dumps(out, ensure_ascii=False), ""
-    ...
-```
+=== "Node"
 
-`stop_gate.py` 演示的是防死循环。Stop hook 拦一次，模型就多干一轮；干完又想停，又被拦……如果条件永远达不到，就会一直转下去。
+    ```ts
+    function decide(payload: HookPayload): [number, string, string] {
+      if (payload.hook_event_name !== "PreToolUse" || payload.tool_name !== "Bash") return [0, "", ""];
+      const cmd = String(payload.tool_input?.command ?? "");
+      if (/\brm\s+-[a-zA-Z]*r[a-zA-Z]*f?\s+\/(\s|$)/.test(cmd) ...) {
+        return [2, "", `拒绝：\`${cmd}\` 会删除根目录或家目录。...`];
+      }
+      if (/\bgit\s+push\b.*--force(?!-with-lease)/.test(cmd)) {
+        const out = { hookSpecificOutput: { hookEventName: "PreToolUse",
+                      permissionDecision: "deny", permissionDecisionReason: "..." } };
+        return [0, JSON.stringify(out), ""];
+      }
+      ...
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def decide(payload: dict) -> tuple[int, str, str]:
+        if payload.get("hook_event_name") != "PreToolUse" or payload.get("tool_name") != "Bash":
+            return 0, "", ""
+        cmd = payload.get("tool_input", {}).get("command", "")
+        if re.search(r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f?\s+/(\s|$)", cmd) ...:
+            return 2, "", f"拒绝：`{cmd}` 会删除根目录或家目录。..."
+        if re.search(r"\bgit\s+push\b.*--force(?!-with-lease)", cmd):
+            out = {"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                   "permissionDecision": "deny", "permissionDecisionReason": "..."}}
+            return 0, json.dumps(out, ensure_ascii=False), ""
+        ...
+    ```
+
+`stop_gate.ts`（`stop_gate.py`）演示的是防死循环。Stop hook 拦一次，模型就多干一轮；干完又想停，又被拦……如果条件永远达不到，就会一直转下去。
 
 官方给了两道保险。一是 stdin 里的 `stop_hook_active`：它为 true，说明这次 Stop 本身就是被拦回去之后再次触发的，脚本应该直接放行。二是 harness 自己的上限：连续 block 8 次、中间模型一次工具都没调用，Claude Code 就强行结束（上限可以用 `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 调）。
 
-最后用 `hook_runner.py` 把整条链路串起来，看 harness 拿到 exit 2 之后怎么处理：
+最后用 `hook_runner.ts`（`hook_runner.py`）把整条链路串起来，看 harness 拿到 exit 2 之后怎么处理：
 
-```text
-$ python3 hooks_demo/hook_runner.py hooks_demo/demo_settings.json <rm -rf / 的事件文件>
-· 'python3 hooks_demo/guard_bash.py' -> exit=2
-{"blocked": true, "permission": "deny", "reason": "拒绝：`rm -rf /` 会删除根目录或家目录。请改成删除具体子目录。", "updated_input": null, "context": [], "stop_session": false}
-```
+=== "Node"
 
-测试：`uv run pytest -q hooks_demo`，结果 `6 passed`。
+    ```text
+    $ node hooks_demo/hook_runner.ts hooks_demo/demo_settings.json <rm -rf / 的事件文件>
+    · "node hooks_demo/guard_bash.ts" -> exit=2
+    {"blocked":true,"permission":"deny","reason":"拒绝：`rm -rf /` 会删除根目录或家目录。请改成删除具体子目录。","updatedInput":null,"context":[],"stopSession":false}
+    ```
+
+=== "Python"
+
+    ```text
+    $ python3 hooks_demo/hook_runner.py hooks_demo/demo_settings.json <rm -rf / 的事件文件>
+    · 'python3 hooks_demo/guard_bash.py' -> exit=2
+    {"blocked": true, "permission": "deny", "reason": "拒绝：`rm -rf /` 会删除根目录或家目录。请改成删除具体子目录。", "updated_input": null, "context": [], "stop_session": false}
+    ```
+
+测试：`node --test 'hooks_demo/*.test.ts'`，结果 `ℹ pass 6`（Python 版 `uv run pytest -q hooks_demo`，结果 `6 passed`）。
 
 想在真 Claude Code 里试，把 `demo_settings.json` 里那段 `hooks` 拷进某个测试仓库的 `.claude/settings.local.json` 就行。不要改 `~/.claude/settings.json`，那是全局生效的。
 
@@ -203,7 +280,7 @@ $ python3 hooks_demo/hook_runner.py hooks_demo/demo_settings.json <rm -rf / 的�
   - `~/dotfiles/claude-skills`：4,017 字符（5,767 字节）。
   - `~/work/webapp/apps/web`：7,683 字符（12,008 字节），公司层加项目层两层累积。
 
-  官方文档写明纯文本 stdout 和 `additionalContext` 一样受这个上限约束：「A hook's `additionalContext`, `systemMessage`, and `initialUserMessage` strings, and its plain stdout, are capped at 10,000 characters」。上限按**字符**算，不是字节。中文在 UTF-8 里一个字占 3 字节，所以 `wc -c` 量出来的 12,008 是字节数，按字符只有 7,683，没超，离上限还有约 2,300 字符。这里踩过一次坑：最早用 `wc -c` 量，误判成了超限。量字符要用 `wc -m`（并确保 locale 是 UTF-8）或 Python 的 `len(text)`。
+  官方文档写明纯文本 stdout 和 `additionalContext` 一样受这个上限约束：「A hook's `additionalContext`, `systemMessage`, and `initialUserMessage` strings, and its plain stdout, are capped at 10,000 characters」。上限按**字符**算，不是字节。中文在 UTF-8 里一个字占 3 字节，所以 `wc -c` 量出来的 12,008 是字节数，按字符只有 7,683，没超，离上限还有约 2,300 字符。这里踩过一次坑：最早用 `wc -c` 量，误判成了超限。量字符要用 `wc -m`（并确保 locale 是 UTF-8）、Python 的 `len(text)` 或 Node 的 `[...text].length`（`text.length` 数的是 UTF-16 码元，emoji 会算成 2）。
 - **`enforce-worktree.py`（PreToolUse: Bash）用的是 exit 2 + stderr。** 它的 docstring 写得很清楚：「2 = 拒绝该次工具调用，stderr 回灌给模型」。它还专门处理了「heredoc 和引号里出现的 `git worktree add` 是数据不是调用」这种误伤，这正是常见坑第 3 条。
 - **`cc-status` 挂在 10 个事件上**，全部不带 matcher，所以每个事件都会触发。我统计了最近 40 个会话的 jsonl，`hook_success` 类型的 attachment 有一万三千多条。每条都记着 `hookName`（例如 `SessionStart:startup`）、`exitCode`、`stdout`、`durationMs`。hook 不生效时，先翻 jsonl 里的这些记录，比盲猜快得多。
 - **你的 CLAUDE.md 原则 1「工具链能强制的就别写进上下文」**，说的就是本章这件事。原则 3 说「关流程 = 关规则 + 卸工具」，hook 就是那个「卸工具」的手段：deny 掉的那条路，模型想走也走不了。
@@ -227,8 +304,8 @@ $ python3 hooks_demo/hook_runner.py hooks_demo/demo_settings.json <rm -rf / 的�
 
 ## 练习
 
-1. 给 `guard_bash.py` 加一条规则：命令里出现 `.env` 就 deny。用 `run_demo.sh` 的方式造一份 stdin 验证，再写一条 pytest。
-2. 把 `stop_gate.py` 从「搜字符串 passed」改成真正解析 transcript jsonl：找到最后一次 Bash 的 `tool_result`，判断其中是否出现 `N passed` 且没有 `failed`。想一想：`transcript_path`「可能落后于内存中的对话」，这会给你的判断带来什么风险？
+1. 给 `guard_bash.ts`（或 `guard_bash.py`）加一条规则：命令里出现 `.env` 就 deny。用 `run_demo.sh` 的方式造一份 stdin 验证，再写一条测试（`node:test` 或 pytest）。
+2. 把 `stop_gate.ts`（`stop_gate.py`）从「搜字符串 passed」改成真正解析 transcript jsonl：找到最后一次 Bash 的 `tool_result`，判断其中是否出现 `N passed` 且没有 `failed`。想一想：`transcript_path`「可能落后于内存中的对话」，这会给你的判断带来什么风险？
 3. （开放题）你现在有 45 个 skill，其中有哪些步骤其实是「每次都必须成立」、应该从 skill 正文挪到 hook 里的？挑一个，写出它应该挂在哪个事件、用哪个通道回话，并说明为什么不能继续只写在 skill 里。
 
 ## 延伸阅读

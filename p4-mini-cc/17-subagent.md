@@ -16,49 +16,89 @@
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch17.json`）。这份剧本是新格式：`main` 是父 agent 的台词，`agents` 按 description 给每个子 agent 各写一份台词（后台 agent 跑在另一个线程，不能和父亲抢同一份剧本）。项目里有 `api/posts.py`、`api/users.py`、`web/feed.js`：
+离线 fake 模型（`examples/ch17.json`）。这份剧本是新格式：`main` 是父 agent 的台词，`agents` 按 description 给每个子 agent 各写一份台词（后台 agent 跑在另一个线程，不能和父亲抢同一份剧本；Node 版没有线程，但后台 agent 和父亲交替执行，同样不能共用一份）。项目里有 `api/posts.py`、`api/users.py`、`web/feed.js`（Node 版是 `api/posts.js`、`api/users.js`、`web/feed.js`）：
 
-```console
-$ (printf '分页逻辑散在哪些地方？顺便查查有没有地方用 offset 做分页\n'; sleep 2; printf '/tasks\n/context\n/exit\n') \
-    | uv run python -m mini_cc --fake examples/ch17.json
-❯ 分页逻辑散在哪些地方？顺便查查有没有地方用 offset 做分页
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-● 派一个 Explore 去找，免得把一堆文件读进我们的对话。
-⏺ Agent(Explore: 找分页实现)
-  ⎿ Explore: Bash(grep -rn page_size --include=*.py .)
-  ⎿ Explore: Read(api/posts.py)
-✔ Agent -> - api/posts.py:3 list_posts(posts, page=1, page_size=20)，切片实现
-  - api/users.py:5 list_users(users, page=1, page_size=50)，同样的切片实现
-  两处逻辑重复。  …(+2 lines)
-● 分页实现找到了。offset 的用法让另一个 agent 在后台查，我先回答你。
-⏺ Agent(Explore: 查 offset 用法)
-✔ Agent -> Async agent launched successfully.
-  agentId: a2
-  The agent is working in the background. You will be notified automatically when it completes. Contin
-● 分页逻辑在两处：
-- api/posts.py:3 list_posts(page, page_size)
-- api/users.py:5 list_users(page, page_size)
-两处写法一致，可以抽一个公共的 paginate()。offset 的用法还在后台查。
-◇ system  1 条通知
-● 后台 agent 查完了：web/feed.js:2 用的是 offset/limit，和后端的 page/page_size 不一致，前端调用时要换算 offset = (page - 1) * page_size。
-❯ /tasks
-a2  agent    completed     0.0s  查 offset 用法
-❯ /context
-system[0]       1278 chars  You are mini-cc, an interactive coding a
-system[1]        240 chars  # Environment
-system[2]       1364 chars  # Memory
-reminders        813 chars  3 个 <system-reminder> 块
-messages        1506 chars  8 条消息（不含提醒）
-last request     100 tokens
-```
+=== "Node"
+
+    ```console
+    $ (printf '分页逻辑散在哪些地方？顺便查查有没有地方用 offset 做分页\n'; sleep 2; printf '/tasks\n/context\n/exit\n') \
+        | node mini_cc/cli.ts --fake examples/ch17.json
+    ❯ 分页逻辑散在哪些地方？顺便查查有没有地方用 offset 做分页
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 派一个 Explore 去找，免得把一堆文件读进我们的对话。
+    ⏺ Agent(Explore: 找分页实现)
+      ⎿ Explore: Bash(grep -rn page_size --include=*.js .)
+      ⎿ Explore: Read(api/posts.js)
+    ✔ Agent -> - api/posts.js:3 list_posts(posts, page = 1, page_size = 20)，slice 实现
+      - api/users.js:5 list_users(users, page = 1, page_size = 50)，同样的 slice 实现
+      两处逻辑重复。  …(+2 lines)
+    ● 分页实现找到了。offset 的用法让另一个 agent 在后台查，我先回答你。
+    ⏺ Agent(Explore: 查 offset 用法)
+    ✔ Agent -> Async agent launched successfully.
+      agentId: a2
+      The agent is working in the background. You will be notified automatically when it completes. Contin
+    ● 分页逻辑在两处：
+    - api/posts.js:3 list_posts(page, page_size)
+    - api/users.js:5 list_users(page, page_size)
+    两处写法一致，可以抽一个公共的 paginate()。offset 的用法还在后台查。
+    ◇ system  1 条通知
+    ● 后台 agent 查完了：web/feed.js:2 用的是 offset/limit，和后端的 page/page_size 不一致，前端调用时要换算 offset = (page - 1) * page_size。
+    ❯ /tasks
+    a2  agent    completed     0.0s  查 offset 用法
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        240 chars  # Environment
+    system[2]       1364 chars  # Memory
+    reminders        804 chars  3 个 <system-reminder> 块
+    messages        1468 chars  8 条消息（不含提醒）
+    last request     100 tokens
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    $ (printf '分页逻辑散在哪些地方？顺便查查有没有地方用 offset 做分页\n'; sleep 2; printf '/tasks\n/context\n/exit\n') \
+        | uv run python -m mini_cc --fake examples/ch17.json
+    ❯ 分页逻辑散在哪些地方？顺便查查有没有地方用 offset 做分页
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ● 派一个 Explore 去找，免得把一堆文件读进我们的对话。
+    ⏺ Agent(Explore: 找分页实现)
+      ⎿ Explore: Bash(grep -rn page_size --include=*.py .)
+      ⎿ Explore: Read(api/posts.py)
+    ✔ Agent -> - api/posts.py:3 list_posts(posts, page=1, page_size=20)，切片实现
+      - api/users.py:5 list_users(users, page=1, page_size=50)，同样的切片实现
+      两处逻辑重复。  …(+2 lines)
+    ● 分页实现找到了。offset 的用法让另一个 agent 在后台查，我先回答你。
+    ⏺ Agent(Explore: 查 offset 用法)
+    ✔ Agent -> Async agent launched successfully.
+      agentId: a2
+      The agent is working in the background. You will be notified automatically when it completes. Contin
+    ● 分页逻辑在两处：
+    - api/posts.py:3 list_posts(page, page_size)
+    - api/users.py:5 list_users(page, page_size)
+    两处写法一致，可以抽一个公共的 paginate()。offset 的用法还在后台查。
+    ◇ system  1 条通知
+    ● 后台 agent 查完了：web/feed.js:2 用的是 offset/limit，和后端的 page/page_size 不一致，前端调用时要换算 offset = (page - 1) * page_size。
+    ❯ /tasks
+    a2  agent    completed     0.0s  查 offset 用法
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        240 chars  # Environment
+    system[2]       1364 chars  # Memory
+    reminders        813 chars  3 个 <system-reminder> 块
+    messages        1506 chars  8 条消息（不含提醒）
+    last request     100 tokens
+    ```
 
 两个子 agent，一个前台一个后台：
 
 - 前台的 `⎿ Explore: …` 两行是**给你看的进度**，不进任何上下文。父 agent 拿到的只有那三行结论。
 - 后台的立刻返回「launched」，父 agent 先回答了你；子 agent 跑完，第 16 章的通知通道把结论送回来，父 agent 自己开口补充。
 
-两个子 agent 的完整过程存在会话目录下的 `subagents/agent-a1.jsonl`（6 条消息、1498 字符）和 `agent-a2.jsonl`（4 条、793 字符），没有一条进父历史。演示项目很小所以数字不大；换成 webapp，Explore 翻的二三十个文件就全留在这两个文件里了。
+两个子 agent 的完整过程存在会话目录下的 `subagents/agent-a1.jsonl`（6 条消息、1498 字符）和 `agent-a2.jsonl`（4 条、793 字符）（Node 版是 1532 和 756 字符：`JSON.stringify` 不带空格，演示项目的文件内容也不同），没有一条进父历史。演示项目很小所以数字不大；换成 webapp，Explore 翻的二三十个文件就全留在这两个文件里了。
 
 ## 原理：同一个循环，另一个数组
 
@@ -97,25 +137,48 @@ sequenceDiagram
 
 ### 1. agent 类型：说明 + 工具 + 约束
 
-`mini_cc/subagent.py:AgentType`：
+`mini_cc/subagent.ts:AgentType`（Python 版 `subagent.py:AgentType`）：
 
-```python
-@dataclass
-class AgentType:
-    name: str
-    description: str
-    prompt: str
-    tools: list[str] | None = None        # None = 父 agent 的全部工具（减去 NEVER_FOR_CHILDREN）
-    read_only: bool = False
-    load_instructions: bool = True        # 要不要注入 AGENTS.md / CLAUDE.md
-    effort: str = "medium"
+=== "Node"
 
-BUILTIN = [
-    AgentType("general-purpose", "Research, search code and execute multi-step tasks; can edit files.", GENERAL_PROMPT),
-    AgentType("Explore", "Read-only, fast codebase search: …",
-              EXPLORE_PROMPT, ["Read", "Bash"], read_only=True, load_instructions=False, effort="low"),
-]
-```
+    ```ts
+    export class AgentType {
+      name: string;
+      description: string;
+      prompt: string;
+      tools: string[] | null; // null = 父 agent 的全部工具（减去 NEVER_FOR_CHILDREN）
+      readOnly: boolean;
+      loadInstructions: boolean; // 要不要注入 AGENTS.md / CLAUDE.md
+      effort: string;
+      ...
+    }
+
+    export const BUILTIN = [
+      new AgentType("general-purpose", "Research, search code and execute multi-step tasks; can edit files.", GENERAL_PROMPT),
+      new AgentType("Explore", "Read-only, fast codebase search: …",
+        EXPLORE_PROMPT, ["Read", "Bash"], { readOnly: true, loadInstructions: false, effort: "low" }),
+    ];
+    ```
+
+=== "Python"
+
+    ```python
+    @dataclass
+    class AgentType:
+        name: str
+        description: str
+        prompt: str
+        tools: list[str] | None = None        # None = 父 agent 的全部工具（减去 NEVER_FOR_CHILDREN）
+        read_only: bool = False
+        load_instructions: bool = True        # 要不要注入 AGENTS.md / CLAUDE.md
+        effort: str = "medium"
+
+    BUILTIN = [
+        AgentType("general-purpose", "Research, search code and execute multi-step tasks; can edit files.", GENERAL_PROMPT),
+        AgentType("Explore", "Read-only, fast codebase search: …",
+                  EXPLORE_PROMPT, ["Read", "Bash"], read_only=True, load_instructions=False, effort="low"),
+    ]
+    ```
 
 两个内置类型的名字都照搬 Claude Code。有几处取值是有依据的：
 
@@ -138,21 +201,38 @@ tools: Read
 
 ### 2. 组装一个子 Agent：`run_subagent`
 
-```python
-allowed = [t for t in parent_tools if t.name not in NEVER_FOR_CHILDREN
-           and (kind.tools is None or t.name in kind.tools)]
-settings = replace(parent.settings, max_iterations=max_turns, effort=kind.effort, auto_compact=False)
-child = Agent(client, ToolRegistry(allowed), settings)
-providers = [date_provider()] + ([instructions_provider(home)] if kind.load_instructions else [])
-child.context = ContextBuilder(child, home, providers=providers,
-                               static_prompt=f"{BASE_PROMPT}\n\n{kind.prompt}")
-child.ctx = ToolContext(cwd=parent.ctx.cwd)
-child.permissions = PermissionManager(cwd, mode=parent.permissions.mode,
-                                      allow_rules=set(parent.permissions.allow_rules))
-if kind.read_only:
-    child.permissions.extra_checks.append(_read_only_check)
-child.approver = approver
-```
+=== "Node"
+
+    ```ts
+    const allowed = parentTools.filter((t) => !NEVER_FOR_CHILDREN.has(t.name) &&
+      (kind.tools === null || kind.tools.includes(t.name)));
+    const settings = new Settings({ ...parent.settings, maxIterations: maxTurns, effort: kind.effort, autoCompact: false });
+    const child = new Agent(client, new ToolRegistry(allowed), settings);
+    const providers = [dateProvider(), ...(kind.loadInstructions ? [instructionsProvider(home)] : [])];
+    child.context = new ContextBuilder(child, home, providers, `${BASE_PROMPT}\n\n${kind.prompt}`); // 第 4 个参数 = staticPrompt
+    child.ctx = new ToolContext(parent.ctx.cwd);
+    child.permissions = new PermissionManager(cwd, { mode: parent.permissions.mode, allowRules: parent.permissions.allowRules });
+    if (kind.readOnly) child.permissions.extraChecks.push(readOnlyCheck);
+    child.approver = approver;
+    ```
+
+=== "Python"
+
+    ```python
+    allowed = [t for t in parent_tools if t.name not in NEVER_FOR_CHILDREN
+               and (kind.tools is None or t.name in kind.tools)]
+    settings = replace(parent.settings, max_iterations=max_turns, effort=kind.effort, auto_compact=False)
+    child = Agent(client, ToolRegistry(allowed), settings)
+    providers = [date_provider()] + ([instructions_provider(home)] if kind.load_instructions else [])
+    child.context = ContextBuilder(child, home, providers=providers,
+                                   static_prompt=f"{BASE_PROMPT}\n\n{kind.prompt}")
+    child.ctx = ToolContext(cwd=parent.ctx.cwd)
+    child.permissions = PermissionManager(cwd, mode=parent.permissions.mode,
+                                          allow_rules=set(parent.permissions.allow_rules))
+    if kind.read_only:
+        child.permissions.extra_checks.append(_read_only_check)
+    child.approver = approver
+    ```
 
 逐个看「换掉了什么」：
 
@@ -165,7 +245,7 @@ child.approver = approver
 | `PermissionManager` | 新的，继承模式和「不再询问」规则 | 父亲批准过的命令，子 agent 不用再问一遍 |
 | `approver` | 前台：父亲的弹窗；后台：`None` | 后台 agent 没法弹窗打断你，需要审批的调用一律拒绝 |
 
-`ContextBuilder` 为此多了一个字段 `static_prompt`，默认还是主 agent 的 `STATIC_PROMPT`。这是本章唯一改动的已有接口。
+`ContextBuilder` 为此多了一个字段 `static_prompt`（Node 版是构造函数的第 4 个参数 `staticPrompt`），默认还是主 agent 的 `STATIC_PROMPT`。这是本章唯一改动的已有接口。
 
 `BASE_PROMPT` 里最重要的一句是：
 
@@ -178,12 +258,23 @@ does not (no raw file dumps).
 
 ### 3. 只读是硬约束，不是建议
 
-```python
-def _read_only_check(tool, args, pm):
-    if tool.read_only or tool.self_check(args) == "allow":
-        return None
-    return Decision("deny", "this agent is read-only; it must not modify files or run state-changing commands", "check")
-```
+=== "Node"
+
+    ```ts
+    function readOnlyCheck(tool: Tool, args: Args): Decision | null {
+      if (tool.readOnly || tool.selfCheck(args) === "allow") return null;
+      return new Decision("deny", "this agent is read-only; it must not modify files or run state-changing commands", "check");
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def _read_only_check(tool, args, pm):
+        if tool.read_only or tool.self_check(args) == "allow":
+            return None
+        return Decision("deny", "this agent is read-only; it must not modify files or run state-changing commands", "check")
+    ```
 
 挂在第 5 章预留的 `extra_checks` 上，它排在 bypass 之前。测试 `test_explore_cannot_write` 把父亲设成 `bypassPermissions`，Explore 想 `touch x.txt` 照样被拒。
 
@@ -193,11 +284,21 @@ def _read_only_check(tool, args, pm):
 
 ### 4. 前台：同步跑完，结论当 tool_result
 
-```python
-r = run_subagent(app.agent, kind, args["prompt"], app.subagent_client(desc), approver=app.agent.approver,
-                 progress=lambda s: app.ui.info(f"  ⎿ {s}"), **common)
-return ToolResult(f"{r.text}\n\n(agent {agent_id} · {kind.name} · {uses} · {r.requests} requests)")
-```
+=== "Node"
+
+    ```ts
+    const r = await runSubagent(app.agent, kind, args.prompt, app.subagentClient(desc),
+      { ...common, approver: app.agent.approver, progress: (s) => app.ui.info(`  ⎿ ${s}`), signal: ctx.signal });
+    return new ToolResult(`${r.text}\n\n(agent ${agentId} · ${kind.name} · ${uses} · ${r.requests} requests)`);
+    ```
+
+=== "Python"
+
+    ```python
+    r = run_subagent(app.agent, kind, args["prompt"], app.subagent_client(desc), approver=app.agent.approver,
+                     progress=lambda s: app.ui.info(f"  ⎿ {s}"), **common)
+    return ToolResult(f"{r.text}\n\n(agent {agent_id} · {kind.name} · {uses} · {r.requests} requests)")
+    ```
 
 子循环的事件里，`ToolStart` 变成一行进度直接打给 UI（`progress` 回调）。为什么不走第 11 章的 `ctx.emit()`？因为 emit 的事件要等 `ToolEnd` 之后才转发，进度全挤在结果后面。子 agent 可能要跑一分钟，你需要实时看到它在干什么。
 
@@ -205,24 +306,38 @@ return ToolResult(f"{r.text}\n\n(agent {agent_id} · {kind.name} · {uses} · {r
 
 ### 5. 后台：复用第 16 章的任务表
 
-`JobManager` 加了一个 `start_thread(kind, prefix, description, fn)`：`fn` 在新线程里跑，返回 `(status, summary, result)`，结束时发通知，`result` 放进 `<result>`：
+`JobManager` 加了一个 `start_thread(kind, prefix, description, fn)`：`fn` 在新线程里跑（Node 版 `startThread` 的 `fn` 是一个 async 函数，调用后不 await，让它和主循环交替执行），返回 `(status, summary, result)`，结束时发通知，`result` 放进 `<result>`：
 
-```python
-def work(job):
-    r = run_subagent(app.agent, kind, args["prompt"], app.subagent_client(desc), approver=None, progress=None, **common)
-    status = "failed" if r.partial else "completed"
-    return status, f'Agent "{desc}" {status} ({r.tool_uses} tool uses)', r.text
+=== "Node"
 
-job = app.jobs.start_thread("agent", "a", desc, work, ctx.tool_use_id, job_id=agent_id)
-return ToolResult("Async agent launched successfully.\nagentId: a2\nThe agent is working in the background. "
-                  "You will be notified automatically when it completes. …")
-```
+    ```ts
+    const job = app.jobs.startThread("agent", "a", desc, async () => { // async 函数：不 await，和主循环交替执行
+      const r = await runSubagent(app.agent, kind, args.prompt, app.subagentClient(desc), { ...common, approver: null, progress: null });
+      const status = r.partial ? "failed" : "completed";
+      return [status, `Agent "${desc}" ${status} (${r.toolUses} tool uses)`, r.text];
+    }, ctx.toolUseId, agentId);
+    return new ToolResult("Async agent launched successfully.\nagentId: a2\nThe agent is working in the background. " +
+      "You will be notified automatically when it completes. …");
+    ```
+
+=== "Python"
+
+    ```python
+    def work(job):
+        r = run_subagent(app.agent, kind, args["prompt"], app.subagent_client(desc), approver=None, progress=None, **common)
+        status = "failed" if r.partial else "completed"
+        return status, f'Agent "{desc}" {status} ({r.tool_uses} tool uses)', r.text
+
+    job = app.jobs.start_thread("agent", "a", desc, work, ctx.tool_use_id, job_id=agent_id)
+    return ToolResult("Async agent launched successfully.\nagentId: a2\nThe agent is working in the background. "
+                      "You will be notified automatically when it completes. …")
+    ```
 
 返回文案的头两句和你本机 Claude Code 记录里的一样（「Async agent launched successfully.」「You will be notified auto…」）。后台 agent 的状态 `/tasks` 里能看到，`TaskStop` 也能停（`stop()` 会设 `stop_requested`；子循环本身不支持中途取消，所以要等当前这次请求结束，练习 1 改进它）。
 
 你可能会问：后台 agent 和主 agent 共用一个 `AnthropicClient`，线程安全吗？
 
-SDK 的客户端可以跨线程并发发请求。真正要小心的是**共享的可变状态**：子 agent 有自己的 messages、自己的文件状态表、自己的权限管理器，唯一共享的是磁盘上的项目文件。两个 general-purpose agent 同时改同一个文件就会出事，这也是为什么后台 agent 最适合只读的活。
+SDK 的客户端可以跨线程并发发请求。真正要小心的是**共享的可变状态**：子 agent 有自己的 messages、自己的文件状态表、自己的权限管理器，唯一共享的是磁盘上的项目文件。两个 general-purpose agent 同时改同一个文件就会出事，这也是为什么后台 agent 最适合只读的活。（Node 版只有一个线程，后台 agent 的请求和主 agent 的请求在同一个事件循环里并发，客户端本身不存在线程安全问题；共享项目文件的问题一样存在。）
 
 ### 6. transcript：sidechain
 
@@ -230,20 +345,36 @@ SDK 的客户端可以跨线程并发发请求。真正要小心的是**共享�
 
 ## 测试
 
-`tests/test_ch17_subagent.py`，8 个：
+`tests/ch17_subagent.test.ts`（Python 版 `tests/test_ch17_subagent.py`），8 个：
 
 - 前台 Explore：子 agent 第一次请求只有委派 prompt、看不到父亲的话；system 里有只读说明、没有 `# Memory`；工具只有 Read 和 Bash；父亲拿到结论和统计，子 agent 的 grep 不在父历史里；进度行显示给人看。
 - 父亲 bypass，Explore 的 `touch` 也被拒；general-purpose 有编辑工具，但没有 `Agent` 等工具。
 - 未知类型列出可用类型；后台 agent 立即返回、通知带 `<result>`。
 - 自定义 `reviewer.md` 出现在工具描述里，工具和 system 都按定义来；transcript 是 sidechain；`max_turns` 触发 `[partial]`。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 42%]
-........................................................................ [ 85%]
-.........................                                                [100%]
-169 passed in 9.78s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[0-7]*.test.ts tests/extension_points.test.ts
+    ℹ tests 169
+    ℹ suites 0
+    ℹ pass 169
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 9205.878625
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 42%]
+    ........................................................................ [ 85%]
+    .........................                                                [100%]
+    169 passed in 9.78s
+    ```
 
 ## 和真实 Claude Code 的差异
 

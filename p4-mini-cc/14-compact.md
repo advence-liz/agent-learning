@@ -16,47 +16,91 @@
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch14.json`），`--permission-mode acceptEdits`。项目里有 `posts.py` 和一份 `AGENTS.md`。剧本里每一步的 `input_tokens` 是手写的：第一轮约 11.8 万，第三步故意写成 97.5 万，模拟「上下文快满了」：
+离线 fake 模型（`examples/ch14.json`），`--permission-mode acceptEdits`。项目里有 `posts.py`（Node 版是 `posts.js`）和一份 `AGENTS.md`。剧本里每一步的 `input_tokens` 是手写的：第一轮约 11.8 万，第三步故意写成 97.5 万，模拟「上下文快满了」：
 
-```console
-❯ 给 list_posts 加分页，别改函数名，默认每页 20 条。先说方案
-◇ system  项目说明 1 个文件
-◇ system  日期 2026-10-21
-● 先看代码。
-⏺ Read(posts.py)
-✔ Read ->      1        def list_posts(posts):
-       2            return posts
-● list_posts 目前直接返回全部数据，没有分页。建议加 page / page_size 两个参数，默认 1 和 20。
-❯ /compact 重点保留用户的约束
-压缩上下文中（当前约 118400 tokens）…
-◇ system  项目说明 1 个文件
-◇ system  日期 2026-10-21
-已压缩：118400 → 约 300 tokens（摘要 260 字符，挂回 1 个文件）
-❯ /context
-system[0]       1278 chars  You are mini-cc, an interactive coding a
-system[1]        240 chars  # Environment
-system[2]       1364 chars  # Memory
-reminders        717 chars  3 个 <system-reminder> 块
-messages         448 chars  1 条消息（不含提醒）
-last request     300 tokens
-❯ 就按这个方案改，改完验证一下
-● 按摘要里的方案改。
-⏺ Edit(posts.py)
-✔ Edit -> The file posts.py has been updated (1 replacement). Snippet:
-       1        def list_posts(posts, page=1, page_size=20):
-       2            start = (page - 1) * page_size  …(+1 lines)
-自动压缩上下文中（当前约 975000 tokens）…
-◇ system  项目说明 1 个文件
-◇ system  日期 2026-10-21
-已压缩：975000 → 约 358 tokens（摘要 250 字符，挂回 1 个文件）
-● 接着验证。
-⏺ Bash(python3 -c "from posts import list_posts; assert list_posts(list(range(50)), 2) == list(range(20, 40)); print('ok')")
-是否允许 Bash(python3 -c "…")？（needs approval）
-...
-选择 [1/2/3]: 1
-✔ Bash -> ok
-● 改好并验证通过：函数名没变，默认每页 20 条。
-```
+=== "Node"
+
+    ```console
+    ❯ 给 list_posts 加分页，别改函数名，默认每页 20 条。先说方案
+    ◇ system  项目说明 1 个文件
+    ◇ system  日期 2026-10-22
+    ● 先看代码。
+    ⏺ Read(posts.js)
+    ✔ Read ->      1	function list_posts(posts) {
+           2	  return posts;
+           3	}  …(+2 lines)
+    ● list_posts 目前直接返回全部数据，没有分页。建议加 page / page_size 两个参数，默认 1 和 20。
+    ❯ /compact 重点保留用户的约束
+    压缩上下文中（当前约 118400 tokens）…
+    ◇ system  项目说明 1 个文件
+    ◇ system  日期 2026-10-22
+    已压缩：118400 → 约 312 tokens（摘要 260 字符，挂回 1 个文件）
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        240 chars  # Environment
+    system[2]       1364 chars  # Memory
+    reminders        774 chars  3 个 <system-reminder> 块
+    messages         445 chars  1 条消息（不含提醒）
+    last request     312 tokens
+    ❯ 就按这个方案改，改完验证一下
+    ● 按摘要里的方案改。
+    ⏺ Edit(posts.js)
+    ✔ Edit -> The file posts.js has been updated (1 replacement). Snippet:
+           1	function list_posts(posts, page = 1, page_size = 20) {
+           2	  const start = (page - 1) * page_size;  …(+4 lines)
+    自动压缩上下文中（当前约 975000 tokens）…
+    ◇ system  项目说明 1 个文件
+    ◇ system  日期 2026-10-22
+    已压缩：975000 → 约 374 tokens（摘要 250 字符，挂回 1 个文件）
+    ● 接着验证。
+    ⏺ Bash(node -e "const { list_posts } = require('./posts.js'); const r = list_posts([...Array(50).keys()], 2); if (r[0] !== 20 || r.length !== 20) process.exit(1); console.log('ok')")
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> ok
+    ● 改好并验证通过：函数名没变，默认每页 20 条。
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 给 list_posts 加分页，别改函数名，默认每页 20 条。先说方案
+    ◇ system  项目说明 1 个文件
+    ◇ system  日期 2026-10-21
+    ● 先看代码。
+    ⏺ Read(posts.py)
+    ✔ Read ->      1        def list_posts(posts):
+           2            return posts
+    ● list_posts 目前直接返回全部数据，没有分页。建议加 page / page_size 两个参数，默认 1 和 20。
+    ❯ /compact 重点保留用户的约束
+    压缩上下文中（当前约 118400 tokens）…
+    ◇ system  项目说明 1 个文件
+    ◇ system  日期 2026-10-21
+    已压缩：118400 → 约 300 tokens（摘要 260 字符，挂回 1 个文件）
+    ❯ /context
+    system[0]       1278 chars  You are mini-cc, an interactive coding a
+    system[1]        240 chars  # Environment
+    system[2]       1364 chars  # Memory
+    reminders        717 chars  3 个 <system-reminder> 块
+    messages         448 chars  1 条消息（不含提醒）
+    last request     300 tokens
+    ❯ 就按这个方案改，改完验证一下
+    ● 按摘要里的方案改。
+    ⏺ Edit(posts.py)
+    ✔ Edit -> The file posts.py has been updated (1 replacement). Snippet:
+           1        def list_posts(posts, page=1, page_size=20):
+           2            start = (page - 1) * page_size  …(+1 lines)
+    自动压缩上下文中（当前约 975000 tokens）…
+    ◇ system  项目说明 1 个文件
+    ◇ system  日期 2026-10-21
+    已压缩：975000 → 约 358 tokens（摘要 250 字符，挂回 1 个文件）
+    ● 接着验证。
+    ⏺ Bash(python3 -c "from posts import list_posts; assert list_posts(list(range(50)), 2) == list(range(20, 40)); print('ok')")
+    是否允许 Bash(python3 -c "…")？（needs approval）
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> ok
+    ● 改好并验证通过：函数名没变，默认每页 20 条。
+    ```
 
 两次压缩，一次手动、一次自动：
 
@@ -65,12 +109,21 @@ last request     300 tokens
 
 会话文件里留下了两条边界记录：
 
-```json
-{"subtype": "compact_boundary", "parentUuid": null, "compactMetadata": {"trigger": "manual", "preTokens": 118400, "postTokens": 300}}
-{"subtype": "compact_boundary", "parentUuid": null, "compactMetadata": {"trigger": "auto", "preTokens": 975000, "postTokens": 358}}
-```
+=== "Node"
 
-（摘要内容是剧本写死的；`postTokens` 是按 4 字符 ≈ 1 token 粗估的，真实场景请以下一次请求的 usage 为准。）
+    ```json
+    {"subtype":"compact_boundary","parentUuid":null,"compactMetadata":{"trigger":"manual","preTokens":118400,"postTokens":312}}
+    {"subtype":"compact_boundary","parentUuid":null,"compactMetadata":{"trigger":"auto","preTokens":975000,"postTokens":374}}
+    ```
+
+=== "Python"
+
+    ```json
+    {"subtype": "compact_boundary", "parentUuid": null, "compactMetadata": {"trigger": "manual", "preTokens": 118400, "postTokens": 300}}
+    {"subtype": "compact_boundary", "parentUuid": null, "compactMetadata": {"trigger": "auto", "preTokens": 975000, "postTokens": 358}}
+    ```
+
+（摘要内容是剧本写死的；`postTokens` 是按 4 字符 ≈ 1 token 粗估的，真实场景请以下一次请求的 usage 为准。两版的估值不同，是因为 Node 的 `JSON.stringify` 不带空格、挂回的文件也不一样。）
 
 ## 原理：一次额外请求，换一个新起点
 
@@ -103,20 +156,38 @@ sequenceDiagram
 
 ### 1. 摘要请求：同一个前缀，多一条指令
 
-`mini_cc/compact.py:compact`：
+`mini_cc/compact.ts:compact`（Python 版 `compact.py:compact`）：
 
-```python
-req = agent._request()                      # 同一个 system、同一套 tools
-history = merge_consecutive_users(agent.messages)
-if history and history[-1]["role"] == "user":
-    # 自动压缩发生在工具结果之后：指令并进最后一条 user 消息，保持交替（只改请求副本）
-    history = history[:-1] + [{"role": "user", "content": _blocks(history[-1]["content"]) + [
-        {"type": "text", "text": ask}]}]
-else:
-    history = history + [{"role": "user", "content": [{"type": "text", "text": ask}]}]
-req.messages = history
-done = complete(agent.client, req)
-```
+=== "Node"
+
+    ```ts
+    const req = agent.request(); // 同一个 system、同一套 tools
+    let history = mergeConsecutiveUsers(agent.messages);
+    const last = history.at(-1);
+    if (last && last.role === "user") {
+      // 自动压缩发生在工具结果之后：指令并进最后一条 user 消息，保持交替（只改请求副本）
+      history = [...history.slice(0, -1), { role: "user", content: [...blocks(last.content), { type: "text", text: ask }] }];
+    } else {
+      history = [...history, { role: "user", content: [{ type: "text", text: ask }] }];
+    }
+    req.messages = history;
+    done = await complete(agent.client, req);
+    ```
+
+=== "Python"
+
+    ```python
+    req = agent._request()                      # 同一个 system、同一套 tools
+    history = merge_consecutive_users(agent.messages)
+    if history and history[-1]["role"] == "user":
+        # 自动压缩发生在工具结果之后：指令并进最后一条 user 消息，保持交替（只改请求副本）
+        history = history[:-1] + [{"role": "user", "content": _blocks(history[-1]["content"]) + [
+            {"type": "text", "text": ask}]}]
+    else:
+        history = history + [{"role": "user", "content": [{"type": "text", "text": ask}]}]
+    req.messages = history
+    done = complete(agent.client, req)
+    ```
 
 你可能会问：写摘要而已，为什么不另起一个干净的请求，只带历史、不带工具？
 
@@ -130,14 +201,27 @@ done = complete(agent.client, req)
 
 拿到摘要以后：
 
-```python
-text = f"{SUMMARY_HEADER}\n\n{summary}" + (f"\n\n{CONTINUE}" if trigger == "auto" else "")
-blocks = [{"type": "text", "text": text}] + _reattach_files(agent)
-agent.load_history([], agent.usage)
-merged, atts = agent.context.inject(blocks, "user")    # 项目说明 / 日期 / 任务清单自动重新注入
-msg = {"role": "user", "content": merged}
-agent._append(msg, compact={"trigger": trigger, "preTokens": pre, "postTokens": post})
-```
+=== "Node"
+
+    ```ts
+    const text = `${SUMMARY_HEADER}\n\n${summary}` + (trigger === "auto" ? `\n\n${CONTINUE}` : "");
+    const content: Block[] = [{ type: "text", text }, ...reattachFiles(agent)];
+    agent.loadHistory([], agent.usage);
+    const [merged, atts] = await agent.context.inject(content, "user"); // 项目说明 / 日期 / 任务清单自动重新注入
+    const msg: Message = { role: "user", content: merged };
+    agent.append(msg, { compact: { trigger, preTokens: pre, postTokens: post } });
+    ```
+
+=== "Python"
+
+    ```python
+    text = f"{SUMMARY_HEADER}\n\n{summary}" + (f"\n\n{CONTINUE}" if trigger == "auto" else "")
+    blocks = [{"type": "text", "text": text}] + _reattach_files(agent)
+    agent.load_history([], agent.usage)
+    merged, atts = agent.context.inject(blocks, "user")    # 项目说明 / 日期 / 任务清单自动重新注入
+    msg = {"role": "user", "content": merged}
+    agent._append(msg, compact={"trigger": trigger, "preTokens": pre, "postTokens": post})
+    ```
 
 `SUMMARY_HEADER` 是 Claude Code 摘要消息的开头原句：「This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.」（你本机 jsonl 里 `isCompactSummary: true` 的那条 user 消息就是这样开头的）。自动压缩时末尾再加一句 `CONTINUE`：接着干，不要复述摘要、不要问用户。
 
@@ -159,12 +243,25 @@ agent._append(msg, compact={"trigger": trigger, "preTokens": pre, "postTokens": 
 
 最近读过的文件由 `_reattach_files()` 处理：
 
-```python
-recent = [p for p in fs.paths() if p.is_file()][-REATTACH_FILES:]   # 最近 5 个
-fs.clear()
-for p in recent:
-    att = _file_attachment(p, agent.ctx.rel(p), agent.ctx, REATTACH_LINES)   # 按 Read 的格式，也重新登记
-```
+=== "Node"
+
+    ```ts
+    const recent = fs.paths().filter((p) => existsSync(p) && statSync(p).isFile()).slice(-REATTACH_FILES); // 最近 5 个
+    fs.clear();
+    return recent.map((p) => {
+      const att = fileAttachment(p, agent.ctx.rel(p), agent.ctx, REATTACH_LINES); // 按 Read 的格式，也重新登记
+      ...
+    });
+    ```
+
+=== "Python"
+
+    ```python
+    recent = [p for p in fs.paths() if p.is_file()][-REATTACH_FILES:]   # 最近 5 个
+    fs.clear()
+    for p in recent:
+        att = _file_attachment(p, agent.ctx.rel(p), agent.ctx, REATTACH_LINES)   # 按 Read 的格式，也重新登记
+    ```
 
 5 这个数来自 Claude Code 文档（压缩后最多重新注入 5 个最近读过或编辑过的文件）。为了让 `paths()` 按「最近看到」排序，`FileStateCache.remember()` 改成先 `pop` 再插入。
 
@@ -174,15 +271,32 @@ for p in recent:
 
 `compact.py:auto_compact_hook`，挂在 `Agent.before_request`：
 
-```python
-def auto_compact_hook(agent):
-    s = agent.settings
-    if not s.auto_compact or agent.usage.last_input < s.context_window - s.auto_compact_buffer:
-        return []
-    if not agent.messages or agent.messages[-1]["role"] != "user":
-        return []           # 只在「即将请求」的位置压缩；悬空的 tool_use 不能拆开
-    return list(compact(agent, "auto"))
-```
+=== "Node"
+
+    ```ts
+    export async function autoCompactHook(agent: Agent): Promise<Event[]> {
+      const s = agent.settings;
+      if (!s.autoCompact || agent.usage.lastInput < s.contextWindow - s.autoCompactBuffer) return [];
+      if (!agent.messages.length || agent.messages.at(-1)!.role !== "user") {
+        return []; // 只在「即将请求」的位置压缩；悬空的 tool_use 不能拆开
+      }
+      const evs: Event[] = [];
+      for await (const ev of compact(agent, "auto")) evs.push(ev);
+      return evs;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def auto_compact_hook(agent):
+        s = agent.settings
+        if not s.auto_compact or agent.usage.last_input < s.context_window - s.auto_compact_buffer:
+            return []
+        if not agent.messages or agent.messages[-1]["role"] != "user":
+            return []           # 只在「即将请求」的位置压缩；悬空的 tool_use 不能拆开
+        return list(compact(agent, "auto"))
+    ```
 
 阈值是 `context_window - auto_compact_buffer`，默认 100 万减 4 万，也就是 96 万。Claude Code 文档说原生 1M 窗口的模型约在 967K 时自动压缩，你本机的中位数也正好在那附近。
 
@@ -203,16 +317,35 @@ buffer 要留够，原因有两个：
 
 那就是在修改一条已经存在的历史消息，第一条不变量不允许。我们换一个思路：**历史照存，请求时合并**。`Agent._request()` 发请求前调 `merge_consecutive_users()`：
 
-```python
-def merge_consecutive_users(messages):
-    out = []
-    for m in messages:
-        if out and m["role"] == "user" and out[-1]["role"] == "user":
-            out[-1] = {"role": "user", "content": _blocks(out[-1]["content"]) + _blocks(m["content"])}
-        else:
-            out.append(m)
-    return out
-```
+=== "Node"
+
+    ```ts
+    export function mergeConsecutiveUsers(messages: Message[]): Message[] {
+      const out: Message[] = [];
+      for (const m of messages) {
+        const prev = out.at(-1);
+        if (prev && m.role === "user" && prev.role === "user") {
+          out[out.length - 1] = { role: "user", content: [...blocks(prev.content), ...blocks(m.content)] };
+        } else {
+          out.push(m);
+        }
+      }
+      return out;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def merge_consecutive_users(messages):
+        out = []
+        for m in messages:
+            if out and m["role"] == "user" and out[-1]["role"] == "user":
+                out[-1] = {"role": "user", "content": _blocks(out[-1]["content"]) + _blocks(m["content"])}
+            else:
+                out.append(m)
+        return out
+    ```
 
 合并是历史的**确定性函数**：同样的历史永远合并出同样的字节，后续请求的前缀依然稳定，prompt cache 不受影响。这恰好也是 claude-api 文档描述的简单压缩形状：下一次请求以「摘要 + 新的 user 消息」开头。
 
@@ -220,10 +353,21 @@ def merge_consecutive_users(messages):
 
 `Session.record` 看到 `meta["compact"]` 时，先写一条边界：
 
-```python
-boundary = {"type": "system", "subtype": "compact_boundary", "uuid": ...,
-            "parentUuid": None, "logicalParentUuid": self.last_uuid, "compactMetadata": meta["compact"]}
-```
+=== "Node"
+
+    ```ts
+    const boundary: SessionRecord = {
+      type: "system", subtype: "compact_boundary", uuid: randomUUID(), parentUuid: null,
+      logicalParentUuid: this.lastUuid, sessionId: this.id, timestamp: now(), compactMetadata: meta.compact,
+    };
+    ```
+
+=== "Python"
+
+    ```python
+    boundary = {"type": "system", "subtype": "compact_boundary", "uuid": ...,
+                "parentUuid": None, "logicalParentUuid": self.last_uuid, "compactMetadata": meta["compact"]}
+    ```
 
 字段名照搬你本机 Claude Code 的记录：`parentUuid` 为空、`logicalParentUuid` 指向压缩前最后一条消息、`compactMetadata` 里有 `trigger / preTokens / postTokens`。第 13 章的 `branch()` 从叶子往回走，走到摘要消息时它的 parent 是边界、边界不是消息，链就在这里断开。`/resume` 恢复出来的就是压缩后的历史，压缩前的记录还在文件里（只追加），但不在链上。
 
@@ -231,7 +375,7 @@ boundary = {"type": "system", "subtype": "compact_boundary", "uuid": ...,
 
 ## 测试
 
-`tests/test_ch14_compact.py`，8 个：
+`tests/ch14_compact.test.ts`（Python 版 `tests/test_ch14_compact.py`），8 个：
 
 - `extract_summary`（有无 `<summary>` 标签）、`merge_consecutive_users` 不修改原历史。
 - 手动压缩：摘要请求与正常请求同 system / 同 tools、历史是原样前缀、指令含「Do not call any tools」和用户附加的话；压缩后只剩一条消息，含摘要、挂回的文件、重新注入的项目说明；下一轮请求只有一条合并后的 user 消息。
@@ -239,13 +383,29 @@ boundary = {"type": "system", "subtype": "compact_boundary", "uuid": ...,
 - 一轮中途自动压缩、阈值以下不压缩、摘要为空时历史不变。
 - 7 个文件只挂回最近 5 个，文件状态表只剩这 5 个；剧本可以写 `usage`。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 49%]
-........................................................................ [ 98%]
-..                                                                       [100%]
-146 passed in 5.18s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[0-4]*.test.ts tests/extension_points.test.ts
+    ℹ tests 146
+    ℹ suites 0
+    ℹ pass 146
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 5710.519709
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 49%]
+    ........................................................................ [ 98%]
+    ..                                                                       [100%]
+    146 passed in 5.18s
+    ```
 
 ## API 侧的两种做法
 

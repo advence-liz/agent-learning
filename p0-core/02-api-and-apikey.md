@@ -66,30 +66,50 @@ flowchart LR
 
 ## 动手：同一段对话，三种写法
 
-光看文档容易漏细节，最可靠的是抓下真正发出去的字节。代码在 [`code/agent/core/api_formats.py`](../code/agent/core/api_formats.py)。思路是这样的：
+光看文档容易漏细节，最可靠的是抓下真正发出去的字节。代码在 [`code/agent-node/core/api_formats.ts`](../code/agent-node/core/api_formats.ts)（Python 版 [`api_formats.py`](../code/agent/core/api_formats.py)）。思路是这样的：
 
 1. 定义一份和厂商无关的对话状态：用户问 webapp 的 vitest 超时，模型调了一次 `read_file`，工具返回了结果。
 2. 写三个函数，把这份状态分别序列化成三种请求体。
-3. 用 `MockTransport` 拦截 HTTP。拦截器把请求记录下来，再按各家文档的形状返回一个假响应，**不发任何真实请求**。
-4. Anthropic 那一路用官方 SDK 发，好看清 SDK 实际替你加了哪些头；OpenAI 两路用手写的 httpx 请求（本项目没装 openai SDK）。
+3. 用一个假的 `fetch`（Python 版是 httpx 的 `MockTransport`）拦截 HTTP。拦截器把请求记录下来，再按各家文档的形状返回一个假响应，**不发任何真实请求**。
+4. Anthropic 那一路用官方 SDK 发，好看清 SDK 实际替你加了哪些头；OpenAI 两路用手写的 `fetch` 请求（Python 版用 httpx；本项目没装 openai SDK）。
 
-跑一下（离线 MockTransport，`--compact` 让每个 body 打印成一行，这里只截取头部和解析结果）：
+跑一下（离线拦截，`--compact` 让每个 body 打印成一行，这里只截取头部和解析结果）：
 
-```text
-$ uv run python -m core.api_formats --compact
-===== POST /v1/messages
-headers: {"content-type": "application/json", "x-api-key": "sk-fake-not-…", "anthropic-version": "2023-06-01"}
-===== POST /v1/chat/completions
-headers: {"authorization": "Bearer sk-fa…", "content-type": "application/json"}
-===== POST /v1/responses
-headers: {"authorization": "Bearer sk-fa…", "content-type": "application/json"}
-===== 三种响应解析回统一结构（离线 MockTransport，无真实请求）
-anthropic         text='超时是 15000ms。' stop='end_turn' in=120 out=12
-chat_completions  text='超时是 15000ms。' stop='stop' in=120 out=12
-responses         text='超时是 15000ms。' stop='completed' in=120 out=12
-```
+=== "Node"
 
-不加 `--compact` 能看到完整的缩进 JSON。下面摘出三份 body 里最能说明差异的片段，都取自实际输出。
+    ```text
+    $ node core/api_formats.ts --compact
+    ===== POST /v1/messages
+    headers: {"anthropic-version":"2026-10-21","authorization":"Bearer sk-fa…","content-type":"application/json"}
+    ===== POST /v1/chat/completions
+    headers: {"authorization":"Bearer sk-fa…","content-type":"application/json"}
+    ===== POST /v1/responses
+    headers: {"authorization":"Bearer sk-fa…","content-type":"application/json"}
+    ===== 三种响应解析回统一结构（离线假 fetch，无真实请求）
+    anthropic         text="超时是 15000ms。" stop="end_turn" in=120 out=12
+    chat_completions  text="超时是 15000ms。" stop="stop" in=120 out=12
+    responses         text="超时是 15000ms。" stop="completed" in=120 out=12
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m core.api_formats --compact
+    ===== POST /v1/messages
+    headers: {"content-type": "application/json", "x-api-key": "sk-fake-not-…", "anthropic-version": "2023-06-01"}
+    ===== POST /v1/chat/completions
+    headers: {"authorization": "Bearer sk-fa…", "content-type": "application/json"}
+    ===== POST /v1/responses
+    headers: {"authorization": "Bearer sk-fa…", "content-type": "application/json"}
+    ===== 三种响应解析回统一结构（离线 MockTransport，无真实请求）
+    anthropic         text='超时是 15000ms。' stop='end_turn' in=120 out=12
+    chat_completions  text='超时是 15000ms。' stop='stop' in=120 out=12
+    responses         text='超时是 15000ms。' stop='completed' in=120 out=12
+    ```
+
+两版有一处真实差异：Node 的 `@anthropic-ai/sdk`（本机 1.1.0）把 `apiKey` 放在 `Authorization: Bearer` 里发，`anthropic-version` 也是新的 `2026-10-21`；Python 的 `anthropic` 1.17.0 发的是 `x-api-key` + `2023-06-01`。这是从 SDK 源码和抓到的头确认的，下面的表按 Python 版和官方文档写。
+
+不加 `--compact` 能看到完整的缩进 JSON。下面摘出三份 body 里最能说明差异的片段，都取自实际输出（Python 版；Node 的 `JSON.stringify` 不加空格，`arguments` 是 `{"path":"apps/web/vitest.config.ts"}`，其余字段一致）。
 
 Anthropic Messages：`system` 在顶层；工具调用和工具结果都是 content block，结果放在一条 `user` 消息里。
 
@@ -148,9 +168,9 @@ Responses：不叫 `messages`，叫 `input`，里面的元素是一个个 item�
 有两个细节，不抓包很容易漏：
 
 - **参数一个是对象，一个是字符串**。在 OpenAI 两种格式里，模型给的 `arguments` 是一段需要你再 `JSON.parse` 的字符串；Anthropic 给的直接是对象。写 adapter 时这里最容易出 bug。
-- **SDK 替你加的头比你想的多**。表里只列了和格式有关的头。实际抓到的 Anthropic 请求有 19 个头，除了 `x-api-key` 和 `anthropic-version`，还有 `user-agent` 和一串 `x-stainless-*`（SDK 版本、运行时、重试次数、超时）。你在 [Claude Code 抓包分析工具](../p3-agent-internals/01-http-analyzer.md) 看 Claude Code 的请求时也会遇到它们。
+- **SDK 替你加的头比你想的多**。表里只列了和格式有关的头。实际抓到的 Anthropic 请求有 19 个头（Node SDK 是 13 个），除了鉴权头和 `anthropic-version`，还有 `user-agent` 和一串 `x-stainless-*`（SDK 版本、运行时、重试次数、超时）。你在 [Claude Code 抓包分析工具](../p3-agent-internals/01-http-analyzer.md) 看 Claude Code 的请求时也会遇到它们。
 
-> ⚠️ 一个真实踩到的坑：本机 `anthropic` 是 1.17.0，它的 HTTP 层已经换成了 httpx 的维护分支 **httpx2**。传 `http_client=httpx.Client(transport=httpx.MockTransport(...))` 会直接 `TypeError: ... this SDK uses httpx2`。解决办法是把传给 SDK 的对象都换成 `httpx2` 的（`import httpx2 as httpx`，API 完全一致）。凡是靠 patch `httpx` 来 mock 或打点的库，比如 respx、OpenTelemetry 的 httpx instrumentor，在 1.x 上都会**静默**地看不到 SDK 的流量。
+> ⚠️ 一个真实踩到的坑：本机 `anthropic` 是 1.17.0，它的 HTTP 层已经换成了 httpx 的维护分支 **httpx2**。传 `http_client=httpx.Client(transport=httpx.MockTransport(...))` 会直接 `TypeError: ... this SDK uses httpx2`。解决办法是把传给 SDK 的对象都换成 `httpx2` 的（`import httpx2 as httpx`，API 完全一致）。凡是靠 patch `httpx` 来 mock 或打点的库，比如 respx、OpenTelemetry 的 httpx instrumentor，在 1.x 上都会**静默**地看不到 SDK 的流量。Node 的 SDK 走标准 `fetch`，构造时传 `fetch` 选项就能拦截，没有这个坑。
 
 ## 对照你的环境
 
@@ -178,7 +198,7 @@ Responses：不叫 `messages`，叫 `input`，里面的元素是一个个 item�
 
 </details>
 
-**2.** 某中转站「兼容 Anthropic 格式」。你把 `core/api_formats.py` 里的 `anthropic_body()` 加上 `"temperature": 0`，model 设成 `claude-opus-5-5` 发过去，可能出现哪几种结果？各自说明了什么？
+**2.** 某中转站「兼容 Anthropic 格式」。你把 `core/api_formats.ts` 里的 `anthropicBody()`（Python 版 `anthropic_body()`）加上 `"temperature": 0`，model 设成 `claude-opus-5-5` 发过去，可能出现哪几种结果？各自说明了什么？
 
 <details>
 <summary>参考答案</summary>
@@ -187,7 +207,7 @@ Responses：不叫 `messages`，叫 `input`，里面的元素是一个个 item�
 
 </details>
 
-**3.** 给 `core/api_formats.py` 加一个反方向的适配：写一个 `from_chat_completions(body) -> anthropic_body`，用 pytest 断言它对上面那份 Chat Completions body 的输出，与 `anthropic_body()` 逐字段相等。
+**3.** 给 `core/api_formats.ts` 加一个反方向的适配：写一个 `fromChatCompletions(body)`，返回 Anthropic 格式的 body，用 `node:test` 断言它对上面那份 Chat Completions body 的输出，与 `anthropicBody()` 逐字段相等（Python 版：`from_chat_completions`、pytest、`anthropic_body()`）。
 
 **4.**（开放题）如果你要在 webapp 里接入一个 LLM 能力（比如录音摘要），前端和后端之间应该传哪种格式？还是应该定义自己的中性格式，由后端做 adapter？说说你会怎么权衡锁定成本、流式支持和工具调用。
 

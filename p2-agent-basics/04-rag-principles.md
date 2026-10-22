@@ -26,36 +26,69 @@
 
 ## 三个实验
 
-代码在 [`code/agent/rag/experiments.py`](../code/agent/rag/experiments.py)，全部离线、真实输出：
+代码在 [`code/agent-node/rag/experiments.ts`](../code/agent-node/rag/experiments.ts)（Python 版 [`experiments.py`](../code/agent/rag/experiments.py)），全部离线、真实输出（两个版本的分数完全一致）：
 
-```text
-$ uv run python -m rag.experiments
-实验 1：给每块加不加文档标题（上下文补全）
- [加标题]
-  Q: 具体价格是多少
-     0.074  membership.md#会员与价格      【会员与价格】Pro 会员月付 39 元，年付 299 …
-     0.066  membership.md#会员与价格      【会员与价格】闪记提供免费版和 Pro 会员两档。免费版…
- [不加标题]
-  Q: 具体价格是多少
-     0.043  transcription.md#转写与语言   转写速度大约是录音时长的 1/10，一小时的录音约 6 …
-     0.018  account.md#账号与安全         同一个账号最多可以同时在 3 台设备上登录，超过后最早登…
+=== "Node"
 
-实验 2：换个说法（同义改写，几乎不共享字）
-  Q: 忘记密码怎么办
-     0.219  account.md#账号与安全         【账号与安全】如果忘记了登录密码，可以在登录页点击「账号…
-     0.013  membership.md#会员与价格      【会员与价格】闪记提供免费版和 Pro 会员两档。免费版…
-  Q: 登不上去了口令想不起来
-     0.046  account.md#账号与安全         【账号与安全】同一个账号最多可以同时在 3 台设备上登录…
-     0.043  account.md#账号与安全         【账号与安全】如果忘记了登录密码，可以在登录页点击「账号…
+    ```text
+    $ node rag/experiments.ts
+    实验 1：给每块加不加文档标题（上下文补全）
+     [加标题]
+      Q: 具体价格是多少
+         0.074  membership.md#会员与价格      【会员与价格】Pro 会员月付 39 元，年付 299 …
+         0.066  membership.md#会员与价格      【会员与价格】闪记提供免费版和 Pro 会员两档。免费版…
+     [不加标题]
+      Q: 具体价格是多少
+         0.043  transcription.md#转写与语言   转写速度大约是录音时长的 1/10，一小时的录音约 6 …
+         0.018  account.md#账号与安全         同一个账号最多可以同时在 3 台设备上登录，超过后最早登…
 
-实验 3：在代码里找 `useRecordingStore` 的所有引用
-  grep -w: ['src/store/recording.ts', 'src/hooks/useRecorder.ts']
-  向量检索（子词切分）top-4：
-     0.669  src/hooks/useRecorder.ts
-     0.414  src/store/recording.ts
-     0.235  src/pages/Home.tsx
-     0.000  src/utils/record.ts
-```
+    实验 2：换个说法（同义改写，几乎不共享字）
+      Q: 忘记密码怎么办
+         0.219  account.md#账号与安全         【账号与安全】如果忘记了登录密码，可以在登录页点击「账号…
+         0.013  membership.md#会员与价格      【会员与价格】闪记提供免费版和 Pro 会员两档。免费版…
+      Q: 登不上去了口令想不起来
+         0.046  account.md#账号与安全         【账号与安全】同一个账号最多可以同时在 3 台设备上登录…
+         0.043  account.md#账号与安全         【账号与安全】如果忘记了登录密码，可以在登录页点击「账号…
+
+    实验 3：在代码里找 `useRecordingStore` 的所有引用
+      grep -w: ["src/store/recording.ts","src/hooks/useRecorder.ts"]
+      向量检索（子词切分）top-4：
+         0.669  src/hooks/useRecorder.ts
+         0.414  src/store/recording.ts
+         0.235  src/pages/Home.tsx
+         0.000  src/utils/record.ts
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m rag.experiments
+    实验 1：给每块加不加文档标题（上下文补全）
+     [加标题]
+      Q: 具体价格是多少
+         0.074  membership.md#会员与价格      【会员与价格】Pro 会员月付 39 元，年付 299 …
+         0.066  membership.md#会员与价格      【会员与价格】闪记提供免费版和 Pro 会员两档。免费版…
+     [不加标题]
+      Q: 具体价格是多少
+         0.043  transcription.md#转写与语言   转写速度大约是录音时长的 1/10，一小时的录音约 6 …
+         0.018  account.md#账号与安全         同一个账号最多可以同时在 3 台设备上登录，超过后最早登…
+
+    实验 2：换个说法（同义改写，几乎不共享字）
+      Q: 忘记密码怎么办
+         0.219  account.md#账号与安全         【账号与安全】如果忘记了登录密码，可以在登录页点击「账号…
+         0.013  membership.md#会员与价格      【会员与价格】闪记提供免费版和 Pro 会员两档。免费版…
+      Q: 登不上去了口令想不起来
+         0.046  account.md#账号与安全         【账号与安全】同一个账号最多可以同时在 3 台设备上登录…
+         0.043  account.md#账号与安全         【账号与安全】如果忘记了登录密码，可以在登录页点击「账号…
+
+    实验 3：在代码里找 `useRecordingStore` 的所有引用
+      grep -w: ['src/store/recording.ts', 'src/hooks/useRecorder.ts']
+      向量检索（子词切分）top-4：
+         0.669  src/hooks/useRecorder.ts
+         0.414  src/store/recording.ts
+         0.235  src/pages/Home.tsx
+         0.000  src/utils/record.ts
+    ```
 
 ### 实验 1：切块会把主题切丢
 
@@ -138,8 +171,8 @@ flowchart LR
 
 ## 练习
 
-1. 在 `experiments.py` 里给实验 2 再加三个同义改写，统计哈希 TF-IDF 的 top-1 命中率。
-2. 实现一个最简单的混合检索：`score = 0.5 * tfidf + 0.5 * bm25`（BM25 可以自己用 numpy 写），对比实验 2 的结果。
+1. 在 `experiments.ts`（Python 版 `experiments.py`）里给实验 2 再加三个同义改写，统计哈希 TF-IDF 的 top-1 命中率。
+2. 实现一个最简单的混合检索：`score = 0.5 * tfidf + 0.5 * bm25`（BM25 可以自己用普通数组写，Python 版用 numpy），对比实验 2 的结果。
 3. 开放题：如果你要给 webapp 做一个「问代码库问题」的内部工具，你会用 RAG、agentic search，还是两者结合？说说你会怎么处理「代码每天都在变」这件事。
 
 ## 延伸阅读

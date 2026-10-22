@@ -58,38 +58,70 @@ prompt caching 文档在「Subagents and the cache」一节把两者放在一起
 
 ## 先跑起来：一个前缀缓存模拟器
 
-`code/agent/fork_demo/prefix_cache.py` 把一次请求拆成一串 block：tools、system、每条消息各算一个 block。每个 block 边界处计算一个累计 hash 存进 cache。新请求从头开始比对，命中的最长前缀算作 cache_read。token 数用「字符数 / 4」粗略估计，只看相对大小。
+[`code/agent-node/fork_demo/prefix_cache.ts`](../code/agent-node/fork_demo/prefix_cache.ts)（Python 版 [`prefix_cache.py`](../code/agent/fork_demo/prefix_cache.py)）把一次请求拆成一串 block：tools、system、每条消息各算一个 block。每个 block 边界处计算一个累计 hash 存进 cache。新请求从头开始比对，命中的最长前缀算作 cache_read。token 数用「字符数 / 4」粗略估计，只看相对大小。
 
-主会话先跑 30 轮把缓存预热，然后依次模拟几种「分支」。运行 `uv run python fork_demo/prefix_cache.py`（真实输出）：
+主会话先跑 30 轮把缓存预热，然后依次模拟几种「分支」。真实输出（两版的 JSON 序列化分隔符不同，token 粗估值差几十，比例一样）：
 
-```text
-场景                                         cache_read  uncached     命中率
-主会话第 N 轮（预热）                                        0      9158    0.0%
-Fork：同 tools/system/历史 + 追加任务                    9158        15   99.8%
-Fork 但删掉 Bash 工具定义                                  0      9153    0.0%
-Fork 但改了 system prompt                             83      9091    0.9%
-全新 Sub Agent（自己的 system+tools，空历史）                  0        38    0.0%
-/btw：同前缀 + 追加问题（推测实现）                            9158        14   99.8%
-```
+=== "Node"
+
+    ```text
+    $ node fork_demo/prefix_cache.ts
+    场景                                         cache_read  uncached     命中率
+    主会话第 N 轮（预热）                                        0      9121    0.0%
+    Fork：同 tools/system/历史 + 追加任务                    9121        14   99.8%
+    Fork 但删掉 Bash 工具定义                                  0      9117    0.0%
+    Fork 但改了 system prompt                             76      9060    0.8%
+    全新 Sub Agent（自己的 system+tools，空历史）                  0        36    0.0%
+    /btw：同前缀 + 追加问题（推测实现）                            9121        14   99.8%
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python fork_demo/prefix_cache.py
+    场景                                         cache_read  uncached     命中率
+    主会话第 N 轮（预热）                                        0      9178    0.0%
+    Fork：同 tools/system/历史 + 追加任务                    9178        15   99.8%
+    Fork 但删掉 Bash 工具定义                                  0      9173    0.0%
+    Fork 但改了 system prompt                             83      9111    0.9%
+    全新 Sub Agent（自己的 system+tools，空历史）                  0        38    0.0%
+    /btw：同前缀 + 追加问题（推测实现）                            9178        14   99.8%
+    ```
 
 第三行就是开头那个问题的答案。只是把 Bash 从工具列表里删掉，tools 这第一个 block 就变了，后面的 9,000 多 token 全部重算。
 
 第四行也值得看：只在 system 末尾加了一句「只读模式」，就只剩 tools 那一小段还能命中。
 
-第五行「全新 Sub Agent」的 uncached 只有 38，那是因为 demo 里它的 system 只有一行。真实的子 agent 有自己的系统提示词、CLAUDE.md 和工具定义，冷启动的成本要高得多。
+第五行「全新 Sub Agent」的 uncached 只有 38（Node 版 36），那是因为 demo 里它的 system 只有一行。真实的子 agent 有自己的系统提示词、CLAUDE.md 和工具定义，冷启动的成本要高得多。
 
 核心判断就是一个循环：
 
-```python
-for b in blocks_of(tools, system, messages):
-    h.update(b.encode())
-    if matched and h.hexdigest() in self.entries:
-        read = total                 # 前缀还连着，继续算命中
-    else:
-        matched = False              # 一旦断开，后面再一样也不算
-```
+=== "Node"
 
-测试：`uv run pytest -q fork_demo`，结果 `1 passed`。
+    ```ts
+    for (const b of blocksOf(tools, system, messages)) {
+      h.update(b);
+      const d = h.copy().digest("hex");  // digest() 会结束 hash，先 copy() 再取累计值
+      if (matched && this.entries.has(d)) {
+        read = total;                    // 前缀还连着，继续算命中
+      } else {
+        matched = false;                 // 一旦断开，后面再一样也不算
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    for b in blocks_of(tools, system, messages):
+        h.update(b.encode())
+        if matched and h.hexdigest() in self.entries:
+            read = total                 # 前缀还连着，继续算命中
+        else:
+            matched = False              # 一旦断开，后面再一样也不算
+    ```
+
+测试：`node --test 'fork_demo/*.test.ts'`，结果 `ℹ pass 1`（Python 版 `uv run pytest -q fork_demo`，结果 `1 passed`）。
 
 ## 这对分支的权限意味着什么
 
@@ -154,8 +186,8 @@ prompt caching 文档还给出了另一条线索：作用于具体参数的 deny
 
 ## 练习
 
-1. 在 `prefix_cache.py` 里加一个场景：只改变 tools 列表的**顺序**，不增也不删。预测命中率，然后跑一下验证。想一想：为什么真实的 harness 要保证工具列表的顺序稳定？
-2. 加一个「工具保留、调用时拒绝」的场景：fork 的请求和父会话完全一致，另写一个 `execute(tool_name)` 对 Edit 返回错误。证明它的命中率和普通 fork 一样，同时 Edit 也被拦住了。
+1. 在 `prefix_cache.ts`（`prefix_cache.py`）里加一个场景：只改变 tools 列表的**顺序**，不增也不删。预测命中率，然后跑一下验证。想一想：为什么真实的 harness 要保证工具列表的顺序稳定？
+2. 加一个「工具保留、调用时拒绝」的场景：fork 的请求和父会话完全一致，另写一个 `execute(toolName)`（`execute(tool_name)`）对 Edit 返回错误。证明它的命中率和普通 fork 一样，同时 Edit 也被拦住了。
 3. （开放题）mini Claude Code 要实现 `/btw`，你会怎么设计请求的形状：tools 带不带、`tool_choice` 设不设、回答写不写进 messages？请分别估算每一种设计的缓存命中情况，再和本章的推测做对比。
 
 ## 延伸阅读

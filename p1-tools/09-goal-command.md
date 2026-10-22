@@ -65,48 +65,86 @@ Judge 每次只给三种结论之一，并附一句理由：not yet met、met、
 - **它属于 hooks 体系。** 所以要受工作区信任规则的约束；`disableAllHooks: true` 时 `/goal` 不可用，命令会告诉你原因。
 - **`/goal` 不改权限模式。** 想让它无人值守地跑，要配合 auto mode。文档的说法是：auto mode 去掉了「每次调用工具都要确认」，`/goal` 去掉了「每一轮都要你发话」。
 
-至于 Judge 拿到的 prompt 具体长什么样，「对话」是全文还是摘要，文档都没有写。下面 demo 里 `render_for_judge()` 的格式是我的**推测**。依据是：文档说发送的是「the condition and the conversation so far」，评审不调工具，只依据 Claude 已经输出到对话里的内容。
+至于 Judge 拿到的 prompt 具体长什么样，「对话」是全文还是摘要，文档都没有写。下面 demo 里 `renderForJudge()`（Python 版 `render_for_judge()`）的格式是我的**推测**。依据是：文档说发送的是「the condition and the conversation so far」，评审不调工具，只依据 Claude 已经输出到对话里的内容。
 
 ## 先跑起来：离线复刻这个循环
 
-`code/agent/goal_demo/goal_loop.py` 用一百来行代码复刻了上面那张状态图。Worker 和 Judge 都是可以替换的函数：
+[`code/agent-node/goal_demo/goal_loop.ts`](../code/agent-node/goal_demo/goal_loop.ts)（Python 版 [`goal_loop.py`](../code/agent/goal_demo/goal_loop.py)）用一百来行代码复刻了上面那张状态图。Worker 和 Judge 都是可以替换的函数（Node 版允许它们返回 Promise，所以 `runGoal` 是 `async` 的）：
 
-- 离线模式：`scripted_worker` 按剧本返回每一轮的结果，`keyword_judge` 只在对话里找 `0 failed` 和 `lint clean` 两个证据。
-- 真实模式：`make_llm_judge(anthropic.Anthropic())` 发一次无工具的 `claude-haiku-5-5` 调用，用 `output_config.format` 约束模型输出 `{status, reason}` 这个 JSON。本仓库只用 fake client 测过，没有发真实请求。
+- 离线模式：`scriptedWorker`（`scripted_worker`）按剧本返回每一轮的结果，`keywordJudge`（`keyword_judge`）只在对话里找 `0 failed` 和 `lint clean` 两个证据。
+- 真实模式：`makeLlmJudge(new Anthropic())`（Python 版 `make_llm_judge(anthropic.Anthropic())`）发一次无工具的 `claude-haiku-5-5` 调用，用 `output_config.format` 约束模型输出 `{status, reason}` 这个 JSON。本仓库只用 fake client 测过，没有发真实请求。
 
-剧本是这样的：第 1 轮测试还有失败；第 2 轮起了后台 e2e；第 3 轮修好测试；第 4 轮跑 lint。运行 `uv run python goal_demo/goal_loop.py`（离线 fake 模型，真实输出）：
+剧本是这样的：第 1 轮测试还有失败；第 2 轮起了后台 e2e；第 3 轮修好测试；第 4 轮跑 lint。离线 fake 模型，真实输出：
 
-```text
-turn 1: judge=not_met reason=对话里还没出现证据：0 failed, lint clean
-turn 2: 后台任务未结束 → 跳过评审
-turn 3: judge=not_met reason=对话里还没出现证据：lint clean
-turn 4: judge=met reason=测试与 lint 证据都已出现
-outcome=achieved turns=4 evaluations=3
-```
+=== "Node"
+
+    ```text
+    $ node goal_demo/goal_loop.ts
+    turn 1: judge=not_met reason=对话里还没出现证据：0 failed, lint clean
+    turn 2: 后台任务未结束 → 跳过评审
+    turn 3: judge=not_met reason=对话里还没出现证据：lint clean
+    turn 4: judge=met reason=测试与 lint 证据都已出现
+    outcome=achieved turns=4 evaluations=3
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python goal_demo/goal_loop.py
+    turn 1: judge=not_met reason=对话里还没出现证据：0 failed, lint clean
+    turn 2: 后台任务未结束 → 跳过评审
+    turn 3: judge=not_met reason=对话里还没出现证据：lint clean
+    turn 4: judge=met reason=测试与 lint 证据都已出现
+    outcome=achieved turns=4 evaluations=3
+    ```
 
 跑了 4 轮，只评审了 3 次，因为第 2 轮有后台任务没结束。第 3 轮的 reason 只剩「lint clean」，Worker 下一轮就照着这个去跑 lint。整个循环的核心就这么几行：
 
-```python
-v = judge(condition, transcript)
-if v.status == "met":        return GoalResult("achieved", ...)
-if v.status == "impossible": return GoalResult("impossible", ...)
-directive = v.reason                     # 理由 = 下一轮指令
-transcript.append({"role": "user", "content": f"[goal evaluator] {v.reason}"})
-```
+=== "Node"
+
+    ```ts
+    const v = await judge(condition, transcript);
+    if (v.status === "met")        return { outcome: "achieved", ... };
+    if (v.status === "impossible") return { outcome: "impossible", ... };
+    directive = v.reason;                     // 理由 = 下一轮指令
+    transcript.push({ role: "user", content: `[goal evaluator] ${v.reason}` });
+    ```
+
+=== "Python"
+
+    ```python
+    v = judge(condition, transcript)
+    if v.status == "met":        return GoalResult("achieved", ...)
+    if v.status == "impossible": return GoalResult("impossible", ...)
+    directive = v.reason                     # 理由 = 下一轮指令
+    transcript.append({"role": "user", "content": f"[goal evaluator] {v.reason}"})
+    ```
 
 说穿了，就是在 agent 循环外面再套了一层 `while`，退出条件交给另一个模型来判断。reason 被追加到 messages 的末尾，和 Stop hook 返回 `decision: block` + `reason` 是同一种做法。
 
-真实 Judge 的调用长这样（`make_llm_judge` 里的代码，没有执行过）：
+真实 Judge 的调用长这样（`makeLlmJudge` / `make_llm_judge` 里的代码，没有对真实 API 执行过）：
 
-```python
-resp = client.messages.create(
-    model="claude-haiku-5-5", max_tokens=1024, system=JUDGE_SYSTEM,
-    output_config={"effort": "low", "format": {"type": "json_schema", "schema": JUDGE_SCHEMA}},
-    messages=[{"role": "user", "content": render_for_judge(condition, transcript)}],
-)   # 注意：没有 tools
-```
+=== "Node"
 
-测试：`uv run pytest -q goal_demo`，结果 `4 passed`。其中两条覆盖了「连续无工具调用 → stalled」和「impossible → 清除目标」。还有一条断言请求里**没有** `tools` 字段，评审不许动手，这一点写成了测试。
+    ```ts
+    const resp = await client.messages.create({
+      model: "claude-haiku-5-5", max_tokens: 1024, system: JUDGE_SYSTEM,
+      output_config: { effort: "low", format: { type: "json_schema", schema: JUDGE_SCHEMA } },
+      messages: [{ role: "user", content: renderForJudge(condition, transcript) }],
+    });   // 注意：没有 tools
+    ```
+
+=== "Python"
+
+    ```python
+    resp = client.messages.create(
+        model="claude-haiku-5-5", max_tokens=1024, system=JUDGE_SYSTEM,
+        output_config={"effort": "low", "format": {"type": "json_schema", "schema": JUDGE_SCHEMA}},
+        messages=[{"role": "user", "content": render_for_judge(condition, transcript)}],
+    )   # 注意：没有 tools
+    ```
+
+测试：`node --test 'goal_demo/*.test.ts'`，结果 `ℹ pass 4`（Python 版 `uv run pytest -q goal_demo`，结果 `4 passed`）。其中两条覆盖了「连续无工具调用 → stalled」和「impossible → 清除目标」。还有一条断言请求里**没有** `tools` 字段，评审不许动手，这一点写成了测试。
 
 ## /goal、Stop hook、/loop 怎么选
 
@@ -137,9 +175,9 @@ resp = client.messages.create(
 
 ## 练习
 
-1. 改 `keyword_judge`：对话里同时出现 `0 failed` 和「删除了测试」时，返回 `not_met`，理由是「不允许删除测试」。补一条 pytest。
+1. 改 `keywordJudge`（`keyword_judge`）：对话里同时出现 `0 failed` 和「删除了测试」时，返回 `not_met`，理由是「不允许删除测试」。补一条测试（`node:test` 或 pytest）。
 2. 不用 `/goal`，在测试仓库的 `.claude/settings.local.json` 里写一个 `type: "prompt"` 的 Stop hook，复现同样的「测试全过才许停」。它和 `/goal` 在作用范围、能不能用 `/goal clear` 撤销这两点上有什么区别？
-3. （开放题）Judge 和 Worker 用同一族模型，会不会有「同一个模型族的盲区」？如果让 Codex 来当 Judge（异源评审，就像你的 `codex-review`），要改 `goal_loop.py` 的哪个接口？这样做的收益和成本各是什么？
+3. （开放题）Judge 和 Worker 用同一族模型，会不会有「同一个模型族的盲区」？如果让 Codex 来当 Judge（异源评审，就像你的 `codex-review`），要改 `goal_loop.ts`（`goal_loop.py`）的哪个接口？这样做的收益和成本各是什么？
 
 ## 延伸阅读
 

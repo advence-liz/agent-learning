@@ -24,47 +24,94 @@
 
 离线 fake 模型（`examples/ch07.json`），一个有两处 `TIMEOUT = 30` 的 `config.py`，中途用一条 `sed` 模拟「你在另一个终端改了文件」：
 
-```console
-❯ 把 prod 的超时改成 60，再关掉 DEBUG
-● 直接把 DEBUG 关掉。
-⏺ Edit(config.py)
-✘ Edit -> <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
-● 得先读文件。
-⏺ Read(config.py)
-✔ Read ->      1        # dev
-       2        TIMEOUT = 30
-       3        # prod  …(+2 lines)
-⏺ Edit(config.py)
-✘ Edit -> <tool_use_error>Found 2 matches of the string to replace, but replace_all is false. To replace all o
-  String: TIMEOUT = 30</tool_use_error>
-● 有两处，带上注释那一行让它唯一。
-⏺ Edit(config.py)
-✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
-       1        # dev
-       2        TIMEOUT = 30  …(+3 lines)
-● （模拟：你在另一个终端里改了这个文件）
-⏺ Bash(sed -i '' 's/DEBUG = True/DEBUG = True  # set by ops/' config.py)
-...
-选择 [1/2/3]: 1
-✔ Bash -> (no output)
-⏺ Edit(config.py)
-✘ Edit -> <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again 
-● 文件被改过了，重新读。
-⏺ Read(config.py)
-...
-⏺ Edit(config.py)
-✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
-...
-● 改好了：prod 的 TIMEOUT 改成 60，DEBUG 关闭，保留了你加的注释。
---- config.py
-# dev
-TIMEOUT = 30
-# prod
-TIMEOUT = 60
-DEBUG = False  # set by ops
-```
+=== "Node"
 
-三条规矩各拦了一次，每次模型都按报错的提示自我修正。最后的文件里，dev 的 `TIMEOUT` 没被误改，「你」加的注释 `# set by ops` 也没被覆盖。
+    ```console
+    ❯ 把 prod 的超时改成 60，再关掉 DEBUG
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 直接把 DEBUG 关掉。
+    ⏺ Edit(config.py)
+    ✘ Edit -> <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
+    ● 得先读文件。
+    ⏺ Read(config.py)
+    ✔ Read ->      1	# dev
+           2	TIMEOUT = 30
+           3	# prod  …(+2 lines)
+    ⏺ Edit(config.py)
+    ✘ Edit -> <tool_use_error>Found 2 matches of the string to replace, but replace_all is false. To replace all o
+      String: TIMEOUT = 30</tool_use_error>
+    ● 有两处，带上注释那一行让它唯一。
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           1	# dev
+           2	TIMEOUT = 30  …(+3 lines)
+    ● （模拟：你在另一个终端里改了这个文件）
+    ⏺ Bash(sed -i '' 's/DEBUG = True/DEBUG = True  # set by ops/' config.py)
+    是否允许 Bash(sed -i '' 's/DEBUG = True/DEBUG = True  # set by ops/' config.py)？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Bash(sed -i '' 's/DEBUG = True/DEBUG = True  # set by ops/' config.py)
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 1
+    ✔ Bash -> (no output)
+    ◇ system  1 个文件被外部修改
+    ● 提醒里说文件被改过了（带了 diff），按新内容改。
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           2	TIMEOUT = 30
+           3	# prod  …(+2 lines)
+    ● 改好了：prod 的 TIMEOUT 改成 60，DEBUG 关闭，保留了你加的注释。
+    --- config.py
+    # dev
+    TIMEOUT = 30
+    # prod
+    TIMEOUT = 60
+    DEBUG = False  # set by ops
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 把 prod 的超时改成 60，再关掉 DEBUG
+    ● 直接把 DEBUG 关掉。
+    ⏺ Edit(config.py)
+    ✘ Edit -> <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
+    ● 得先读文件。
+    ⏺ Read(config.py)
+    ✔ Read ->      1        # dev
+           2        TIMEOUT = 30
+           3        # prod  …(+2 lines)
+    ⏺ Edit(config.py)
+    ✘ Edit -> <tool_use_error>Found 2 matches of the string to replace, but replace_all is false. To replace all o
+      String: TIMEOUT = 30</tool_use_error>
+    ● 有两处，带上注释那一行让它唯一。
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           1        # dev
+           2        TIMEOUT = 30  …(+3 lines)
+    ● （模拟：你在另一个终端里改了这个文件）
+    ⏺ Bash(sed -i '' 's/DEBUG = True/DEBUG = True  # set by ops/' config.py)
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> (no output)
+    ⏺ Edit(config.py)
+    ✘ Edit -> <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again 
+    ● 文件被改过了，重新读。
+    ⏺ Read(config.py)
+    ...
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+    ...
+    ● 改好了：prod 的 TIMEOUT 改成 60，DEBUG 关闭，保留了你加的注释。
+    --- config.py
+    # dev
+    TIMEOUT = 30
+    # prod
+    TIMEOUT = 60
+    DEBUG = False  # set by ops
+    ```
+
+三条规矩各拦了一次，每次模型都按报错的提示自我修正。（Node 版是在实现到第 10 章的代码上跑的：第 9 章的「外部修改提醒」会在 Bash 结果后面主动注入 diff、按新内容重新登记文件——就是那行 `◇ system  1 个文件被外部修改`——所以规矩二在这里不再「拦下」，模型直接按提醒里的新内容改；规矩二拦下的样子见测试「读后被外部修改，必须重读」。Node 版剧本也相应少了「撞墙 → 重读」两步。）最后的文件里，dev 的 `TIMEOUT` 没被误改，「你」加的注释 `# set by ops` 也没被覆盖。
 
 ## 三条规矩，各防一种事故
 
@@ -91,18 +138,31 @@ stateDiagram-v2
 
 ## 规矩一：先读后改
 
-`mini_cc/tools/file_state.py:guard_write` 是 `Write` 和 `Edit` 共用的检查：
+`mini_cc/tools/file_state.ts:guardWrite`（Python 版 `file_state.py:guard_write`）是 `Write` 和 `Edit` 共用的检查：
 
-```python
-def guard_write(state: FileStateCache, path: Path) -> str | None:
-    if not path.exists():
-        return None            # 新文件随便写
-    if state.get(path) is None:
-        return NOT_READ        # "File has not been read yet. Read it first before writing to it."
-    if state.is_stale(path):
-        return STALE           # 规矩二，见下节
-    return None
-```
+=== "Node"
+
+    ```ts
+    export function guardWrite(state: FileStateCache, path: string): string | null {
+      if (!existsSync(path)) return null;              // 新文件随便写
+      if (state.get(path) === undefined) return NOT_READ; // "File has not been read yet. Read it first before writing to it."
+      if (state.isStale(path)) return STALE;           // 规矩二，见下节
+      return null;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def guard_write(state: FileStateCache, path: Path) -> str | None:
+        if not path.exists():
+            return None            # 新文件随便写
+        if state.get(path) is None:
+            return NOT_READ        # "File has not been read yet. Read it first before writing to it."
+        if state.is_stale(path):
+            return STALE           # 规矩二，见下节
+        return None
+    ```
 
 `Read` 每次读完都调 `ctx.file_state.remember(path, text, partial=...)`，记下文件当时的 `mtime_ns` 和内容的 sha256。`FileStateCache` 挂在 `ToolContext.file_state` 上，整个会话共享一份。
 
@@ -114,14 +174,28 @@ def guard_write(state: FileStateCache, path: Path) -> str | None:
 
 `FileStateCache.is_stale`：
 
-```python
-def is_stale(self, path: Path) -> bool:
-    rec = self._records.get(path)
-    ...
-    if path.stat().st_mtime_ns == rec.mtime_ns:
-        return False                                  # 快路径：时间戳没变
-    return digest(read_text(path)) != rec.sha         # 时间戳变了，再比内容
-```
+=== "Node"
+
+    ```ts
+    isStale(path: string): boolean {
+      const rec = this.records.get(path);
+      ...
+      if (statSync(path, { bigint: true }).mtimeNs === rec.mtimeNs)
+        return false;                                   // 快路径：时间戳没变
+      return digest(readText(path)) !== rec.sha;        // 时间戳变了，再比内容
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def is_stale(self, path: Path) -> bool:
+        rec = self._records.get(path)
+        ...
+        if path.stat().st_mtime_ns == rec.mtime_ns:
+            return False                                  # 快路径：时间戳没变
+        return digest(read_text(path)) != rec.sha         # 时间戳变了，再比内容
+    ```
 
 为什么不只比 mtime？因为很多工具会 `touch` 文件而不改内容（构建系统、git checkout 同一个版本）。只比 mtime 会让模型白白重读。先比 mtime 是快路径，变了再比内容才是准确判断。测试 `test_touch_without_content_change_is_not_stale` 守着这一点。
 
@@ -129,18 +203,35 @@ def is_stale(self, path: Path) -> bool:
 
 ## 规矩三：old_string 必须唯一
 
-`mini_cc/tools/edit.py:EditTool.run` 的核心几行：
+`mini_cc/tools/edit.ts:EditTool.run`（Python 版 `edit.py:EditTool.run`）的核心几行：
 
-```python
-count = text.count(old)
-if count == 0:
-    return err(_diagnose_not_found(text, old))
-if count > 1 and not replace_all:
-    return err(f"Found {count} matches of the string to replace, but replace_all is false. "
-               "To replace all occurrences, set replace_all to true. To replace only one occurrence, "
-               f"please provide more context to uniquely identify the instance.\nString: {old}")
-updated = text.replace(old, new) if replace_all else text.replace(old, new, 1)
-```
+=== "Node"
+
+    ```ts
+    const n = count(text, old);
+    if (n === 0) return err(diagnoseNotFound(text, old));
+    if (n > 1 && !replaceAll) {
+      return err(`Found ${n} matches of the string to replace, but replace_all is false. ` +
+        "To replace all occurrences, set replace_all to true. To replace only one occurrence, " +
+        `please provide more context to uniquely identify the instance.\nString: ${old}`);
+    }
+    const pos = text.indexOf(old);
+    const updated = replaceAll ? text.split(old).join(replacement)
+                               : text.slice(0, pos) + replacement + text.slice(pos + old.length);
+    ```
+
+=== "Python"
+
+    ```python
+    count = text.count(old)
+    if count == 0:
+        return err(_diagnose_not_found(text, old))
+    if count > 1 and not replace_all:
+        return err(f"Found {count} matches of the string to replace, but replace_all is false. "
+                   "To replace all occurrences, set replace_all to true. To replace only one occurrence, "
+                   f"please provide more context to uniquely identify the instance.\nString: {old}")
+    updated = text.replace(old, new) if replace_all else text.replace(old, new, 1)
+    ```
 
 你可能会问：多处匹配时，替换第一处不就行了？大多数时候模型想改的就是第一处。
 
@@ -155,7 +246,7 @@ updated = text.replace(old, new) if replace_all else text.replace(old, new, 1)
 
 - `old_string == new_string`：拒绝，`No changes to make`。模型偶尔会这样「假装做了修改」。
 - `old_string` 为空且文件不存在：新建文件；文件已存在则拒绝（避免误当作「在开头插入」）。
-- 文件是 CRLF、模型给的是 LF：把模型的 `\n` 换成 `\r\n` 再匹配，写回时保持文件原有的换行风格。`read_text/write_text` 用 `newline=""` 打开，Python 不会悄悄转换换行符。
+- 文件是 CRLF、模型给的是 LF：把模型的 `\n` 换成 `\r\n` 再匹配，写回时保持文件原有的换行风格。`read_text/write_text` 用 `newline=""` 打开，Python 不会悄悄转换换行符（Node 的 `readFileSync` / `writeFileSync` 本来就不转换）。
 
 ## 报错要能指路
 
@@ -183,7 +274,7 @@ String:     /** assistant 消息：langfuse trace id */ ...
 
 ## Read 也升级了
 
-`mini_cc/tools/read.py:ReadTool`：
+`mini_cc/tools/read.ts:ReadTool`（Python 版 `read.py:ReadTool`）：
 
 - 输出 `cat -n` 风格：`{行号:>6}\t{内容}`。行号让模型能说「第 42 行」，也让人能对照。
 - `offset` / `limit`，默认最多 2000 行，单行最多 2000 字符。超大文件分段读，末尾注明 `[showing lines 50-51 of 100]`。
@@ -195,7 +286,7 @@ String:     /** assistant 消息：langfuse trace id */ ...
 
 ## 测试
 
-`tests/test_ch07_file_edit.py`，15 个：
+`tests/ch07_file_edit.test.ts`（Python 版 `tests/test_ch07_file_edit.py`），15 个：
 
 - Read：行号格式、offset/limit 与部分读取标记。
 - 规矩一：未读不许 Edit、未读不许覆盖已存在文件（新文件可以）。
@@ -203,12 +294,28 @@ String:     /** assistant 消息：langfuse trace id */ ...
 - 规矩三：多处匹配报错 → `replace_all` 全部替换；加上下文变唯一；no-op 拒绝。
 - 诊断：行号前缀、缩进、弯引号；CRLF 保留；空 `old_string` 新建文件后接着改不用重读；写前钩子；Edit 在 acceptEdits 下被识别为编辑；agent 级别的「Edit 失败 → Read → Edit 成功」。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 87%]
-..........                                                               [100%]
-82 passed in 1.58s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch0[1-7]*.test.ts'
+    ℹ tests 82
+    ℹ suites 0
+    ℹ pass 82
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 2685.042625
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 87%]
+    ..........                                                               [100%]
+    82 passed in 1.58s
+    ```
 
 ## 回到开头
 

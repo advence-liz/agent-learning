@@ -100,47 +100,101 @@ Performs exact string replacement in a file.
 
 ## 动手：一个按稳定性排序的拼装器
 
-下面这段代码（存成 `system_prompt_demo.py` 就能跑，只用标准库）模拟「片段注册表 + 稳定段在前 + 断点打在稳定段末尾」。两个用户的环境完全不同，看看缓存前缀会不会一样：
+下面这段代码（存成 `system_prompt_demo.ts` 就能跑，Python 版存成 `system_prompt_demo.py`，都只用标准库）模拟「片段注册表 + 稳定段在前 + 断点打在稳定段末尾」。两个用户的环境完全不同，看看缓存前缀会不会一样：
 
-```python
-import hashlib
+=== "Node"
 
-# 每个片段：(名字, 是否稳定, 生成函数)。稳定片段放前面，动态片段放后面。
-SECTIONS = [
-    ("identity", True,  lambda ctx: "You are a coding agent running in the user's terminal."),
-    ("doing_tasks", True, lambda ctx: (
-        "# Doing tasks\n"
-        "判断标准：改动是否让用户的目标更近一步。\n"
-        "例子：用户说『修这个 bug』，先复现再改，不顺手重构无关代码。\n"
-        "禁止：没读过的文件不要直接改。")),
-    ("tool_policy", True, lambda ctx: "# Tools\n优先用专用工具（Read/Edit），不要用 cat/sed 代替。"),
-    ("env", False, lambda ctx: f"# Environment\ncwd: {ctx['cwd']}\nos: {ctx['os']}\ndate: {ctx['date']}"),
-    ("git", False, lambda ctx: f"# Git\nbranch: {ctx['branch']}"),
-]
+    ```ts
+    import { createHash } from "node:crypto";
 
-def build_system(ctx, dynamic_to_user=False):
-    stable = [{"type": "text", "text": f(ctx)} for _, s, f in SECTIONS if s]
-    dynamic = [{"type": "text", "text": f(ctx)} for _, s, f in SECTIONS if not s]
-    stable[-1]["cache_control"] = {"type": "ephemeral"}      # 断点打在稳定段末尾
-    if dynamic_to_user:                                        # 类似 --exclude-dynamic-system-prompt-sections
-        return stable, "\n\n".join(b["text"] for b in dynamic)
-    return stable + dynamic, None
+    type Ctx = Record<string, string>;
+    type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 
-a = dict(cwd="/home/alice/proj", os="Linux", date="2026-10-21", branch="main")
-b = dict(cwd="/Users/bob/work", os="Darwin", date="2026-10-22", branch="feat/x")
-for name, ctx in (("alice", a), ("bob", b)):
-    sys_blocks, extra = build_system(ctx)
-    bp = next(i for i, x in enumerate(sys_blocks) if "cache_control" in x)
-    prefix = [x["text"] for x in sys_blocks[: bp + 1]]
-    print(name, "blocks:", len(sys_blocks), "cached-prefix hash:", hashlib.sha1("".join(prefix).encode()).hexdigest()[:8],
-          "full hash:", hashlib.sha1("".join(x["text"] for x in sys_blocks).encode()).hexdigest()[:8])
-```
+    // 每个片段：[名字, 是否稳定, 生成函数]。稳定片段放前面，动态片段放后面。
+    const SECTIONS: [string, boolean, (ctx: Ctx) => string][] = [
+      ["identity", true, (ctx) => "You are a coding agent running in the user's terminal."],
+      ["doing_tasks", true, (ctx) =>
+        "# Doing tasks\n" +
+        "判断标准：改动是否让用户的目标更近一步。\n" +
+        "例子：用户说『修这个 bug』，先复现再改，不顺手重构无关代码。\n" +
+        "禁止：没读过的文件不要直接改。"],
+      ["tool_policy", true, (ctx) => "# Tools\n优先用专用工具（Read/Edit），不要用 cat/sed 代替。"],
+      ["env", false, (ctx) => `# Environment\ncwd: ${ctx.cwd}\nos: ${ctx.os}\ndate: ${ctx.date}`],
+      ["git", false, (ctx) => `# Git\nbranch: ${ctx.branch}`],
+    ];
 
-```text
-❯ uv run python system_prompt_demo.py
-alice blocks: 5 cached-prefix hash: 32826c2c full hash: 382811fb
-bob blocks: 5 cached-prefix hash: 32826c2c full hash: 2dc9e33a
-```
+    function buildSystem(ctx: Ctx, dynamicToUser = false): [Block[], string | null] {
+      const stable: Block[] = SECTIONS.filter(([, s]) => s).map(([, , f]) => ({ type: "text", text: f(ctx) }));
+      const dynamic: Block[] = SECTIONS.filter(([, s]) => !s).map(([, , f]) => ({ type: "text", text: f(ctx) }));
+      stable[stable.length - 1].cache_control = { type: "ephemeral" };   // 断点打在稳定段末尾
+      if (dynamicToUser)                                                   // 类似 --exclude-dynamic-system-prompt-sections
+        return [stable, dynamic.map((b) => b.text).join("\n\n")];
+      return [[...stable, ...dynamic], null];
+    }
+
+    const sha1 = (s: string) => createHash("sha1").update(s).digest("hex").slice(0, 8);
+    const a = { cwd: "/home/alice/proj", os: "Linux", date: "2026-10-21", branch: "main" };
+    const b = { cwd: "/Users/bob/work", os: "Darwin", date: "2026-10-22", branch: "feat/x" };
+    for (const [name, ctx] of [["alice", a], ["bob", b]] as const) {
+      const [sysBlocks] = buildSystem(ctx);
+      const bp = sysBlocks.findIndex((x) => "cache_control" in x);
+      const prefix = sysBlocks.slice(0, bp + 1).map((x) => x.text);
+      console.log(name, "blocks:", sysBlocks.length, "cached-prefix hash:", sha1(prefix.join("")),
+        "full hash:", sha1(sysBlocks.map((x) => x.text).join("")));
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    import hashlib
+
+    # 每个片段：(名字, 是否稳定, 生成函数)。稳定片段放前面，动态片段放后面。
+    SECTIONS = [
+        ("identity", True,  lambda ctx: "You are a coding agent running in the user's terminal."),
+        ("doing_tasks", True, lambda ctx: (
+            "# Doing tasks\n"
+            "判断标准：改动是否让用户的目标更近一步。\n"
+            "例子：用户说『修这个 bug』，先复现再改，不顺手重构无关代码。\n"
+            "禁止：没读过的文件不要直接改。")),
+        ("tool_policy", True, lambda ctx: "# Tools\n优先用专用工具（Read/Edit），不要用 cat/sed 代替。"),
+        ("env", False, lambda ctx: f"# Environment\ncwd: {ctx['cwd']}\nos: {ctx['os']}\ndate: {ctx['date']}"),
+        ("git", False, lambda ctx: f"# Git\nbranch: {ctx['branch']}"),
+    ]
+
+    def build_system(ctx, dynamic_to_user=False):
+        stable = [{"type": "text", "text": f(ctx)} for _, s, f in SECTIONS if s]
+        dynamic = [{"type": "text", "text": f(ctx)} for _, s, f in SECTIONS if not s]
+        stable[-1]["cache_control"] = {"type": "ephemeral"}      # 断点打在稳定段末尾
+        if dynamic_to_user:                                        # 类似 --exclude-dynamic-system-prompt-sections
+            return stable, "\n\n".join(b["text"] for b in dynamic)
+        return stable + dynamic, None
+
+    a = dict(cwd="/home/alice/proj", os="Linux", date="2026-10-21", branch="main")
+    b = dict(cwd="/Users/bob/work", os="Darwin", date="2026-10-22", branch="feat/x")
+    for name, ctx in (("alice", a), ("bob", b)):
+        sys_blocks, extra = build_system(ctx)
+        bp = next(i for i, x in enumerate(sys_blocks) if "cache_control" in x)
+        prefix = [x["text"] for x in sys_blocks[: bp + 1]]
+        print(name, "blocks:", len(sys_blocks), "cached-prefix hash:", hashlib.sha1("".join(prefix).encode()).hexdigest()[:8],
+              "full hash:", hashlib.sha1("".join(x["text"] for x in sys_blocks).encode()).hexdigest()[:8])
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node system_prompt_demo.ts
+    alice blocks: 5 cached-prefix hash: 32826c2c full hash: 382811fb
+    bob blocks: 5 cached-prefix hash: 32826c2c full hash: 2dc9e33a
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python system_prompt_demo.py
+    alice blocks: 5 cached-prefix hash: 32826c2c full hash: 382811fb
+    bob blocks: 5 cached-prefix hash: 32826c2c full hash: 2dc9e33a
+    ```
 
 （纯本地计算，不调用模型。）
 

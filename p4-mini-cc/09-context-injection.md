@@ -18,71 +18,148 @@ mini-cc 现在对项目一无所知：你在根目录放了 `AGENTS.md` 写着�
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch09.json`），一个 git 仓库，根目录有 `AGENTS.md`，中途用一条命令模拟 formatter 改了文件：
+离线 fake 模型（`examples/ch09.json`；Node 版剧本里是 `utils.js`，用 `node -e` 改文件，最后一句回答不写死日期），一个 git 仓库，根目录有 `AGENTS.md`，中途用一条命令模拟 formatter 改了文件：
 
-```console
-❯ 检查一下 utils.py 的命名
-◇ system  项目说明 1 个文件、git 快照
-◇ system  日期 2026-10-21
-● 按 AGENTS.md 的规范，先看看 utils.py。
-⏺ Read(utils.py)
-✔ Read ->      1        def getUser(uid):
-       2            return {"id": uid}
-● （模拟 formatter / 另一个终端改了文件）
-⏺ Bash(python3 -c "import pathlib; p=pathlib.Path('utils.py'); p.write_text(...)")
-...
-选择 [1/2/3]: 1
-✔ Bash -> (no output)
-◇ system  1 个文件被外部修改
-● 看到 utils.py 已经被改成 get_user 了，符合 snake_case 规范，不需要我再动。
-❯ 今天几号？
-● 今天是 2026-10-21（来自注入的日期）。
-❯ /context
-system[0]        971 chars  You are mini-cc, an interactive coding a
-system[1]        237 chars  # Environment
-reminders        924 chars  3 个 <system-reminder> 块
-messages         879 chars  8 条消息（不含提醒）
-```
+=== "Node"
+
+    ```console
+    ❯ 检查一下 utils.js 的命名
+    ◇ system  项目说明 1 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    ● 按 AGENTS.md 的规范，先看看 utils.js。
+    ⏺ Read(utils.js)
+    ✔ Read ->      1	function getUser(uid) {
+           2	  return { id: uid };
+           3	}
+    ● （模拟 formatter / 另一个终端改了文件）
+    ⏺ Bash(node -e "const fs = require('fs'); fs.writeFileSync('utils.js', fs.readFileSync('utils.js', 'utf8').replace('function getUser', 'function get_user'))")
+    是否允许 Bash(node -e "const fs = require('fs'); fs.writeFileSync('utils.js', fs.readFileSync('utils.js', 'utf8').replace('function getUser', 'function get_user'))")？（needs approval）
+      1. 允许
+      2. 允许，且本会话不再询问 Bash(node -e "const fs = require('fs'); fs.writeFileSync('utils.js', fs.readFileSync('utils.js', 'utf8').replace('function getUser', 'function get_user'))")
+      3. 拒绝（可以附一句话告诉模型该怎么做）
+    选择 [1/2/3]: 1
+    ✔ Bash -> (no output)
+    ◇ system  1 个文件被外部修改
+    ● 看到 utils.js 已经被改成 get_user 了，符合 snake_case 规范，不需要我再动。
+    ❯ 今天几号？
+    ● 今天的日期在第一条消息的 <system-reminder> 里（◇ system 日期 那一行），不用调工具就知道。
+    ❯ /context
+    system[0]       1178 chars  You are mini-cc, an interactive coding a
+    system[1]        239 chars  # Environment
+    reminders        926 chars  3 个 <system-reminder> 块
+    messages         907 chars  8 条消息（不含提醒）
+    last request     100 tokens
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 检查一下 utils.py 的命名
+    ◇ system  项目说明 1 个文件、git 快照
+    ◇ system  日期 2026-10-21
+    ● 按 AGENTS.md 的规范，先看看 utils.py。
+    ⏺ Read(utils.py)
+    ✔ Read ->      1        def getUser(uid):
+           2            return {"id": uid}
+    ● （模拟 formatter / 另一个终端改了文件）
+    ⏺ Bash(python3 -c "import pathlib; p=pathlib.Path('utils.py'); p.write_text(...)")
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> (no output)
+    ◇ system  1 个文件被外部修改
+    ● 看到 utils.py 已经被改成 get_user 了，符合 snake_case 规范，不需要我再动。
+    ❯ 今天几号？
+    ● 今天是 2026-10-21（来自注入的日期）。
+    ❯ /context
+    system[0]        971 chars  You are mini-cc, an interactive coding a
+    system[1]        237 chars  # Environment
+    reminders        924 chars  3 个 <system-reminder> 块
+    messages         879 chars  8 条消息（不含提醒）
+    ```
 
 `◇ system` 开头的行，是客户端**主动**往上下文里塞东西的时刻。会话文件里，第一条 user 消息长这样（三个文本块）：
 
-```
-<system-reminder>
-# Project instructions
-Instructions below come from AGENTS.md / CLAUDE.md files. Follow them; files closer to the working directory take precedence.
+=== "Node"
 
-Contents of $SCRATCH/demo_proj/AGENTS.md:
+    ```
+    <system-reminder>
+    # Project instructions
+    Instructions below come from AGENTS.md / CLAUDE.md files. Follow them; files closer to the working directory take precedence.
 
-# 项目规范
-- 变量和函数名必须用 snake_case
+    Contents of $SCRATCH/demo_proj/AGENTS.md:
 
-# Git snapshot (taken at session start; it will NOT update during the conversation)
-Current branch: main
+    # 项目规范
+    - 变量和函数名必须用 snake_case
 
-Status:
-?? new.txt
+    # Git snapshot (taken at session start; it will NOT update during the conversation)
+    Current branch: main
 
-Recent commits:
-721fcaf init
-</system-reminder>
-<system-reminder>
-# Current date
-Today's date is 2026-10-21.
-</system-reminder>
-检查一下 utils.py 的命名
-```
+    Status:
+    ?? new.txt
+
+    Recent commits:
+    ff0674f init
+    </system-reminder>
+    <system-reminder>
+    # Current date
+    Today's date is 2026-10-22.
+    </system-reminder>
+    检查一下 utils.js 的命名
+    ```
+
+=== "Python"
+
+    ```
+    <system-reminder>
+    # Project instructions
+    Instructions below come from AGENTS.md / CLAUDE.md files. Follow them; files closer to the working directory take precedence.
+
+    Contents of $SCRATCH/demo_proj/AGENTS.md:
+
+    # 项目规范
+    - 变量和函数名必须用 snake_case
+
+    # Git snapshot (taken at session start; it will NOT update during the conversation)
+    Current branch: main
+
+    Status:
+    ?? new.txt
+
+    Recent commits:
+    721fcaf init
+    </system-reminder>
+    <system-reminder>
+    # Current date
+    Today's date is 2026-10-21.
+    </system-reminder>
+    检查一下 utils.py 的命名
+    ```
 
 而 Bash 结果那条 user 消息是 `['tool_result', 'text']`，后面那个 text 块就是文件变化的提醒：
 
-```
-<system-reminder>
-utils.py was modified outside of your tools (by the user, a formatter or a command). Diff since you last saw it:
-@@ -1,2 +1,2 @@
--def getUser(uid):
-+def get_user(uid):
-     return {"id": uid}
-</system-reminder>
-```
+=== "Node"
+
+    ```
+    <system-reminder>
+    utils.js was modified outside of your tools (by the user, a formatter or a command). Diff since you last saw it:
+    @@ -1,2 +1,2 @@
+    -function getUser(uid) {
+    +function get_user(uid) {
+       return { id: uid };
+    </system-reminder>
+    ```
+
+=== "Python"
+
+    ```
+    <system-reminder>
+    utils.py was modified outside of your tools (by the user, a formatter or a command). Diff since you last saw it:
+    @@ -1,2 +1,2 @@
+    -def getUser(uid):
+    +def get_user(uid):
+         return {"id": uid}
+    </system-reminder>
+    ```
 
 模型没有调任何工具，就知道了项目规范、git 状态、日期，以及文件刚被改过。
 
@@ -113,19 +190,40 @@ flowchart LR
 
 ## 位置 ①：system 里只放不变的
 
-`mini_cc/context.py:ContextBuilder.system_blocks`：
+`mini_cc/context.ts:ContextBuilder.systemBlocks`（Python 版 `context.py:ContextBuilder.system_blocks`）：
 
-```python
-def system_blocks(self):
-    """会话内只算一次：任何一个字节变化都会让 prompt cache 失效，所以别在这里放时间戳。"""
-    if self._system_cache is None:
-        texts = [STATIC_PROMPT, environment_text(self.agent.settings.cwd, self.agent.settings.model)]
-        texts += [t for fn in self.system_sections if (t := fn())]
-        blocks = [{"type": "text", "text": t} for t in texts]
-        blocks[-1]["cache_control"] = {"type": "ephemeral"}
-        self._system_cache = blocks
-    return self._system_cache
-```
+=== "Node"
+
+    ```ts
+    systemBlocks(): Block[] {
+      // 会话内只算一次：任何一个字节变化都会让 prompt cache 失效，所以别在这里放时间戳
+      if (this.systemCache === null) {
+        const texts = [STATIC_PROMPT, environmentText(this.agent.settings.cwd, this.agent.settings.model)];
+        for (const fn of this.systemSections) {
+          const t = fn();
+          if (t) texts.push(t);
+        }
+        const blocks: Block[] = texts.map((t) => ({ type: "text", text: t }));
+        blocks.at(-1)!.cache_control = { type: "ephemeral" };
+        this.systemCache = blocks;
+      }
+      return this.systemCache;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def system_blocks(self):
+        """会话内只算一次：任何一个字节变化都会让 prompt cache 失效，所以别在这里放时间戳。"""
+        if self._system_cache is None:
+            texts = [STATIC_PROMPT, environment_text(self.agent.settings.cwd, self.agent.settings.model)]
+            texts += [t for fn in self.system_sections if (t := fn())]
+            blocks = [{"type": "text", "text": t} for t in texts]
+            blocks[-1]["cache_control"] = {"type": "ephemeral"}
+            self._system_cache = blocks
+        return self._system_cache
+    ```
 
 两个块：`STATIC_PROMPT`（身份、工作规则）和 `environment_text()`（工作目录、是否 git 仓库、平台、shell、模型）。环境信息在会话内不会变，所以也放这里。最后一块打上 `cache_control`。
 
@@ -147,14 +245,27 @@ def system_blocks(self):
 
 注入点只有一个，`mini_cc/loop.py:Agent._append_user`：
 
-```python
-def _append_user(self, content, trigger):
-    """追加一条 user 消息，顺带把本轮该注入的上下文并进去。"""
-    merged, atts = self.context.inject(content, trigger)
-    for a in atts:
-        yield ContextInjected(a.kind, a.title)
-    self._append({"role": "user", "content": merged})
-```
+=== "Node"
+
+    ```ts
+    /** 追加一条 user 消息，顺带把本轮该注入的上下文并进去。 */
+    private async *appendUser(content: string | Block[], trigger: "user" | "tool_result") {
+      const [merged, atts] = await this.context.inject(content, trigger);
+      for (const a of atts) yield { type: "ContextInjected", kind: a.kind, title: a.title };
+      this.append({ role: "user", content: merged });
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def _append_user(self, content, trigger):
+        """追加一条 user 消息，顺带把本轮该注入的上下文并进去。"""
+        merged, atts = self.context.inject(content, trigger)
+        for a in atts:
+            yield ContextInjected(a.kind, a.title)
+        self._append({"role": "user", "content": merged})
+    ```
 
 `run_turn` 里用户发话、`_run_tools` 里工具结果，都经过它。`ContextBuilder.inject` 决定附件放在哪：
 
@@ -171,13 +282,26 @@ def _append_user(self, content, trigger):
 
 `instructions_provider` 是位置 ② 的主力：
 
-```python
-def provide(st):
-    if st.trigger != "user" or any(INSTRUCTIONS_HEADER in r for r in st.reminders()):
-        return None  # 每个会话只注入一次；压缩后历史里没有了，会自动再注入
-    files = find_instruction_files(cwd, home)
-    ...
-```
+=== "Node"
+
+    ```ts
+    return (st) => {
+      if (st.trigger !== "user" || st.reminders().some((r) => r.includes(INSTRUCTIONS_HEADER)))
+        return null;  // 每个会话只注入一次；压缩后历史里没有了，会自动再注入
+      const files = findInstructionFiles(cwd, home);
+      ...
+    };
+    ```
+
+=== "Python"
+
+    ```python
+    def provide(st):
+        if st.trigger != "user" or any(INSTRUCTIONS_HEADER in r for r in st.reminders()):
+            return None  # 每个会话只注入一次；压缩后历史里没有了，会自动再注入
+        files = find_instruction_files(cwd, home)
+        ...
+    ```
 
 注意它判断「发没发过」的方式：不是一个 `self.injected = True` 的标志位，而是**扫描历史**里有没有带 `# Project instructions` 标题的提醒。
 
@@ -197,20 +321,31 @@ git 快照（当前分支、`git status --short`、最近 5 次提交）也在�
 
 **`date_provider`**：扫描历史里最后一条日期提醒，和今天比，不一样就注入。第一次是「Today's date is …」，之后变了是「The date has changed. Today's date is now …」。这两句的措辞和 Claude Code 二进制里的一致；你本机会话记录里也能看到 `date` 和 `date_change` 两种 attachment。
 
-**`changed_files_provider`**：遍历上一章的 `FileStateCache`，对每个「过期」的文件，用 `difflib.unified_diff` 算出「模型上次看到的版本」和「现在的版本」之间的差异，注入 diff。为此 `FileRecord` 多存了一份 `text`（超过 20 万字符的文件不存，只提示重读）。
+**`changed_files_provider`**：遍历上一章的 `FileStateCache`，对每个「过期」的文件，用 `difflib.unified_diff`（Node 没有标准库 difflib，`mini_cc/difflib.ts` 按 CPython 的算法移植了一份）算出「模型上次看到的版本」和「现在的版本」之间的差异，注入 diff。为此 `FileRecord` 多存了一份 `text`（超过 20 万字符的文件不存，只提示重读）。
 
-```python
-diff = list(difflib.unified_diff(rec.text.splitlines(), new.splitlines(), "before", "after", lineterm="", n=1))[2:]
-notes.append(f"{rel} was modified outside of your tools (by the user, a formatter or a command). "
-             f"Diff since you last saw it:\n" + "\n".join(diff[:max_diff_lines]) + more)
-fs.remember(path, new, ...)   # 模型已经知道了变化：按新内容登记，避免下一轮重复提醒
-```
+=== "Node"
+
+    ```ts
+    const diff = unifiedDiff(splitLines(rec.text), splitLines(now), "before", "after", 1).slice(2);
+    notes.push(`${rel} was modified outside of your tools (by the user, a formatter or a command). ` +
+      "Diff since you last saw it:\n" + diff.slice(0, maxDiffLines).join("\n") + more);
+    fs.remember(path, now, rec.partial);  // 模型已经知道了变化：按新内容登记，避免下一轮重复提醒
+    ```
+
+=== "Python"
+
+    ```python
+    diff = list(difflib.unified_diff(rec.text.splitlines(), new.splitlines(), "before", "after", lineterm="", n=1))[2:]
+    notes.append(f"{rel} was modified outside of your tools (by the user, a formatter or a command). "
+                 f"Diff since you last saw it:\n" + "\n".join(diff[:max_diff_lines]) + more)
+    fs.remember(path, new, ...)   # 模型已经知道了变化：按新内容登记，避免下一轮重复提醒
+    ```
 
 这比上一章「等模型撞上 modified since read 再重读」好在哪？一是**主动**：模型可能根本不打算再编辑这个文件，但它需要知道文件变了（比如你修掉了它正在排查的 bug）；二是**便宜**：一段 diff 比整个文件小得多。你本机 Claude Code 的会话记录里有近 800 条 `edited_text_file` 类型的 attachment，内容就是文件名加一段片段——同样的思路。
 
-有个微妙之处：模型**自己**用 Edit/Write 改的文件不会触发提醒（工具写完立刻更新了状态表），但用 **Bash** 改的会（演示里那条 `python3 -c` 就是）。对文件状态表来说，Bash 和你的编辑器没有区别，都是「外部」。
+有个微妙之处：模型**自己**用 Edit/Write 改的文件不会触发提醒（工具写完立刻更新了状态表），但用 **Bash** 改的会（演示里那条 `python3 -c` 就是，Node 版是 `node -e`）。对文件状态表来说，Bash 和你的编辑器没有区别，都是「外部」。
 
-**`notifications_provider`**：把 `Agent.notifications` 队列里攒的消息一次性送出去。`Agent.notify(text)` 是线程安全的（`queue.Queue`），任何线程都能调。现在没人用它；第 16 章后台命令跑完、第 17 章 sub agent 交报告、第 18 章监听到日志里的 ERROR，都会往这里放一条 `<task-notification>`，下一次追加 user 消息时送达模型。测试 `test_notifications_from_other_threads` 已经从另一个线程验证了这条通道。
+**`notifications_provider`**：把 `Agent.notifications` 队列里攒的消息一次性送出去。`Agent.notify(text)` 是线程安全的（`queue.Queue`），任何线程都能调（Node 是单线程事件循环，子进程、定时器的回调和循环交替执行，一个数组就够了）。现在没人用它；第 16 章后台命令跑完、第 17 章 sub agent 交报告、第 18 章监听到日志里的 ERROR，都会往这里放一条 `<task-notification>`，下一次追加 user 消息时送达模型。测试 `test_notifications_from_other_threads` 已经从另一个线程验证了这条通道。
 
 最后，`collect()` 对每个提供者 `try/except`：某个提供者坏了（比如 git 命令超时），跳过它，不能连累整轮对话。
 
@@ -221,7 +356,7 @@ fs.remember(path, new, ...)   # 模型已经知道了变化：按新内容登记
 
 ## 测试
 
-`tests/test_ch09_context.py`，12 个：
+`tests/ch09_context.test.ts`（Python 版 `tests/test_ch09_context.py`），12 个：
 
 - system 在一个会话内逐字节不变、末尾有 `cache_control`、不含日期；请求带顶层缓存，适配层把它传给 SDK。
 - 项目说明只在第一条 user 消息里注入一次；查找顺序（用户级 → 仓库根 → … → cwd）；`/new` 重新注入、`/resume` 不重复。
@@ -229,14 +364,30 @@ fs.remember(path, new, ...)   # 模型已经知道了变化：按新内容登记
 - 外部修改注入 diff 且之后不再过期；模型自己 Edit 不触发、Bash 改动触发且提醒排在 `tool_result` 之后。
 - 跨线程通知送达；历史严格只追加；坏掉的提供者被跳过；`/context`。
 
-为了不让早期章节的测试被注入的块干扰，`tests/conftest.py` 加了 `without_session_context()`，第 1、2、4、8 章各有一处断言改用它（CHANGELOG 里记了）。
+为了不让早期章节的测试被注入的块干扰，`tests/conftest.py` 加了 `without_session_context()`（Node 版 `tests/conftest.ts` 的 `withoutSessionContext()`），第 1、2、4、8 章各有一处断言改用它（CHANGELOG 里记了）。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 69%]
-...............................                                          [100%]
-103 passed in 3.25s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch0[1-9]*.test.ts'
+    ℹ tests 103
+    ℹ suites 0
+    ℹ pass 103
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 2644.675958
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 69%]
+    ...............................                                          [100%]
+    103 passed in 3.25s
+    ```
 
 ## 回到开头
 

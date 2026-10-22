@@ -16,32 +16,68 @@
 
 ## 先跑起来看看
 
-启动两次进程（离线 fake 模型；`MINI_CC_HOME` 指到临时目录，不污染 `~/.mini_cc`）：
+启动两次进程（离线 fake 模型；`MINI_CC_HOME` 指到临时目录，不污染 `~/.mini_cc`；Node 版剧本是 `examples/ch04a.json` / `ch04b.json`，测试命令换成了 `npm test`）：
 
-```console
---- 第一次启动
-❯ 记一下：测试命令是 uv run pytest -q
-● 好的，我记住了：这个项目的测试命令是 uv run pytest -q。
-❯ /exit
---- 第二次启动
-❯ /resume
-1. b25c2034  10-21 19:44    2 msgs  记一下：测试命令是 uv run pytest -q
-输入 /resume <序号> 恢复
-❯ /resume 1
-已恢复会话 b25c2034（2 条消息），继续聊吧
-❯ 测试命令是什么来着？
-● 你之前告诉我，测试命令是 uv run pytest -q。
-❯ /status
-...
-session   3f9c2a1e-5b7d-4c1a-9e2f-8a6b0c4d1e7f
-messages  4
-total     in 200 / out 40 / 2 requests
---- 磁盘上的文件
-3f9c2a1e-5b7d-4c1a-9e2f-8a6b0c4d1e7f.jsonl
-{"type": "user", "uuid": "4cf00467-…", "parentUuid": null, "sessionId": "b25c2034-…", "timestamp": "2026-10-21T11:44:41.544+00:00", "cwd": "/Users/liz/liz/agent-learn/code/mini_cc", "message": {"role": "user", "content": "记一下：测试命令是 uv run pytest -q"}}
-{"type": "assistant", "uuid": "3e85657e-…", "parentU…
-       4 $SCRATCH/demo_home/projects/-Users-liz-liz-agent-learn-code-mini-cc/b25c2034-….jsonl
-```
+=== "Node"
+
+    ```console
+    --- 第一次启动
+    ❯ 记一下：测试命令是 npm test
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    ● 好的，我记住了：这个项目的测试命令是 npm test。
+    ❯ /exit
+    --- 第二次启动
+    ❯ /resume
+    1. 6ec7a169  10-22 17:55    2 msgs  记一下：测试命令是 npm test
+    输入 /resume <序号> 恢复
+    ❯ /resume 1
+    已恢复会话 6ec7a169（2 条消息），继续聊吧
+    ❯ 测试命令是什么来着？
+    ● 你之前告诉我，测试命令是 npm test。
+    ❯ /status
+    model     claude-opus-5-5
+    effort    medium
+    cwd       /Users/liz/liz/agent-learn/code/mini_cc-node
+    session   6ec7a169-ab5d-4f12-bf8d-16f92f2c50f4
+    mode      default
+    allow     -
+    reviewer  0 calls
+    messages  4
+    context   100 tokens（最近一次请求的输入）
+    total     in 200 / out 40 / 2 requests
+    --- 磁盘上的文件
+    6ec7a169-ab5d-4f12-bf8d-16f92f2c50f4.jsonl
+    {"type":"user","uuid":"532d2d03-cfe4-46eb-8459-07e2d0d81c0a","parentUuid":null,"sessionId":"6ec7a169-ab5d-4f12-bf8d-16f92f2c50f4","timestamp":"2026-10-22T09:55:53.674+00:00","cwd":"/Users/liz/liz/agent-learn/code/mini_cc-node","message":{"role":"user","content":[{"type":"text","text":"<system-reminder>\n# Project instructions\n(no AGENTS.md / CLAUDE.md found)\n\n# Gi…
+           4 $SCRATCH/demo_home/projects/-Users-liz-liz-agent-learn-code-mini-cc-node/6ec7a169-ab5d-4f12-bf8d-16f92f2c50f4.jsonl
+    ```
+
+=== "Python"
+
+    ```console
+    --- 第一次启动
+    ❯ 记一下：测试命令是 uv run pytest -q
+    ● 好的，我记住了：这个项目的测试命令是 uv run pytest -q。
+    ❯ /exit
+    --- 第二次启动
+    ❯ /resume
+    1. b25c2034  10-21 19:44    2 msgs  记一下：测试命令是 uv run pytest -q
+    输入 /resume <序号> 恢复
+    ❯ /resume 1
+    已恢复会话 b25c2034（2 条消息），继续聊吧
+    ❯ 测试命令是什么来着？
+    ● 你之前告诉我，测试命令是 uv run pytest -q。
+    ❯ /status
+    ...
+    session   3f9c2a1e-5b7d-4c1a-9e2f-8a6b0c4d1e7f
+    messages  4
+    total     in 200 / out 40 / 2 requests
+    --- 磁盘上的文件
+    3f9c2a1e-5b7d-4c1a-9e2f-8a6b0c4d1e7f.jsonl
+    {"type": "user", "uuid": "4cf00467-…", "parentUuid": null, "sessionId": "b25c2034-…", "timestamp": "2026-10-21T11:44:41.544+00:00", "cwd": "/Users/liz/liz/agent-learn/code/mini_cc", "message": {"role": "user", "content": "记一下：测试命令是 uv run pytest -q"}}
+    {"type": "assistant", "uuid": "3e85657e-…", "parentU…
+           4 $SCRATCH/demo_home/projects/-Users-liz-liz-agent-learn-code-mini-cc/b25c2034-….jsonl
+    ```
 
 （fake 模型第二次的回答是剧本写好的；但测试里会断言「第二个进程发给模型的请求确实带上了第一个进程的历史」，那才是真正要验证的东西。）
 
@@ -83,13 +119,25 @@ JSONL（JSON Lines，一行一个 JSON 对象）就是追加式账本：
 
 上一章定下「历史只在 `MessageDone` 之后写入」，这一章把它推到底：`mini_cc/loop.py:Agent._append` 是历史**唯一**的写入口，只追加、不修改。
 
-```python
-def _append(self, msg: dict[str, Any], **meta: Any) -> None:
-    """历史的唯一写入口。只追加、不修改——这条规矩让持久化、prompt cache、thinking 校验都简单。"""
-    self.messages.append(msg)
-    for fn in self.listeners:
-        fn(msg, meta)
-```
+=== "Node"
+
+    ```ts
+    /** 历史的唯一写入口。只追加、不修改——这条规矩让持久化、prompt cache、thinking 校验都简单。 */
+    append(msg: Message, meta: Record<string, any> = {}): void {
+      this.messages.push(msg);
+      for (const fn of this.listeners) fn(msg, meta);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def _append(self, msg: dict[str, Any], **meta: Any) -> None:
+        """历史的唯一写入口。只追加、不修改——这条规矩让持久化、prompt cache、thinking 校验都简单。"""
+        self.messages.append(msg)
+        for fn in self.listeners:
+            fn(msg, meta)
+    ```
 
 这条规矩同时换来三个好处：
 
@@ -103,22 +151,43 @@ def _append(self, msg: dict[str, Any], **meta: Any) -> None:
 
 Agent 不知道磁盘的存在，它只负责在 `_append` 时通知 listener。`mini_cc/session.py:Session.record` 就是那个 listener：
 
-```python
-def record(self, msg, meta=None):
-    rec = {
-        "type": msg["role"],
-        "uuid": str(uuidlib.uuid4()),
-        "parentUuid": self.last_uuid,      # 串成一条链
-        "sessionId": self.id,
-        "timestamp": _now(),
-        "cwd": str(self.store.cwd),
-        "message": msg,                     # 原样存，恢复时原样回传
+=== "Node"
+
+    ```ts
+    record(msg: Message, meta: Record<string, any> = {}): void {
+      const rec: SessionRecord = {
+        type: msg.role,
+        uuid: randomUUID(),
+        parentUuid: this.lastUuid,        // 串成一条链
+        sessionId: this.id,
+        timestamp: now(),
+        cwd: this.store.cwd,
+        message: msg,                     // 原样存，恢复时原样回传
+      };
+      if (meta.usage) rec.usage = meta.usage;   // assistant 行带上这次请求的 usage
+      this.appendRecord(rec);
+      this.lastUuid = rec.uuid;
     }
-    if meta and meta.get("usage"):
-        rec["usage"] = meta["usage"]        # assistant 行带上这次请求的 usage
-    self.append_record(rec)
-    self.last_uuid = rec["uuid"]
-```
+    ```
+
+=== "Python"
+
+    ```python
+    def record(self, msg, meta=None):
+        rec = {
+            "type": msg["role"],
+            "uuid": str(uuidlib.uuid4()),
+            "parentUuid": self.last_uuid,      # 串成一条链
+            "sessionId": self.id,
+            "timestamp": _now(),
+            "cwd": str(self.store.cwd),
+            "message": msg,                     # 原样存，恢复时原样回传
+        }
+        if meta and meta.get("usage"):
+            rec["usage"] = meta["usage"]        # assistant 行带上这次请求的 usage
+        self.append_record(rec)
+        self.last_uuid = rec["uuid"]
+    ```
 
 几个字段的用意：
 
@@ -132,17 +201,30 @@ def record(self, msg, meta=None):
 
 ## 恢复：读回来，再修一下
 
-`mini_cc/session.py:SessionStore.load` 逐行读，只取 `type` 是 `user`/`assistant` 的行，其他类型一律忽略——第 13、14 章会写入别的记录类型（比如压缩边界），老代码读到也不会崩。
+`mini_cc/session.ts:SessionStore.load`（Python 版 `session.py:SessionStore.load`）逐行读，只取 `type` 是 `user`/`assistant` 的行，其他类型一律忽略——第 13、14 章会写入别的记录类型（比如压缩边界），老代码读到也不会崩。
 
-`mini_cc/cli.py:App.resume`：
+`mini_cc/cli.ts:App.resume`（Python 版 `cli.py:App.resume`）：
 
-```python
-def resume(self, session_id: str) -> int:
-    session, messages, usage = self.store.load(session_id)
-    self._attach(session)  # 先接上文件，load_history 里补的修复记录才会写进这个会话
-    self.agent.load_history(messages, usage)
-    return len(messages)
-```
+=== "Node"
+
+    ```ts
+    resume(sessionId: string): number {
+      const [session, messages, usage] = this.store.load(sessionId);
+      this.attach(session); // 先接上文件，loadHistory 里补的修复记录才会写进这个会话
+      this.agent.loadHistory(messages, usage);
+      return messages.length;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def resume(self, session_id: str) -> int:
+        session, messages, usage = self.store.load(session_id)
+        self._attach(session)  # 先接上文件，load_history 里补的修复记录才会写进这个会话
+        self.agent.load_history(messages, usage)
+        return len(messages)
+    ```
 
 `load_history()` 里会调一次上一章的 `repair_history()`。为什么恢复时还要修？因为进程可能死在「模型说要调工具、工具还没返回」那一刻，磁盘上最后一行就是一个悬空的 `tool_use`。不修，恢复后第一次请求就 400。
 
@@ -159,17 +241,33 @@ def resume(self, session_id: str) -> int:
 
 ## 测试
 
-`tests/test_ch04_session.py`：
+`tests/ch04_session.test.ts`（Python 版 `tests/test_ch04_session.py`）：
 
 - slug 规则；第一条消息前不建文件；每条消息立刻落盘；`parentUuid` 链；assistant 行带 `usage`。
 - **模拟重启**：同一个 `home` 新建第二个 `App`，`/resume 1` 后断言 FakeClient 收到的第一次请求里带着上一个进程的历史，且新消息追加在原文件上、用量也恢复了。
 - `/new` 后旧会话还在；最后一行写了半截也能读；恢复时修复悬空 `tool_use` 并落盘；id 前缀解析与报错。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-.....................................                                    [100%]
-37 passed in 1.68s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch0[1-4]*.test.ts'
+    ℹ tests 37
+    ℹ suites 0
+    ℹ pass 37
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 2820.873792
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    .....................................                                    [100%]
+    37 passed in 1.68s
+    ```
 
 ## 和真实 Claude Code 比一比
 

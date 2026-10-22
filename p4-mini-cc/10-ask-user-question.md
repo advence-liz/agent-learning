@@ -16,34 +16,65 @@
 
 离线 fake 模型（`examples/ch10.json`）：
 
-```console
-❯ 帮我开发一个博客系统
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-● 需求里技术栈和功能范围都没说，我先问清楚。
-⏺ AskUserQuestion(3 个问题：技术栈 / 功能范围 / 部署)
-[技术栈] (1/3) 博客用什么技术栈？
-  1. Astro (Recommended) — 内容站首选，默认零 JS
-  2. Next.js — 需要动态功能时更灵活
-  3. Hugo — Go 写的静态站生成器，构建最快
-  或直接输入你自己的答案；回车跳过
-› 1
-[功能范围] (2/3) 第一版要哪些功能？（可多选，用逗号分隔）
-  1. 评论 — 接 giscus
-  2. RSS
-  3. 全文搜索 — pagefind
-  或直接输入你自己的答案；回车跳过
-› 2,3
-[部署] (3/3) 部署到哪里？
-  1. Cloudflare Pages
-  2. Vercel
-  或直接输入你自己的答案；回车跳过
-› 公司内网的 Nginx
-✔ AskUserQuestion -> Your questions have been answered: "博客用什么技术栈？"="Astro (Recommended)", "第一版要哪些功能？"="RSS, 全文搜索", "部署到哪
-● 收到：Astro + RSS + 全文搜索，部署到公司内网的 Nginx。我按这个口径开始搭骨架。
-```
+=== "Node"
 
-三个问题一次问完；第二题多选；第三题的两个选项都不对，直接打字回答。回给模型的完整 `tool_result`：
+    ```console
+    ❯ 帮我开发一个博客系统
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 需求里技术栈和功能范围都没说，我先问清楚。
+    ⏺ AskUserQuestion(3 个问题：技术栈 / 功能范围 / 部署)
+    [技术栈] (1/3) 博客用什么技术栈？
+      1. Astro (Recommended) — 内容站首选，默认零 JS
+      2. Next.js — 需要动态功能时更灵活
+      3. Hugo — Go 写的静态站生成器，构建最快
+      或直接输入你自己的答案；回车跳过
+    › 1
+    [功能范围] (2/3) 第一版要哪些功能？（可多选，用逗号分隔）
+      1. 评论 — 接 giscus
+      2. RSS
+      3. 全文搜索 — pagefind
+      或直接输入你自己的答案；回车跳过
+    › 2,3
+    [部署] (3/3) 部署到哪里？
+      1. Cloudflare Pages
+      2. Vercel
+      或直接输入你自己的答案；回车跳过
+    › 公司内网的 Nginx
+    ✔ AskUserQuestion -> Your questions have been answered: "博客用什么技术栈？"="Astro (Recommended)", "第一版要哪些功能？"="RSS, 全文搜索", "部署到哪
+    ● 收到：Astro + RSS + 全文搜索，部署到公司内网的 Nginx。我按这个口径开始搭骨架。
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 帮我开发一个博客系统
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ● 需求里技术栈和功能范围都没说，我先问清楚。
+    ⏺ AskUserQuestion(3 个问题：技术栈 / 功能范围 / 部署)
+    [技术栈] (1/3) 博客用什么技术栈？
+      1. Astro (Recommended) — 内容站首选，默认零 JS
+      2. Next.js — 需要动态功能时更灵活
+      3. Hugo — Go 写的静态站生成器，构建最快
+      或直接输入你自己的答案；回车跳过
+    › 1
+    [功能范围] (2/3) 第一版要哪些功能？（可多选，用逗号分隔）
+      1. 评论 — 接 giscus
+      2. RSS
+      3. 全文搜索 — pagefind
+      或直接输入你自己的答案；回车跳过
+    › 2,3
+    [部署] (3/3) 部署到哪里？
+      1. Cloudflare Pages
+      2. Vercel
+      或直接输入你自己的答案；回车跳过
+    › 公司内网的 Nginx
+    ✔ AskUserQuestion -> Your questions have been answered: "博客用什么技术栈？"="Astro (Recommended)", "第一版要哪些功能？"="RSS, 全文搜索", "部署到哪
+    ● 收到：Astro + RSS + 全文搜索，部署到公司内网的 Nginx。我按这个口径开始搭骨架。
+    ```
+
+三个问题一次问完；第二题多选；第三题的两个选项都不对，直接打字回答。回给模型的完整 `tool_result`（Node 版逐字相同）：
 
 ```
 Your questions have been answered: "博客用什么技术栈？"="Astro (Recommended)", "第一版要哪些功能？"="RSS, 全文搜索", "部署到哪里？"="公司内网的 Nginx". You can now continue with these answers in mind.
@@ -82,31 +113,56 @@ sequenceDiagram
 
 ## 工具本身：不到一百行
 
-`mini_cc/tools/ask_user.py:AskUserQuestionTool`：
+`mini_cc/tools/ask_user.ts:AskUserQuestionTool`（Python 版 `ask_user.py:AskUserQuestionTool`）：
 
-```python
-class AskUserQuestionTool(Tool):
-    name = "AskUserQuestion"
-    read_only = True   # 不碰文件系统；问用户本身不需要再经过权限审批
-    kind = "meta"
-    ...
-    def run(self, args, ctx):
-        asker = ctx.extras.get("ask_user")
-        if asker is None:
-            return ToolResult("The user is not available to answer questions in this mode. "
-                              "Proceed with sensible defaults and state your assumptions explicitly.", True)
-        questions = [Question(q["question"], q["header"], q["options"], q.get("multiSelect", False))
-                     for q in args["questions"]]
-        answers = asker(questions)
+=== "Node"
+
+    ```ts
+    export class AskUserQuestionTool extends Tool {
+      override name = "AskUserQuestion";
+      override readOnly = true;   // 不碰文件系统；问用户本身不需要再经过权限审批
+      override kind = "meta";
+      ...
+      override async run(args: Args, ctx: ToolContext): Promise<ToolResult> {
+        const asker: Asker | undefined = ctx.extras.ask_user;
+        if (asker === undefined) {
+          return new ToolResult("The user is not available to answer questions in this mode. " +
+            "Proceed with sensible defaults and state your assumptions explicitly.", true);
+        }
+        const questions = args.questions.map((q) => new Question(q.question, q.header, q.options, q.multiSelect ?? false));
+        const answers = await asker(questions);
         ...
-        return ToolResult("Your questions have been answered: " + ", ".join(parts)
-                          + ". You can now continue with these answers in mind.")
-```
+        return new ToolResult("Your questions have been answered: " + parts.join(", ") +
+          ". You can now continue with these answers in mind.");
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    class AskUserQuestionTool(Tool):
+        name = "AskUserQuestion"
+        read_only = True   # 不碰文件系统；问用户本身不需要再经过权限审批
+        kind = "meta"
+        ...
+        def run(self, args, ctx):
+            asker = ctx.extras.get("ask_user")
+            if asker is None:
+                return ToolResult("The user is not available to answer questions in this mode. "
+                                  "Proceed with sensible defaults and state your assumptions explicitly.", True)
+            questions = [Question(q["question"], q["header"], q["options"], q.get("multiSelect", False))
+                         for q in args["questions"]]
+            answers = asker(questions)
+            ...
+            return ToolResult("Your questions have been answered: " + ", ".join(parts)
+                              + ". You can now continue with these answers in mind.")
+    ```
 
 几个设计点：
 
 - **`read_only = True`**：权限判定的「只读」分支直接放行。它确实不改任何东西。
-- **UI 通过 `ctx.extras["ask_user"]` 注入**。工具不 import UI，`App` 在启动时把 `ui.ask_questions` 挂上去。测试里换成 `BufferUI`，答案从 `answers` 列表里取。
+- **UI 通过 `ctx.extras["ask_user"]` 注入**（Node 版是 `ctx.extras.ask_user`，返回 Promise，工具 `await` 它）。工具不 import UI，`App` 在启动时把 `ui.ask_questions` 挂上去。测试里换成 `BufferUI`，答案从 `answers` 列表里取。
 - **没有 UI 时不报「失败」，而是告诉模型怎么办**：按默认值继续，并明确说出假设。`-p` 非交互模式下就是这样。
 - **结果措辞参考 Claude Code**。你本机会话记录里一条真实的 `AskUserQuestion` 结果是：`Your questions have been answered: "这份说明要解决的是哪种「换 apikey」?"="切到内部 AI Gateway" … You can now continue with these a…`。
 
@@ -156,18 +212,34 @@ Do not use this tool to ask for permission to proceed or to confirm a plan you c
 
 ## 测试
 
-`tests/test_ch10_ask_user.py`，8 个：
+`tests/ch10_ask_user.test.ts`（Python 版 `tests/test_ch10_ask_user.py`），8 个：
 
 - `parse_answer` 的各种输入（单选、多选、中文逗号、Other、跳过、越界、单选题多选无效）。
 - agent 级：提问后用答案继续、结果文本逐字匹配、**不触发权限弹窗**；Other + 跳过；无效输入重问；全部跳过 = declined。
 - schema 限制（5 个问题、1 个选项都被校验器拦下）；没有 UI 时的降级；工具和 system prompt 都发给了模型。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 64%]
-.......................................                                  [100%]
-111 passed in 3.32s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch*.test.ts'
+    ℹ tests 111
+    ℹ suites 0
+    ℹ pass 111
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 3689.434375
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 64%]
+    .......................................                                  [100%]
+    111 passed in 3.32s
+    ```
 
 ## 回到开头
 

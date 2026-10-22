@@ -22,51 +22,97 @@
 
 离线 fake 模型（`examples/ch13.json`），`--permission-mode acceptEdits`。项目里只有一个 `config.py`（`DEBUG = True` 和 `HOST`）：
 
-```console
-❯ 给 config.py 加一个 TIMEOUT = 30
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-⏺ Read(config.py)
-✔ Read ->      1        DEBUG = True
-       2        HOST = "localhost"
-⏺ Edit(config.py)
-✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
-       1        DEBUG = True
-       2        TIMEOUT = 30  …(+1 lines)
-● 加好了：TIMEOUT = 30。
-❯ 顺便把 DEBUG 删掉，再建一个 utils.py
-● 去掉 DEBUG，再新建 utils.py。
-⏺ Edit(config.py)
-✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
-       1        TIMEOUT = 30
-       2        HOST = "localhost"
-⏺ Write(utils.py)
-✔ Write -> Created utils.py (5 lines)
-● DEBUG 已删除，utils.py 已创建。
-❯ /rewind
-1. 给 config.py 加一个 TIMEOUT = 30  （改了 1 个文件）
-2. 顺便把 DEBUG 删掉，再建一个 utils.py  （改了 2 个文件）
-输入 /rewind <序号> [both|conversation|code] 回到那条消息发出之前（默认 both）
-❯ /rewind 2
-  ⎿ 恢复 config.py
-  ⎿ 删除（这之后才新建的） utils.py
-已回到第 2 个检查点之前，对话剩 6 条消息
-原话：顺便把 DEBUG 删掉，再建一个 utils.py（已放回输入框，可以改一改再发）
-❯ 只建 utils.py，DEBUG 先留着
-● 这次只建 utils.py，DEBUG 保留。
-⏺ Write(utils.py)
-✔ Write -> Created utils.py (5 lines)
-● utils.py 已创建，config.py 没动。
-❯ /exit
---- config.py
-DEBUG = True
-TIMEOUT = 30
-HOST = "localhost"
-```
+=== "Node"
+
+    ```console
+    ❯ 给 config.py 加一个 TIMEOUT = 30
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ⏺ Read(config.py)
+    ✔ Read ->      1	DEBUG = True
+           2	HOST = "localhost"
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           1	DEBUG = True
+           2	TIMEOUT = 30  …(+1 lines)
+    ● 加好了：TIMEOUT = 30。
+    ❯ 顺便把 DEBUG 删掉，再建一个 utils.py
+    ● 去掉 DEBUG，再新建 utils.py。
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           1	TIMEOUT = 30
+           2	HOST = "localhost"
+    ⏺ Write(utils.py)
+    ✔ Write -> Created utils.py (5 lines)
+    ● DEBUG 已删除，utils.py 已创建。
+    ❯ /rewind
+    1. 给 config.py 加一个 TIMEOUT = 30  （改了 1 个文件）
+    2. 顺便把 DEBUG 删掉，再建一个 utils.py  （改了 2 个文件）
+    输入 /rewind <序号> [both|conversation|code] 回到那条消息发出之前（默认 both）
+    ❯ /rewind 2
+      ⎿ 恢复 config.py
+      ⎿ 删除（这之后才新建的） utils.py
+    已回到第 2 个检查点之前，对话剩 6 条消息
+    原话：顺便把 DEBUG 删掉，再建一个 utils.py（已放回输入框，可以改一改再发）
+    ❯ 只建 utils.py，DEBUG 先留着
+    ● 这次只建 utils.py，DEBUG 保留。
+    ⏺ Write(utils.py)
+    ✔ Write -> Created utils.py (5 lines)
+    ● utils.py 已创建，config.py 没动。
+    ❯ /exit
+    --- config.py
+    DEBUG = True
+    TIMEOUT = 30
+    HOST = "localhost"
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 给 config.py 加一个 TIMEOUT = 30
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ⏺ Read(config.py)
+    ✔ Read ->      1        DEBUG = True
+           2        HOST = "localhost"
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           1        DEBUG = True
+           2        TIMEOUT = 30  …(+1 lines)
+    ● 加好了：TIMEOUT = 30。
+    ❯ 顺便把 DEBUG 删掉，再建一个 utils.py
+    ● 去掉 DEBUG，再新建 utils.py。
+    ⏺ Edit(config.py)
+    ✔ Edit -> The file config.py has been updated (1 replacement). Snippet:
+           1        TIMEOUT = 30
+           2        HOST = "localhost"
+    ⏺ Write(utils.py)
+    ✔ Write -> Created utils.py (5 lines)
+    ● DEBUG 已删除，utils.py 已创建。
+    ❯ /rewind
+    1. 给 config.py 加一个 TIMEOUT = 30  （改了 1 个文件）
+    2. 顺便把 DEBUG 删掉，再建一个 utils.py  （改了 2 个文件）
+    输入 /rewind <序号> [both|conversation|code] 回到那条消息发出之前（默认 both）
+    ❯ /rewind 2
+      ⎿ 恢复 config.py
+      ⎿ 删除（这之后才新建的） utils.py
+    已回到第 2 个检查点之前，对话剩 6 条消息
+    原话：顺便把 DEBUG 删掉，再建一个 utils.py（已放回输入框，可以改一改再发）
+    ❯ 只建 utils.py，DEBUG 先留着
+    ● 这次只建 utils.py，DEBUG 保留。
+    ⏺ Write(utils.py)
+    ✔ Write -> Created utils.py (5 lines)
+    ● utils.py 已创建，config.py 没动。
+    ❯ /exit
+    --- config.py
+    DEBUG = True
+    TIMEOUT = 30
+    HOST = "localhost"
+    ```
 
 `/rewind 2` 回到了第 2 条消息发出之前：第 1 轮加的 `TIMEOUT` 还在，第 2 轮删掉的 `DEBUG` 回来了，第 2 轮新建的 `utils.py` 被删掉；对话剩 6 条消息，正好是第 1 轮的全部。
 
-会话文件没有被改写过一个字节。下面是同一个 jsonl 里每条记录的 `parentUuid`（我把 uuid 换成了序号）：
+会话文件没有被改写过一个字节。下面是同一个 jsonl 里每条记录的 `parentUuid`（我把 uuid 换成了序号；Node 版跑出来的链逐条相同）：
 
 ```text
 #1  parent=#0  user      给 config.py 加一个 TIMEOUT = 30
@@ -116,21 +162,47 @@ flowchart LR
 
 第 4 章的 `SessionStore.load` 是从头到尾逐行读的。有了分叉，这样读会把两条分支拼在一起。改成从最新的叶子沿 `parentUuid` 往回走，`mini_cc/session.py:branch`：
 
-```python
-def branch(recs):
-    by_id, leaf = {}, None
-    for r in recs:
-        if r.get("type") in ("user", "assistant") and r.get("uuid") and "message" in r:
-            by_id[r["uuid"]] = r
-            leaf = r["uuid"]                    # 最后写的那条消息是叶子
-        elif r.get("type") == "rewind":
-            leaf = r.get("leafUuid")            # 回退把叶子挪回分叉点
-    out = []
-    while leaf and leaf in by_id:
-        out.append(by_id[leaf])
-        leaf = by_id[leaf].get("parentUuid")
-    return out[::-1]
-```
+=== "Node"
+
+    ```ts
+    export function branch(recs: SessionRecord[]): SessionRecord[] {
+      const byId = new Map<string, SessionRecord>();
+      let leaf: string | null = null;
+      for (const r of recs) {
+        if ((r.type === "user" || r.type === "assistant") && r.uuid && "message" in r) {
+          byId.set(r.uuid, r);
+          leaf = r.uuid; // 最后写的那条消息是叶子
+        } else if (r.type === "rewind") {
+          leaf = r.leafUuid ?? null; // 回退把叶子挪回分叉点
+        }
+      }
+      const out: SessionRecord[] = [];
+      while (leaf && byId.has(leaf)) {
+        const r = byId.get(leaf)!;
+        out.push(r);
+        leaf = r.parentUuid ?? null;
+      }
+      return out.reverse();
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def branch(recs):
+        by_id, leaf = {}, None
+        for r in recs:
+            if r.get("type") in ("user", "assistant") and r.get("uuid") and "message" in r:
+                by_id[r["uuid"]] = r
+                leaf = r["uuid"]                    # 最后写的那条消息是叶子
+            elif r.get("type") == "rewind":
+                leaf = r.get("leafUuid")            # 回退把叶子挪回分叉点
+        out = []
+        while leaf and leaf in by_id:
+            out.append(by_id[leaf])
+            leaf = by_id[leaf].get("parentUuid")
+        return out[::-1]
+    ```
 
 你可能会问：为什么还要一条 `rewind` 记录？下一条新消息的 parent 本来就指回分叉点了。
 
@@ -142,54 +214,106 @@ def branch(recs):
 
 ### 2. 文件备份：每轮每个文件只备份一次
 
-`mini_cc/rewind.py:FileHistory.before_write` 挂在第 7 章预留的 `ToolContext.write_hooks` 上，`Write` 和 `Edit` 在真正写盘前调用它：
+`mini_cc/rewind.ts:FileHistory.beforeWrite`（Python 版 `rewind.py:FileHistory.before_write`）挂在第 7 章预留的 `ToolContext.write_hooks` 上，`Write` 和 `Edit` 在真正写盘前调用它：
 
-```python
-def before_write(self, path: Path) -> None:
-    if not self.checkpoints:
-        return
-    cp, key = self.checkpoints[-1], str(path)
-    if key in cp.files:
-        return                                   # 这一轮已经备份过：要的是「这一轮开始前」的版本
-    if path.exists():
-        version = 1 + sum(key in c.files for c in self.checkpoints[:-1])
-        name = f"{hashlib.sha256(key.encode()).hexdigest()[:16]}@v{version}"
-        (self.dir / name).write_bytes(path.read_bytes())
-        cp.files[key] = name
-    else:
-        cp.files[key] = None                     # 写之前不存在：回退 = 删除
-    self.save()
-```
+=== "Node"
+
+    ```ts
+    beforeWrite(path: string): void {
+      if (!this.checkpoints.length) return;
+      const cp = this.checkpoints.at(-1)!;
+      if (path in cp.files) return; // 这一轮已经备份过：要的是「这一轮开始前」的版本
+      if (existsSync(path)) {
+        const version = 1 + this.checkpoints.slice(0, -1).filter((c) => path in c.files).length;
+        const name = `${createHash("sha256").update(path).digest("hex").slice(0, 16)}@v${version}`;
+        writeFileSync(join(this.dir, name), readFileSync(path));
+        cp.files[path] = name;
+      } else {
+        cp.files[path] = null; // 写之前不存在：回退 = 删除
+      }
+      this.save();
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def before_write(self, path: Path) -> None:
+        if not self.checkpoints:
+            return
+        cp, key = self.checkpoints[-1], str(path)
+        if key in cp.files:
+            return                                   # 这一轮已经备份过：要的是「这一轮开始前」的版本
+        if path.exists():
+            version = 1 + sum(key in c.files for c in self.checkpoints[:-1])
+            name = f"{hashlib.sha256(key.encode()).hexdigest()[:16]}@v{version}"
+            (self.dir / name).write_bytes(path.read_bytes())
+            cp.files[key] = name
+        else:
+            cp.files[key] = None                     # 写之前不存在：回退 = 删除
+        self.save()
+    ```
 
 命名 `<路径哈希>@v<版本>` 和目录 `file-history/<session>/` 都照搬 Claude Code。你本机 `~/.claude/file-history/` 下有 34 个会话目录，里面就是 `03e172fcd311f8f7@v2` 这样的文件；会话 jsonl 里对应的 `file-history-snapshot` 记录带着 `trackedFileBackups`，每项有 `backupFileName`、`version`、`backupTime`，新建的文件 `backupFileName` 是 `null`。mini-cc 把检查点列表存进同目录的 `index.json`，没有写进会话 jsonl，`/resume` 之后照样能回退代码。
 
 检查点什么时候开？`cli.py:App._on_message` 订阅 `Agent.listeners`（第 4 章预留），排在会话落盘之后，因为要用落盘时刚分配的 uuid：
 
-```python
-def _on_message(self, msg, meta):
-    if is_prompt(msg) and self.session.last_uuid:
-        self.file_history.begin(self.session.last_uuid, prompt_text(msg))
-```
+=== "Node"
+
+    ```ts
+    private onMessage = (msg: Message, meta: Record<string, any>): void => {
+      if (isPrompt(msg) && this.session.lastUuid) this.fileHistory.begin(this.session.lastUuid, promptText(msg));
+    };
+    ```
+
+=== "Python"
+
+    ```python
+    def _on_message(self, msg, meta):
+        if is_prompt(msg) and self.session.last_uuid:
+            self.file_history.begin(self.session.last_uuid, prompt_text(msg))
+    ```
 
 `is_prompt` 只认用户亲手发的消息：带 `tool_result` 的不算，只有 `<system-reminder>` 的也不算（第 16 章后台任务完成时会用这种消息「唤醒」模型）。
 
 ### 3. 恢复：取检查点之后「第一次」的备份
 
-```python
-def restore(self, uuid):
-    changes = []
-    for key in self.changed_since(uuid):
-        first = next(c for c in self.checkpoints[self.index_of(uuid):] if key in c.files)
-        backup, path = first.files[key], Path(key)
-        if backup is None:
-            if path.exists():
-                path.unlink(); changes.append((key, "deleted"))
-        else:
-            data = (self.dir / backup).read_bytes()
-            if not path.exists() or path.read_bytes() != data:
-                path.write_bytes(data); changes.append((key, "restored"))
-    return changes
-```
+=== "Node"
+
+    ```ts
+    restore(uuid: string): Change[] {
+      const changes: Change[] = [];
+      const after = this.checkpoints.slice(this.indexOf(uuid));
+      for (const key of this.changedSince(uuid)) {
+        const backup = after.find((c) => key in c.files)!.files[key];
+        if (backup === null) {
+          if (existsSync(key)) { rmSync(key); changes.push([key, "deleted"]); }
+        } else {
+          const data = readFileSync(join(this.dir, backup));
+          if (!existsSync(key) || !readFileSync(key).equals(data)) { writeFileSync(key, data); changes.push([key, "restored"]); }
+        }
+      }
+      return changes;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def restore(self, uuid):
+        changes = []
+        for key in self.changed_since(uuid):
+            first = next(c for c in self.checkpoints[self.index_of(uuid):] if key in c.files)
+            backup, path = first.files[key], Path(key)
+            if backup is None:
+                if path.exists():
+                    path.unlink(); changes.append((key, "deleted"))
+            else:
+                data = (self.dir / backup).read_bytes()
+                if not path.exists() or path.read_bytes() != data:
+                    path.write_bytes(data); changes.append((key, "restored"))
+        return changes
+    ```
 
 你可能会问：为什么是「第一次」的备份，不是最后一次？
 
@@ -201,27 +325,47 @@ def restore(self, uuid):
 
 `cli.py:App.rewind(n, mode)`：
 
-```python
-cp = self.checkpoints()[n - 1]
-if mode in ("both", "code"):
-    changes = self.file_history.restore(cp.uuid)
-    for path, _ in changes:
-        self.agent.ctx.file_state.forget(Path(path))
-if mode in ("both", "conversation"):
-    keep = self.session.chain.index(cp.uuid)
-    self.agent.load_history(self.agent.messages[:keep], self.agent.usage)  # 原来的前缀
-    self.session.rewind(keep)
-    self.file_history.truncate(cp.uuid)
-    self.agent.ctx.file_state.clear()
-    self.prefill = cp.prompt
-```
+=== "Node"
+
+    ```ts
+    const cp = this.checkpoints()[n - 1];
+    if (mode === "both" || mode === "code") {
+      changes = this.fileHistory.restore(cp.uuid);
+      for (const [path] of changes) this.agent.ctx.fileState.forget(path);
+    }
+    if (mode === "both" || mode === "conversation") {
+      const keep = this.session.chain.indexOf(cp.uuid);
+      this.agent.loadHistory(this.agent.messages.slice(0, keep), this.agent.usage); // 原来的前缀
+      this.session.rewind(keep);
+      this.fileHistory.truncate(cp.uuid);
+      this.agent.ctx.fileState.clear();
+      this.prefill = cp.prompt;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    cp = self.checkpoints()[n - 1]
+    if mode in ("both", "code"):
+        changes = self.file_history.restore(cp.uuid)
+        for path, _ in changes:
+            self.agent.ctx.file_state.forget(Path(path))
+    if mode in ("both", "conversation"):
+        keep = self.session.chain.index(cp.uuid)
+        self.agent.load_history(self.agent.messages[:keep], self.agent.usage)  # 原来的前缀
+        self.session.rewind(keep)
+        self.file_history.truncate(cp.uuid)
+        self.agent.ctx.file_state.clear()
+        self.prefill = cp.prompt
+    ```
 
 `both / conversation / code` 三个名字来自 Claude Code 的二进制：`/rewind`（别名 `checkpoint`、`undo`，描述「Restore the code and/or conversation to a previous point」）的菜单里就是 `Restore code and conversation` / `Restore conversation` / `Restore code` 三项。只回退代码适合「方案没问题，但改坏了，让它重来」；只回退对话适合「代码留着，但刚才那段讨论把上下文搞乱了」。
 
 有两处细节：
 
 - **回退对话会清空第 7 章的文件状态表**。被丢弃的分支里模型可能 Read 过某个文件，但在新分支里它「没读过」。和 `/resume` 一样，只信任这条分支上亲眼看到的东西，让模型重新 Read。只回退代码时，只让被恢复的那几个文件失效。
-- **原话放回输入框**。`App.prefill` 交给 `prompt_toolkit` 的 `session.prompt(default=...)`。回退的目的几乎总是「换个说法再说一遍」，帮你把原话填好。
+- **原话放回输入框**。`App.prefill` 交给 `prompt_toolkit` 的 `session.prompt(default=...)`（Node 版的 `node:readline` 没有 default 参数，`rl.question()` 之后用 `rl.write(prefill)` 把原话写进输入行）。回退的目的几乎总是「换个说法再说一遍」，帮你把原话填好。
 
 你可能会问：`load_history` 换掉整段历史，不违反第一条不变量「历史只追加、不修改」吗？
 
@@ -229,7 +373,7 @@ if mode in ("both", "conversation"):
 
 ## 测试
 
-`tests/test_ch13_rewind.py`，8 个：
+`tests/ch13_rewind.test.ts`（Python 版 `tests/test_ch13_rewind.py`），8 个：
 
 - `FileHistory`：同一检查点只备份一次、新建文件记成 `None`、恢复时还原和删除、`index.json` 读回。
 - `/rewind` 列表显示每个检查点改了几个文件。
@@ -237,12 +381,28 @@ if mode in ("both", "conversation"):
 - 会话文件分叉：新消息的 `parentUuid` 指回分叉点，`/resume` 走的是新分支。
 - `Bash` 改的文件不在检查点里；序号越界、模式写错的提示。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 52%]
-..................................................................       [100%]
-138 passed in 4.85s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[0-3]*.test.ts tests/extension_points.test.ts
+    ℹ tests 138
+    ℹ suites 0
+    ℹ pass 138
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 3922.668166
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 52%]
+    ..................................................................       [100%]
+    138 passed in 4.85s
+    ```
 
 ## 和真实 Claude Code 的差异
 

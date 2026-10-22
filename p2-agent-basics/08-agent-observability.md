@@ -14,49 +14,91 @@
 
 ## 先跑起来看看
 
-代码在 [`code/agent/observability/tracer.py`](../code/agent/observability/tracer.py)。它给第 2 章的 `run_agent` 套上 trace，fake 模型每次调用 sleep 80ms 模拟网络耗时，并且脚本让 `input_tokens` 逐轮增长，模拟真实的上下文膨胀：
+代码在 [`code/agent-node/observability/tracer.ts`](../code/agent-node/observability/tracer.ts)（Python 版 [`tracer.py`](../code/agent/observability/tracer.py)）。它给第 2 章的 `runAgent` 套上 trace，fake 模型每次调用 sleep 80ms 模拟网络耗时，并且脚本让 `input_tokens` 逐轮增长，模拟真实的上下文膨胀：
 
-```text
-$ uv run python -m observability.tracer      # 离线 fake 模型；耗时是真实测量的，token 数是脚本预设的
-invoke_agent coding_agent            553.8 ms  turns=6 total_in=6660 total_out=238
-  chat claude-opus-5-5                85.5 ms  in=820 out=45 stop=tool_use
-  execute_tool run_command            21.5 ms  ok
-  chat claude-opus-5-5                86.1 ms  in=1010 out=30 stop=tool_use
-  execute_tool read_file               0.3 ms  ok
-  chat claude-opus-5-5                85.2 ms  in=1090 out=28 stop=tool_use
-  execute_tool read_file               0.1 ms  ERROR FileNotFoundError: [Errno 2] No such fil…
-  chat claude-opus-5-5                85.2 ms  in=1160 out=60 stop=tool_use
-  execute_tool write_file              0.4 ms  ok
-  chat claude-opus-5-5                82.1 ms  in=1250 out=40 stop=tool_use
-  execute_tool run_command            21.4 ms  ok
-  chat claude-opus-5-5                85.4 ms  in=1330 out=35 stop=end_turn
+=== "Node"
 
-已写出 trace.json（12 个 span）。其中第一个 chat span：
-{
-  "traceId": "9ce05b5ce5475817796b3e5892becee6",
-  "spanId": "17a41ba4eef52214",
-  "name": "chat claude-opus-5-5",
-  "kind": 3,
-  "startTimeUnixNano": "1792582783962214000",
-  "endTimeUnixNano": "1792582784047759000",
-  "status": {
-    "code": 1
-  },
-  "parentSpanId": "6f3d8ab1ff133916",
-  "attributes(展平显示)": {
-    "gen_ai.operation.name": "chat",
-    "gen_ai.provider.name": "anthropic",
-    "gen_ai.request.model": "claude-opus-5-5",
-    "gen_ai.request.max_tokens": "16000",
-    "agent.turn": "1",
-    "agent.request.messages": "1",
-    "gen_ai.response.id": "msg_fake_001",
-    ...
-```
+    ```text
+    $ node observability/tracer.ts               # 离线 fake 模型；耗时是真实测量的，token 数是脚本预设的
+    invoke_agent coding_agent            689.7 ms  turns=6 total_in=6660 total_out=238
+      chat claude-opus-5-5                84.3 ms  in=820 out=45 stop=tool_use
+      execute_tool run_command           111.9 ms  ok
+      chat claude-opus-5-5                82.6 ms  in=1010 out=30 stop=tool_use
+      execute_tool read_file               4.3 ms  ok
+      chat claude-opus-5-5                81.6 ms  in=1090 out=28 stop=tool_use
+      execute_tool read_file               0.2 ms  ERROR Error: ENOENT: no such file or directory…
+      chat claude-opus-5-5                81.4 ms  in=1160 out=60 stop=tool_use
+      execute_tool write_file              0.9 ms  ok
+      chat claude-opus-5-5                81.6 ms  in=1250 out=40 stop=tool_use
+      execute_tool run_command            75.7 ms  ok
+      chat claude-opus-5-5                81.4 ms  in=1330 out=35 stop=end_turn
+
+    已写出 trace.json（12 个 span）。其中第一个 chat span：
+    {
+      "traceId": "0cd4be33d261ebc9412aafa133637b40",
+      "spanId": "af79c57d9ab76f4e",
+      "name": "chat claude-opus-5-5",
+      "kind": 3,
+      "startTimeUnixNano": "1792661481218355625",
+      "endTimeUnixNano": "1792661481302660667",
+      "status": {
+        "code": 1
+      },
+      "parentSpanId": "a5ce87bbd8c78e69",
+      "attributes(展平显示)": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "anthropic",
+        "gen_ai.request.model": "claude-opus-5-5",
+        "gen_ai.request.max_tokens": "16000",
+        "agent.turn": "1",
+        "agent.request.messages": "1",
+        "gen_ai.response.id": "msg_fake_001",
+        ...
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m observability.tracer      # 离线 fake 模型；耗时是真实测量的，token 数是脚本预设的
+    invoke_agent coding_agent            553.8 ms  turns=6 total_in=6660 total_out=238
+      chat claude-opus-5-5                85.5 ms  in=820 out=45 stop=tool_use
+      execute_tool run_command            21.5 ms  ok
+      chat claude-opus-5-5                86.1 ms  in=1010 out=30 stop=tool_use
+      execute_tool read_file               0.3 ms  ok
+      chat claude-opus-5-5                85.2 ms  in=1090 out=28 stop=tool_use
+      execute_tool read_file               0.1 ms  ERROR FileNotFoundError: [Errno 2] No such fil…
+      chat claude-opus-5-5                85.2 ms  in=1160 out=60 stop=tool_use
+      execute_tool write_file              0.4 ms  ok
+      chat claude-opus-5-5                82.1 ms  in=1250 out=40 stop=tool_use
+      execute_tool run_command            21.4 ms  ok
+      chat claude-opus-5-5                85.4 ms  in=1330 out=35 stop=end_turn
+
+    已写出 trace.json（12 个 span）。其中第一个 chat span：
+    {
+      "traceId": "9ce05b5ce5475817796b3e5892becee6",
+      "spanId": "17a41ba4eef52214",
+      "name": "chat claude-opus-5-5",
+      "kind": 3,
+      "startTimeUnixNano": "1792582783962214000",
+      "endTimeUnixNano": "1792582784047759000",
+      "status": {
+        "code": 1
+      },
+      "parentSpanId": "6f3d8ab1ff133916",
+      "attributes(展平显示)": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "anthropic",
+        "gen_ai.request.model": "claude-opus-5-5",
+        "gen_ai.request.max_tokens": "16000",
+        "agent.turn": "1",
+        "agent.request.messages": "1",
+        "gen_ai.response.id": "msg_fake_001",
+        ...
+    ```
 
 一眼能读出三件事：
 
-1. **时间几乎全花在模型上**。6 次 chat 约 510ms，工具加起来不到 45ms。真实场景里比例往往也是这样，除非某个工具在跑测试套件。
+1. **时间几乎全花在模型上**。6 次 chat 约 500ms，工具加起来在 200ms 以内（Python 版不到 45ms；Node 版每次 `run_command` 要冷启动一个 `node` 进程，多花几十毫秒）。真实场景里比例往往也是这样，除非某个工具在跑测试套件。
 2. **输入 token 在单调上涨**：820 → 1330。每一轮都在重发越来越长的历史。总输入 6660，是单次的 8 倍。这就是第 1 章说的「N 轮对话成本接近 N²」在 trace 里的样子。
 3. **第三次工具调用失败了**，但 Agent 没崩，下一轮模型拿到错误后继续推进。没有 trace，这次失败只会淹没在日志里。
 
@@ -71,37 +113,70 @@ flowchart TD
     R --> C3[...]
 ```
 
-关键是**不改 agent 代码**。第 2 章的 `run_agent` 接受一个 `client` 和一个 `tools` 字典，我们就各包一层：
+关键是**不改 agent 代码**。第 2 章的 `runAgent` 接受一个 `client` 和一个 `tools` 字典，我们就各包一层：
 
-```python
-class TracedClient:
-    """包住任意有 .messages.create 的 client（真的 anthropic.Anthropic 或 FakeAnthropic）。"""
-    def create(self, **kw):
-        with self.tracer.span(f"chat {kw['model']}", kind=3, **{
-            "gen_ai.operation.name": "chat",
-            "gen_ai.request.model": kw["model"],
-            "agent.request.messages": len(kw["messages"]),   # 上下文在膨胀：每轮多 2 条
-        }) as s:
-            resp = self.inner.messages.create(**kw)
-            s.attrs.update({
-                "gen_ai.response.finish_reasons": [resp.stop_reason],
-                "gen_ai.usage.input_tokens": resp.usage.input_tokens,
-                "gen_ai.usage.output_tokens": resp.usage.output_tokens,
-            })
-            return resp
+=== "Node"
 
-def traced_tools(tools, tracer, client):
-    def wrap(name, fn):
-        def inner(**kwargs):
-            with tracer.span(f"execute_tool {name}", **{"gen_ai.tool.name": name, ...}) as s:
-                return fn(**kwargs)
-        return inner
-    return {n: wrap(n, f) for n, f in tools.items()}
-```
+    ```ts
+    class TracedClient {
+      /** 包住任意有 .messages.create 的 client（真的 new Anthropic() 或 FakeAnthropic）。 */
+      create(params) {
+        return this.tracer.span(`chat ${params.model}`, { kind: 3, attrs: {
+          "gen_ai.operation.name": "chat",
+          "gen_ai.request.model": params.model,
+          "agent.request.messages": params.messages.length,   // 上下文在膨胀：每轮多 2 条
+        } }, async (s) => {
+          const resp = await this.inner.messages.create(params);
+          Object.assign(s.attrs, {
+            "gen_ai.response.finish_reasons": [resp.stop_reason],
+            "gen_ai.usage.input_tokens": resp.usage.input_tokens,
+            "gen_ai.usage.output_tokens": resp.usage.output_tokens,
+          });
+          return resp;
+        });
+      }
+    }
+
+    function tracedTools(tools, tracer, client) {
+      const wrap = (name, fn) => (args) =>
+        tracer.span(`execute_tool ${name}`, { attrs: { "gen_ai.tool.name": name, ... } }, (s) => fn(args));
+      return Object.fromEntries(Object.entries(tools).map(([n, f]) => [n, wrap(n, f)]));
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    class TracedClient:
+        """包住任意有 .messages.create 的 client（真的 anthropic.Anthropic 或 FakeAnthropic）。"""
+        def create(self, **kw):
+            with self.tracer.span(f"chat {kw['model']}", kind=3, **{
+                "gen_ai.operation.name": "chat",
+                "gen_ai.request.model": kw["model"],
+                "agent.request.messages": len(kw["messages"]),   # 上下文在膨胀：每轮多 2 条
+            }) as s:
+                resp = self.inner.messages.create(**kw)
+                s.attrs.update({
+                    "gen_ai.response.finish_reasons": [resp.stop_reason],
+                    "gen_ai.usage.input_tokens": resp.usage.input_tokens,
+                    "gen_ai.usage.output_tokens": resp.usage.output_tokens,
+                })
+                return resp
+
+    def traced_tools(tools, tracer, client):
+        def wrap(name, fn):
+            def inner(**kwargs):
+                with tracer.span(f"execute_tool {name}", **{"gen_ai.tool.name": name, ...}) as s:
+                    return fn(**kwargs)
+            return inner
+        return {n: wrap(n, f) for n, f in tools.items()}
+    ```
+
+Node 没有 `with`，所以 `tracer.span(name, opts, fn)` 换成「把要执行的代码作为回调传进去」：回调同步返回或返回 Promise 都行，抛错时先记到 span 上再继续抛。
 
 你可能会问：父子关系是怎么串起来的？我没往函数里传任何 span。
 
-靠 `contextvars`。`tracer.span()` 进入时把自己设成「当前 span」，退出时恢复。嵌套在里面创建的 span 自动以它为父。这和 React 的 Context 是同一个思路：不用一层层传 props，往上找最近的 Provider。
+靠 `contextvars`（Node 版用 `node:async_hooks` 的 `AsyncLocalStorage`，作用一样，而且会跟着 `await` 往下传）。`tracer.span()` 进入时把自己设成「当前 span」，退出时恢复。嵌套在里面创建的 span 自动以它为父。这和 React 的 Context 是同一个思路：不用一层层传 props，往上找最近的 Provider。
 
 一个类比：trace 像快递的物流轨迹。整单是一个 trace，每个中转站是一个 span，每个 span 记着到站和离站时间。你看一眼就知道包裹卡在了哪个中转站。
 
@@ -111,17 +186,27 @@ def traced_tools(tools, tracer, client):
 
 ## 为什么用 OpenTelemetry 的格式
 
-`tracer.to_otlp()` 输出的是 OTLP/JSON，也就是 OpenTelemetry 协议的线上格式：`resourceSpans → scopeSpans → spans`，ID 是 32/16 位十六进制，时间是纳秒字符串，属性是 `{key, value: {stringValue | intValue | ...}}`。
+`tracer.toOtlp()`（Python 版 `to_otlp()`）输出的是 OTLP/JSON，也就是 OpenTelemetry 协议的线上格式：`resourceSpans → scopeSpans → spans`，ID 是 32/16 位十六进制，时间是纳秒字符串，属性是 `{key, value: {stringValue | intValue | ...}}`。
 
-属性名用的是 OpenTelemetry 的 GenAI 语义约定（`gen_ai.*`）。Anthropic SDK 自带的 OpenTelemetry 支持（目前是 beta，通过 `Anthropic(open_telemetry=...)` 配置，会产出名为 `anthropic.messages.create` 的 span）也遵循这套约定。所以我们手写的 span 和官方 SDK 的 span 放进同一个后端，字段是对得上的。
+属性名用的是 OpenTelemetry 的 GenAI 语义约定（`gen_ai.*`）。Anthropic SDK 自带的 OpenTelemetry 支持（目前是 beta，Python 通过 `Anthropic(open_telemetry=...)` 配置，Node 是 `new Anthropic({ openTelemetry: ... })`，都会产出名为 `anthropic.messages.create` 的 span）也遵循这套约定。所以我们手写的 span 和官方 SDK 的 span 放进同一个后端，字段是对得上的。
 
 用标准格式的好处是：你不用自己写可视化。本地起一个支持 OTLP 的后端（比如 Jaeger），把 `trace.json` POST 到它的 OTLP/HTTP 端点（惯例是 `http://localhost:4318/v1/traces`，`Content-Type: application/json`），就能看到瀑布图。我没有在本机起 Jaeger 验证这一步，这里是按 OTLP 规范的推断（**推测**）。
 
-```text
-$ uv run pytest -q observability
-.                                                                        [100%]
-1 passed in 0.37s
-```
+=== "Node"
+
+    ```text
+    $ node --test 'observability/*.test.ts'
+    ✔ trace 树结构和 OTLP 导出
+    ℹ pass 1
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run pytest -q observability
+    .                                                                        [100%]
+    1 passed in 0.37s
+    ```
 
 测试断言了：span 名字和顺序、所有子 span 的父都是根、根上的 token 合计、失败的工具 span `status.code == 2`、ID 长度合法。
 
@@ -137,14 +222,14 @@ $ uv run pytest -q observability
 
 1. **只记 token 不记缓存**。真实响应里 `input_tokens` 不含缓存读写；成本分析要把 `cache_read_input_tokens` 和 `cache_creation_input_tokens` 一起看。注意 OpenTelemetry 的 `gen_ai.usage.input_tokens` 按约定是**包含**缓存的，和 API 响应的口径不同，两边对账时别加重了。
 2. **把完整 prompt 记进 span**。prompt 里可能有用户数据和密钥，后端的保留策略未必合规。默认只记元数据，需要内容时显式开启。
-3. **工具异常被吞掉，span 却标成功**。我们的 span 在 `with` 里捕获异常、记下 `error` 再抛出，`run_agent` 外层再把它转成 `is_error` 结果。顺序反了，span 就看不到失败。
+3. **工具异常被吞掉，span 却标成功**。我们的 span 在 `with`（Node 版是 `span()` 的回调）里捕获异常、记下 `error` 再抛出，`runAgent` 外层再把它转成 `is_error` 结果。顺序反了，span 就看不到失败。
 4. **一个任务开多个 trace**。不同步骤用了不同的 trace_id，后端里就是一堆孤立的点，拼不成树。
 
 ## 练习
 
 1. 给 `invoke_agent` 根 span 加一个 `agent.estimated_cost_usd` 属性，按 Opus 5.5 的 $4 / $20 每百万 token 计算。
-2. 把 `print_tree` 改成按耗时画一个 ASCII 瀑布图（每个 span 一行，用 `█` 的长度表示耗时、用缩进表示开始时间）。
-3. 开放题：如果一轮里有 3 个工具并行执行，现在的 `traced_tools` 和 `pending_tool_ids` 队列还对吗？你会怎么改？如果再加上 subagent，trace 树应该长什么样？
+2. 把 `printTree`（`print_tree`）改成按耗时画一个 ASCII 瀑布图（每个 span 一行，用 `█` 的长度表示耗时、用缩进表示开始时间）。
+3. 开放题：如果一轮里有 3 个工具并行执行，现在的 `tracedTools` 和 `pendingToolIds` 队列（Python 版 `traced_tools` / `pending_tool_ids`）还对吗？你会怎么改？如果再加上 subagent，trace 树应该长什么样？
 
 ## 延伸阅读
 

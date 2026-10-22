@@ -85,42 +85,89 @@ flowchart LR
 
 ## 动手：算一算你自己的会话账单
 
-Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储格式见 [你的聊天记录存在哪](../p1-tools/07-session-storage.md)）。脚本 [`code/agent/core/usage_stats.py`](../code/agent/core/usage_stats.py) 只读每条 assistant 记录的 `message.model`、`message.id`、`message.usage` 这三个字段，**不读也不打印任何会话正文**，最后只输出汇总数字。
+Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储格式见 [你的聊天记录存在哪](../p1-tools/07-session-storage.md)）。脚本 [`code/agent-node/core/usage_stats.ts`](../code/agent-node/core/usage_stats.ts)（Python 版 [`usage_stats.py`](../code/agent/core/usage_stats.py)）只读每条 assistant 记录的 `message.model`、`message.id`、`message.usage` 这三个字段，**不读也不打印任何会话正文**，最后只输出汇总数字。
 
 先看结果（对本机真实会话只读运行；价格是第一方 API 标价，你实际走的渠道另计，这里重在看比例）：
 
-```text
-$ S=~/.claude/projects/-Users-me-work-webapp/<session-id>
-$ uv run python -m core.usage_stats $S.jsonl $S/subagents/*.jsonl
-扫描 7 个文件（只读 usage 字段）
-价格表：claude-api skill，第一方 API 标价，cached 2026-10-06（Vertex 等合作方渠道另计价）
-model                  请求       未缓存输入           缓存读        写5m         写1h         输出     命中率       实际$      无缓存$
-claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    237.13   1910.65
-合计（有价目的模型）：实际 ≈ $237.13，若无缓存 ≈ $1910.65，缓存省了 87.6%
-去重掉的重复行：2456；解析失败行：0
-```
+=== "Node"
+
+    ```text
+    $ S=~/.claude/projects/-Users-me-work-webapp/<session-id>
+    $ node core/usage_stats.ts $S.jsonl $S/subagents/*.jsonl
+    扫描 7 个文件（只读 usage 字段）
+    价格表：claude-api skill，第一方 API 标价，cached 2026-10-06（Vertex 等合作方渠道另计价）
+    model                  请求       未缓存输入           缓存读        写5m         写1h         输出     命中率       实际$      无缓存$
+    claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    237.13   1910.65
+    合计（有价目的模型）：实际 ≈ $237.13，若无缓存 ≈ $1910.65，缓存省了 87.6%
+    去重掉的重复行：2456；解析失败行：0
+    ```
+
+=== "Python"
+
+    ```text
+    $ S=~/.claude/projects/-Users-me-work-webapp/<session-id>
+    $ uv run python -m core.usage_stats $S.jsonl $S/subagents/*.jsonl
+    扫描 7 个文件（只读 usage 字段）
+    价格表：claude-api skill，第一方 API 标价，cached 2026-10-06（Vertex 等合作方渠道另计价）
+    model                  请求       未缓存输入           缓存读        写5m         写1h         输出     命中率       实际$      无缓存$
+    claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    237.13   1910.65
+    合计（有价目的模型）：实际 ≈ $237.13，若无缓存 ≈ $1910.65，缓存省了 87.6%
+    去重掉的重复行：2456；解析失败行：0
+    ```
 
 几个关键实现：
 
-```python
-# 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
-# cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
-PRICES: dict[str, dict[str, float]] = {
-    "claude-opus-5-5":   {"input": 4.00, "output": 20.00, "cache_read": 0.20},
-    "claude-opus-5":     {"input": 5.00, "output": 25.00, "cache_read": 0.50},   # *
-    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.20},
-    "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # * 且只适用于 ≤100K 的提示
-}
-WRITE_5M, WRITE_1H = 1.25, 2.0
-```
+=== "Node"
 
-```python
-# 一次 API 响应会按 content block 拆成多行写进 jsonl，每行带同一份 usage → 按 message.id 去重
-mid = msg.get("id")
-if mid in seen:
-    rep.duplicate_lines += 1
-    continue
-```
+    ```ts
+    // 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
+    // cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+    export const PRICES: Record<string, Price> = {
+      "claude-opus-5-5":   { input: 4.0, output: 20.0, cache_read: 0.2 },
+      "claude-opus-5":     { input: 5.0, output: 25.0, cache_read: 0.5 },   // *
+      "claude-sonnet-5-5": { input: 2.0, output: 10.0, cache_read: 0.2 },
+      "claude-haiku-5-5":  { input: 0.1, output: 0.5,  cache_read: 0.01 },  // * 且只适用于 ≤100K 的提示
+    };
+    const WRITE_5M = 1.25;
+    const WRITE_1H = 2.0;
+    ```
+
+=== "Python"
+
+    ```python
+    # 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
+    # cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+    PRICES: dict[str, dict[str, float]] = {
+        "claude-opus-5-5":   {"input": 4.00, "output": 20.00, "cache_read": 0.20},
+        "claude-opus-5":     {"input": 5.00, "output": 25.00, "cache_read": 0.50},   # *
+        "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.20},
+        "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # * 且只适用于 ≤100K 的提示
+    }
+    WRITE_5M, WRITE_1H = 1.25, 2.0
+    ```
+
+按 `message.id` 去重的那几行：
+
+=== "Node"
+
+    ```ts
+    // 一次 API 响应会按 content block 拆成多行写进 jsonl，每行带同一份 usage → 按 message.id 去重
+    const mid: string | undefined = msg.id;
+    if (mid && seen.has(mid)) {
+      rep.duplicateLines += 1;
+      continue;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    # 一次 API 响应会按 content block 拆成多行写进 jsonl，每行带同一份 usage → 按 message.id 去重
+    mid = msg.get("id")
+    if mid in seen:
+        rep.duplicate_lines += 1
+        continue
+    ```
 
 这一步去重很关键。同一个会话不去重会数出 4481 次「请求」，估算费用变成 $545.02，是去重后的 2.3 倍，因为有 2456 行是同一次响应的重复记录。我验证过，同一个 `message.id` 的多行 `usage` 完全相同，所以按 id 只取一次就对了。另外，`model` 为 `<synthetic>` 的记录是 Claude Code 在本地合成的消息，没有打 API，要跳过。
 
@@ -134,13 +181,13 @@ if mid in seen:
 
 还有一个实测观察：这个会话主线程的缓存写入里，1 小时 TTL 和 5 分钟 TTL 都有（约 500 万 vs 432 万）；6 个 subagent 的写入则**全是 5 分钟 TTL**。Claude Code 是按什么规则选 TTL 的，我没有查到文档，这里只记录现象。
 
-测试 `core/tests/test_usage_stats.py` 用一份合成的 jsonl 覆盖了去重、`<synthetic>`、坏行、TTL 拆分和费用公式，并断言输出里不会出现正文。
+测试 [`core/usage_stats.test.ts`](../code/agent-node/core/usage_stats.test.ts)（Python 版 `core/tests/test_usage_stats.py`）用一份合成的 jsonl 覆盖了去重、`<synthetic>`、坏行、TTL 拆分和费用公式，并断言输出里不会出现正文；Node 版另有一个用例在临时目录里造会话文件，验证不带参数时取的是最大的那个。
 
 ## 对照你的环境
 
 - **SessionStart 注入的内容在前缀里**。`inject-guardrails.sh` 注入的护栏在会话开头，之后不再变，所以只付一次写入费，之后每轮按命中价读取。反过来，如果哪个 hook 每轮都往**前缀**里塞带时间戳的内容，缓存就会每轮失效。动态内容应该追加在末尾，UserPromptSubmit hook 的 `additionalContext` 就是跟着当轮消息走的。
 - **「常驻层是稀缺资源」的计费含义**。你 CLAUDE.md 里这句话，从账单上看就是：常驻层每多 1000 token，每个新会话多付一次写入费，之后**每一轮**再多付一次读取费。以上面那个会话两千次请求来算，1000 token 的常驻内容就要被读 200 万次。
-- **想看任何一个会话**：`uv run python -m core.usage_stats <path.jsonl>`。不带参数时，默认读 webapp 项目目录下最大的那个会话。
+- **想看任何一个会话**：`node core/usage_stats.ts <path.jsonl>`（Python 版 `uv run python -m core.usage_stats <path.jsonl>`）。不带参数时，默认读 webapp 项目目录下最大的那个会话。
 
 ## 常见坑
 

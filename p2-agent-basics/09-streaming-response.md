@@ -12,34 +12,63 @@
 
 ## 先跑起来看看
 
-代码在 [`code/agent/streaming/sse.py`](../code/agent/streaming/sse.py)。[`fixture.sse`](../code/agent/streaming/fixture.sse) 是我按 Messages API 的流式事件格式手工构造的一段响应（**不是**真实录制，因为本教程不发真实请求）：模型先说一句话，再调用 `write_file` 工具。
+代码在 [`code/agent-node/streaming/sse.ts`](../code/agent-node/streaming/sse.ts)（Python 版 [`sse.py`](../code/agent/streaming/sse.py)）。两版共用同一个 [`fixture.sse`](../code/agent/streaming/fixture.sse)，它是我按 Messages API 的流式事件格式手工构造的一段响应（**不是**真实录制，因为本教程不发真实请求）：模型先说一句话，再调用 `write_file` 工具。
 
-```text
-$ uv run python -m streaming.sse --sdk
-message_start        开始 id=msg_stream_01 input_tokens=412
-content_block_start  [0] text 块开始
-ping                 ping（心跳，忽略）
-content_block_delta  [0] +'找到'           → 找到
-content_block_delta  [0] +'原因了：'         → 找到原因了：
-content_block_delta  [0] +'add 写成了'      → 找到原因了：add 写成了
-content_block_delta  [0] +'减法，我来'        → 找到原因了：add 写成了减法，我来
-content_block_delta  [0] +'修正。'          → 找到原因了：add 写成了减法，我来修正。
-content_block_stop   [0] 块结束
-content_block_start  [1] tool_use 开始 name=write_file（参数还没来）
-content_block_delta  [1] +''                               缓冲区能解析吗？✘
-content_block_delta  [1] +'{"path": "ca'                   缓冲区能解析吗？✘
-content_block_delta  [1] +'lc.py", "con'                   缓冲区能解析吗？✘
-content_block_delta  [1] +'tent": "def add(a, b):\\n    re' 缓冲区能解析吗？✘
-content_block_delta  [1] +'turn a + b\\n"}'                缓冲区能解析吗？✔
-content_block_stop   [1] tool_use 结束 → input={'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}
-message_delta        message_delta stop_reason=tool_use output_tokens=58
-message_stop         结束
-...
-SDK final message 的 tool_use.input： {'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}
-与手写拼装一致： True
-```
+=== "Node"
 
-最后一行很重要：我把**同一段字节**通过 `httpx2.MockTransport` 喂给了真实的 `anthropic` SDK（请求被拦在本地，没有发出去），SDK 用 `messages.stream()` + `get_final_message()` 拼出来的结果，和我们手写的拼装器完全一致。
+    ```text
+    $ node streaming/sse.ts --sdk
+    message_start        开始 id=msg_stream_01 input_tokens=412
+    content_block_start  [0] text 块开始
+    ping                 ping（心跳，忽略）
+    content_block_delta  [0] +"找到"           → 找到
+    content_block_delta  [0] +"原因了："         → 找到原因了：
+    content_block_delta  [0] +"add 写成了"      → 找到原因了：add 写成了
+    content_block_delta  [0] +"减法，我来"        → 找到原因了：add 写成了减法，我来
+    content_block_delta  [0] +"修正。"          → 找到原因了：add 写成了减法，我来修正。
+    content_block_stop   [0] 块结束
+    content_block_start  [1] tool_use 开始 name=write_file（参数还没来）
+    content_block_delta  [1] +""                               缓冲区能解析吗？✘
+    content_block_delta  [1] +"{\"path\": \"ca"                缓冲区能解析吗？✘
+    content_block_delta  [1] +"lc.py\", \"con"                 缓冲区能解析吗？✘
+    content_block_delta  [1] +"tent\": \"def add(a, b):\\n    re" 缓冲区能解析吗？✘
+    content_block_delta  [1] +"turn a + b\\n\"}"               缓冲区能解析吗？✔
+    content_block_stop   [1] tool_use 结束 → input={"path":"calc.py","content":"def add(a, b):\n    return a + b\n"}
+    message_delta        message_delta stop_reason=tool_use output_tokens=58
+    message_stop         结束
+    ...
+    SDK final message 的 tool_use.input： { path: 'calc.py', content: 'def add(a, b):\n    return a + b\n' }
+    与手写拼装一致： true
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m streaming.sse --sdk
+    message_start        开始 id=msg_stream_01 input_tokens=412
+    content_block_start  [0] text 块开始
+    ping                 ping（心跳，忽略）
+    content_block_delta  [0] +'找到'           → 找到
+    content_block_delta  [0] +'原因了：'         → 找到原因了：
+    content_block_delta  [0] +'add 写成了'      → 找到原因了：add 写成了
+    content_block_delta  [0] +'减法，我来'        → 找到原因了：add 写成了减法，我来
+    content_block_delta  [0] +'修正。'          → 找到原因了：add 写成了减法，我来修正。
+    content_block_stop   [0] 块结束
+    content_block_start  [1] tool_use 开始 name=write_file（参数还没来）
+    content_block_delta  [1] +''                               缓冲区能解析吗？✘
+    content_block_delta  [1] +'{"path": "ca'                   缓冲区能解析吗？✘
+    content_block_delta  [1] +'lc.py", "con'                   缓冲区能解析吗？✘
+    content_block_delta  [1] +'tent": "def add(a, b):\\n    re' 缓冲区能解析吗？✘
+    content_block_delta  [1] +'turn a + b\\n"}'                缓冲区能解析吗？✔
+    content_block_stop   [1] tool_use 结束 → input={'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}
+    message_delta        message_delta stop_reason=tool_use output_tokens=58
+    message_stop         结束
+    ...
+    SDK final message 的 tool_use.input： {'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}
+    与手写拼装一致： True
+    ```
+
+最后一行很重要：我把**同一段字节**喂给了真实的 SDK（Node 版通过构造参数里的自定义 `fetch` 喂给 `@anthropic-ai/sdk`，Python 版通过 `httpx2.MockTransport` 喂给 `anthropic`；请求被拦在本地，没有发出去），SDK 用 `messages.stream()` + `finalMessage()`（Python 是 `get_final_message()`）拼出来的结果，和我们手写的拼装器完全一致。
 
 ## SSE：一种很朴素的文本协议
 
@@ -58,39 +87,83 @@ data: {"type": "ping"}
 
 规则就三条：每行是 `字段: 值`；`event:` 是事件名，`data:` 是负载；**空行**表示一个事件结束。以冒号开头的行是注释，常被拿来当心跳。
 
-```python
-def parse_sse(lines):
-    event, data = "message", []
-    for raw in lines:
-        line = raw.rstrip("\r\n")
-        if line == "":                     # 空行 = 一个事件结束
-            if data:
-                yield event, json.loads("\n".join(data))
-            event, data = "message", []
-        elif line.startswith(":"):         # 注释行
-            continue
-        else:
-            field, _, value = line.partition(":")
-            value = value.removeprefix(" ")
-            if field == "event":
-                event = value
-            elif field == "data":
-                data.append(value)          # 多行 data 要用 \n 拼回去
-```
+=== "Node"
+
+    ```ts
+    function* parseSse(lines) {
+      let event = "message", data = [];
+      for (const raw of lines) {
+        const line = raw.replace(/\r?\n$/, "");
+        if (line === "") {                   // 空行 = 一个事件结束
+          if (data.length) yield [event, JSON.parse(data.join("\n"))];
+          [event, data] = ["message", []];
+        } else if (line.startsWith(":")) {   // 注释行
+          continue;
+        } else {
+          const i = line.indexOf(":");
+          const field = i === -1 ? line : line.slice(0, i);
+          let value = i === -1 ? "" : line.slice(i + 1);
+          if (value.startsWith(" ")) value = value.slice(1);
+          if (field === "event") event = value;
+          else if (field === "data") data.push(value);   // 多行 data 要用 \n 拼回去
+        }
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def parse_sse(lines):
+        event, data = "message", []
+        for raw in lines:
+            line = raw.rstrip("\r\n")
+            if line == "":                     # 空行 = 一个事件结束
+                if data:
+                    yield event, json.loads("\n".join(data))
+                event, data = "message", []
+            elif line.startswith(":"):         # 注释行
+                continue
+            else:
+                field, _, value = line.partition(":")
+                value = value.removeprefix(" ")
+                if field == "event":
+                    event = value
+                elif field == "data":
+                    data.append(value)          # 多行 data 要用 \n 拼回去
+    ```
 
 你可能会问：浏览器不是有 `EventSource` 吗，为什么还要自己解析？
 
 因为 `EventSource` 只支持 GET，没法带请求体，也不能自定义 `x-api-key` 这类请求头。调 LLM API 都是 POST，所以前端实际上用的是 `fetch` + `ReadableStream`，自己按空行切事件。这里有一个坑：**网络 chunk 的边界和事件边界毫无关系**，一个 chunk 可能切在一个汉字的 UTF-8 字节中间。所以要先按字节缓冲、凑齐一行再解码：
 
-```python
-def lines_from_chunks(chunks):
-    buf = b""
-    for c in chunks:
-        buf += c
-        while b"\n" in buf:
-            line, buf = buf.split(b"\n", 1)
-            yield line.decode("utf-8") + "\n"
-```
+=== "Node"
+
+    ```ts
+    function* linesFromChunks(chunks) {
+      let buf = Buffer.alloc(0);
+      for (const c of chunks) {
+        buf = Buffer.concat([buf, c]);
+        let nl;
+        while ((nl = buf.indexOf(0x0a)) !== -1) {     // 按字节找 \n，凑齐一行再解码
+          yield buf.subarray(0, nl).toString("utf8") + "\n";
+          buf = buf.subarray(nl + 1);
+        }
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def lines_from_chunks(chunks):
+        buf = b""
+        for c in chunks:
+            buf += c
+            while b"\n" in buf:
+                line, buf = buf.split(b"\n", 1)
+                yield line.decode("utf-8") + "\n"
+    ```
 
 测试里把 fixture 切成每块 1、3、7、64 字节分别喂进去，拼出来的结果都一样。
 
@@ -132,32 +205,63 @@ stateDiagram-v2
 
 这是本章最容易出错的地方。看上面的输出，`write_file` 的参数分 5 段到达，前 4 段拼起来都不是合法 JSON，只有最后一段到了才能解析。
 
-```python
-if d["type"] == "input_json_delta":
-    self._json_buf[i] += d["partial_json"]          # 只拼字符串，不解析
-...
-if t == "content_block_stop":
-    if i in self._json_buf:
-        raw = self._json_buf.pop(i)
-        self.message["content"][i]["input"] = json.loads(raw) if raw else {}   # 到 stop 才解析
-```
+=== "Node"
+
+    ```ts
+    if (d.type === "input_json_delta") {
+      this.jsonBuf.set(i, this.jsonBuf.get(i) + d.partial_json);   // 只拼字符串，不解析
+    }
+    ...
+    if (t === "content_block_stop") {
+      if (this.jsonBuf.has(i)) {
+        const raw = this.jsonBuf.get(i);
+        this.jsonBuf.delete(i);
+        this.message.content[i].input = raw ? JSON.parse(raw) : {};   // 到 stop 才解析
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    if d["type"] == "input_json_delta":
+        self._json_buf[i] += d["partial_json"]          # 只拼字符串，不解析
+    ...
+    if t == "content_block_stop":
+        if i in self._json_buf:
+            raw = self._json_buf.pop(i)
+            self.message["content"][i]["input"] = json.loads(raw) if raw else {}   # 到 stop 才解析
+    ```
 
 你可能会问：如果我想在界面上实时显示「模型正在写的文件内容」，难道也要等到 stop？
 
-显示可以不等，执行必须等。显示用的是**容错的 partial JSON 解析器**：对不完整的 JSON 尽量猜出一个部分对象（比如把 `{"path": "calc.py", "con` 解析成 `{"path": "calc.py"}`），只用于显示。真正执行工具，还是要等完整的输入。Anthropic Python SDK 内部就有这样的解析器：`stream` 里的 `input_json` 事件除了 `partial_json`，还带一个 `snapshot` 字段，是「当前已累积部分的解析结果」（见 `anthropic/lib/streaming/_types.py` 的 `InputJsonEvent`）。
+显示可以不等，执行必须等。显示用的是**容错的 partial JSON 解析器**：对不完整的 JSON 尽量猜出一个部分对象（比如把 `{"path": "calc.py", "con` 解析成 `{"path": "calc.py"}`），只用于显示。真正执行工具，还是要等完整的输入。Anthropic Python SDK 内部就有这样的解析器：`stream` 里的 `input_json` 事件除了 `partial_json`，还带一个 `snapshot` 字段，是「当前已累积部分的解析结果」（见 `anthropic/lib/streaming/_types.py` 的 `InputJsonEvent`）。Node SDK 也一样：`stream.on("inputJson", (partialJson, jsonSnapshot) => ...)` 的第二个参数就是这个快照（见 `@anthropic-ai/sdk/lib/MessageStream.d.ts`）。
 
 还有一个和延迟相关的开关：默认情况下，API 会把每个工具参数**缓冲并校验**后才开始发 `input_json_delta`，所以小参数看起来是一次性到的。在工具定义上设 `eager_input_streaming: true`，参数会边生成边推送，但服务端不再替你校验，拼出来的 JSON 可能是不完整（撞上 `max_tokens`）或非法的。这时执行前必须自己按 schema 校验，并先检查 `stop_reason` 是不是 `max_tokens`（依据：`claude-api` skill 的 tool-use 概念文档）。
 
 还有两个和 SDK 对比时发现的细节：
 
-- 真实 SDK 产出的事件里**没有 `ping`**，它把心跳吞掉了；但它额外合成了 `text` 和 `input_json` 两种便利事件（每个 delta 后面跟一个）。
-- SDK 的 `get_final_message()` 就是在做我们手写的 `Accumulator` 做的事。生产代码直接用它，别自己拼。
+- 真实 SDK 产出的事件里**没有 `ping`**，它把心跳吞掉了；Python SDK 还额外合成了 `text` 和 `input_json` 两种便利事件（每个 delta 后面跟一个）。Node SDK 的 `for await` 只给原始事件，便利事件要用 `stream.on("text")` / `stream.on("inputJson")` 订阅。
+- SDK 的 `finalMessage()`（Python 是 `get_final_message()`）就是在做我们手写的 `Accumulator` 做的事。生产代码直接用它，别自己拼。
 
-```text
-$ uv run pytest -q streaming
-....                                                                     [100%]
-4 passed in 0.39s
-```
+=== "Node"
+
+    ```text
+    $ node --test 'streaming/*.test.ts'
+    ✔ tool 参数只在 content_block_stop 时拼成
+    ✔ 任意切分网络 chunk 结果都一样
+    ✔ SSE 多行 data 和注释行
+    ✔ 和真实 SDK 的拼装结果一致
+    ℹ pass 4
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run pytest -q streaming
+    ....                                                                     [100%]
+    4 passed in 0.39s
+    ```
 
 **回到主线**：流式不改变上下文里放什么，也不省 token。它改变的是**等待的体验**和**超时的风险**：长输出不再是一个十分钟不吭声的 HTTP 请求。顺带地，客户端随时掌握「已经生成到哪了」，才谈得上「生成到一半时打断」这种交互。
 

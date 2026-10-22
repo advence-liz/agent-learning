@@ -20,28 +20,55 @@
 
 离线 fake 模型（`examples/ch18.json`）。演示脚本在后台往 `app.log` 里追加四行（两行 INFO、一行 ERROR、一行 Traceback），中间隔开一秒多；你在这期间什么都没输入：
 
-```console
-❯ 盯着 app.log，一出现 ERROR 就告诉我
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-● 用 Monitor 盯着，过滤 ERROR，也带上 Traceback 和 FATAL，免得进程崩了却没动静。
-⏺ Monitor(app.log 里的 ERROR / Traceback / FATAL)
-✔ Monitor -> Monitor started (task m1, expires in 30m unless the source ends first; you get one notice at expiry,
-● 在盯着了。一有匹配的行我就告诉你，你可以先忙别的。
-◇ system  1 条通知
-● app.log 出现了 ERROR：`db timeout after 3000ms`。看起来是数据库连接超时，要我查一下连接池配置吗？
-◇ system  1 条通知
-● 又一条：`Traceback (most recent call last)`，紧跟在超时之后，像是超时没被捕获、把 worker 带崩了。
-❯ /tasks
-m1  monitor  running       4.4s  app.log 里的 ERROR / Traceback / FATAL
-❯ 可以停了
-⏺ TaskStop(m1)
-✔ TaskStop -> Stopped task m1 (app.log 里的 ERROR / Traceback / FATAL).
-● 已停止监听（m1）。
-❯ /tasks
-m1  monitor  killed        4.4s  app.log 里的 ERROR / Traceback / FATAL
-❯ /exit
-```
+=== "Node"
+
+    ```console
+    ❯ 盯着 app.log，一出现 ERROR 就告诉我
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 用 Monitor 盯着，过滤 ERROR，也带上 Traceback 和 FATAL，免得进程崩了却没动静。
+    ⏺ Monitor(app.log 里的 ERROR / Traceback / FATAL)
+    ✔ Monitor -> Monitor started (task m1, expires in 30m unless the source ends first; you get one notice at expiry,
+    ● 在盯着了。一有匹配的行我就告诉你，你可以先忙别的。
+    ◇ system  1 条通知
+    ● app.log 出现了 ERROR：`db timeout after 3000ms`。看起来是数据库连接超时，要我查一下连接池配置吗？
+    ◇ system  1 条通知
+    ● 又一条：`Traceback (most recent call last)`，紧跟在超时之后，像是超时没被捕获、把 worker 带崩了。
+    ❯ /tasks
+    m1  monitor  running       5.3s  app.log 里的 ERROR / Traceback / FATAL
+    ❯ 可以停了
+    ⏺ TaskStop(m1)
+    ✔ TaskStop -> Stopped task m1 (app.log 里的 ERROR / Traceback / FATAL).
+    ● 已停止监听（m1）。
+    ❯ /tasks
+    m1  monitor  killed        5.3s  app.log 里的 ERROR / Traceback / FATAL
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 盯着 app.log，一出现 ERROR 就告诉我
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ● 用 Monitor 盯着，过滤 ERROR，也带上 Traceback 和 FATAL，免得进程崩了却没动静。
+    ⏺ Monitor(app.log 里的 ERROR / Traceback / FATAL)
+    ✔ Monitor -> Monitor started (task m1, expires in 30m unless the source ends first; you get one notice at expiry,
+    ● 在盯着了。一有匹配的行我就告诉你，你可以先忙别的。
+    ◇ system  1 条通知
+    ● app.log 出现了 ERROR：`db timeout after 3000ms`。看起来是数据库连接超时，要我查一下连接池配置吗？
+    ◇ system  1 条通知
+    ● 又一条：`Traceback (most recent call last)`，紧跟在超时之后，像是超时没被捕获、把 worker 带崩了。
+    ❯ /tasks
+    m1  monitor  running       4.4s  app.log 里的 ERROR / Traceback / FATAL
+    ❯ 可以停了
+    ⏺ TaskStop(m1)
+    ✔ TaskStop -> Stopped task m1 (app.log 里的 ERROR / Traceback / FATAL).
+    ● 已停止监听（m1）。
+    ❯ /tasks
+    m1  monitor  killed        4.4s  app.log 里的 ERROR / Traceback / FATAL
+    ❯ /exit
+    ```
 
 模型调用的命令是 `tail -n 0 -F app.log | grep -E --line-buffered 'ERROR|Traceback|FATAL'`。两条 INFO 被 grep 滤掉了，ERROR 和 Traceback 各触发一次唤醒。模型收到的通知长这样：
 
@@ -71,7 +98,7 @@ flowchart LR
     E --> Q
 ```
 
-图注：事件进的是第 9 章预留、第 16 章第一次用上的同一个通知队列；空闲时 `App.wake_if_idle()` 照样会唤醒模型。
+图注：事件进的是第 9 章预留、第 16 章第一次用上的同一个通知队列；空闲时 `App.wake_if_idle()` 照样会唤醒模型。（图里的读线程、tick 线程是 Python 版的做法；Node 版是 `node:readline` 的 `line` 事件加两个定时器：一批的第一行到达时定 200ms 的合并定时器，启动时定一个到期定时器。）
 
 打个比方，第 16 章的后台命令像外卖：送到了给你打一个电话。Monitor 像门铃：每来一个人响一次。
 
@@ -83,39 +110,69 @@ flowchart LR
 
 ### 1. 逐行读，200ms 合并
 
-`mini_cc/jobs.py:JobManager.start_monitor` 和第 16 章的 `start_bash` 只差在 stdout 的去向：
+`mini_cc/jobs.ts:JobManager.startMonitor`（Python 版 `jobs.py:JobManager.start_monitor`）和第 16 章的 `start_bash` 只差在 stdout 的去向：
 
-```python
-job.proc = subprocess.Popen(command, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=out,
-                            stdin=subprocess.DEVNULL, start_new_session=True, text=True, bufsize=1)
+=== "Node"
 
-def read():
-    for line in job.proc.stdout:
-        out.write(line); out.flush()              # 输出文件照样完整保存
-        if line.strip():
-            with lock:
-                pending.append(line.rstrip("\n"))
-                if not first_at:
-                    first_at.append(time.monotonic())
-```
+    ```ts
+    job.proc = spawn(command, { shell: true, cwd, stdio: ["ignore", "pipe", out], detached: true });
+
+    const reader = createInterface({ input: job.proc.stdout!, crlfDelay: Infinity }); // node:readline 逐行切
+    reader.on("line", (line) => {
+      writeSync(out, line + "\n"); // 输出文件照样完整保存
+      if (!line.trim()) return;
+      pending.push(line);
+      batchTimer ??= setTimeout(flush, this.batchWindow * 1000); // 这一批的第一行：0.2s 后合并发出
+    });
+    ```
+
+=== "Python"
+
+    ```python
+    job.proc = subprocess.Popen(command, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=out,
+                                stdin=subprocess.DEVNULL, start_new_session=True, text=True, bufsize=1)
+
+    def read():
+        for line in job.proc.stdout:
+            out.write(line); out.flush()              # 输出文件照样完整保存
+            if line.strip():
+                with lock:
+                    pending.append(line.rstrip("\n"))
+                    if not first_at:
+                        first_at.append(time.monotonic())
+    ```
 
 `stdout=PIPE`：stdout 是事件流，要逐行读出来；`stderr=out`：stderr 只进输出文件，**不触发事件**。
 
-合并由另一个线程做：
+合并由另一个线程做（Node 版不需要它：合并靠 `line` 回调里定的 `setTimeout(flush, 200)`，到期靠启动时定的定时器）：
 
-```python
-def tick():
-    while reader.is_alive():
-        reader.join(0.05)
-        with lock:
-            due = bool(first_at) and time.monotonic() - first_at[0] >= self.batch_window   # 0.2s
-        if due:
-            flush()
-        if time.monotonic() >= deadline and reader.is_alive():
-            kill("timeout")
-    flush()                                        # 进程结束前的最后几行
+=== "Node"
+
+    ```ts
+    const deadline = setTimeout(() => kill("timeout"), timeout * 1000);
     ...
-```
+    job.proc.on("close", (code, sig) => {
+      clearTimeout(deadline);
+      flush(); // 进程结束前的最后几行
+      ...
+    });
+    ```
+
+=== "Python"
+
+    ```python
+    def tick():
+        while reader.is_alive():
+            reader.join(0.05)
+            with lock:
+                due = bool(first_at) and time.monotonic() - first_at[0] >= self.batch_window   # 0.2s
+            if due:
+                flush()
+            if time.monotonic() >= deadline and reader.is_alive():
+                kill("timeout")
+        flush()                                        # 进程结束前的最后几行
+        ...
+    ```
 
 你可能会问：为什么要合并？一行一个事件不是更及时吗？
 
@@ -140,24 +197,48 @@ def tick():
 
 结束时一定有一条通知，三种结局说法不同：
 
-```python
-if end_reason == ["timeout"]:
-    summary = f'Monitor "{description}" expired after {timeout:g}s with {n} events. Arm it again (re-arm) if …'
-elif end_reason == ["flood"]:
-    summary = f'Monitor "{description}" was stopped: too many events ({n} in {self.event_window:g}s). …'
-else:
-    summary = f'Monitor "{description}" stream ended (exit code {rc}, {n} events)'
-```
+=== "Node"
+
+    ```ts
+    if (endReason === "timeout") {
+      summary = `Monitor "${description}" expired after ${timeout}s with ${n} events. Arm it again (re-arm) if …`;
+    } else if (endReason === "flood") {
+      summary = `Monitor "${description}" was stopped: too many events (${n} in ${this.eventWindow}s). …`;
+    } else {
+      summary = `Monitor "${description}" stream ended (exit code ${rc}, ${n} events)`;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    if end_reason == ["timeout"]:
+        summary = f'Monitor "{description}" expired after {timeout:g}s with {n} events. Arm it again (re-arm) if …'
+    elif end_reason == ["flood"]:
+        summary = f'Monitor "{description}" was stopped: too many events ({n} in {self.event_window:g}s). …'
+    else:
+        summary = f'Monitor "{description}" stream ended (exit code {rc}, {n} events)'
+    ```
 
 你本机的 Claude Code 会话里，「Monitor event」通知出现了 586 次，「stream ended」234 次（按 summary 前缀统计）。也就是说，你用 Monitor 的时候，大部分是「有终点的监听」：等 CI 跑完、等测试套件出结果。
 
 ### 3. Monitor 工具
 
-`mini_cc/tools/monitor.py:MonitorTool`，参数和 Claude Code 一致：`command`、`description`、`timeout_ms`。权限直接复用 Bash 的命令分析：
+`mini_cc/tools/monitor.ts:MonitorTool`（Python 版 `monitor.py:MonitorTool`），参数和 Claude Code 一致：`command`、`description`、`timeout_ms`。权限直接复用 Bash 的命令分析：
 
-```python
-self_check = BashTool.self_check     # tail | grep 这种只读命令免审批，其余要问
-```
+=== "Node"
+
+    ```ts
+    override selfCheck(args: Args): "allow" | "ask" | null {
+      return BashTool.prototype.selfCheck.call(this, args); // tail | grep 这种只读命令免审批，其余要问
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    self_check = BashTool.self_check     # tail | grep 这种只读命令免审批，其余要问
+    ```
 
 工具描述是本章最值得花时间的地方，因为 Monitor 用错的方式比用对的多。我从 Claude Code 的 Monitor 说明里挑了几条最关键的，用自己的话写进了描述：
 
@@ -174,20 +255,36 @@ self_check = BashTool.self_check     # tail | grep 这种只读命令免审批�
 
 ## 测试
 
-`tests/test_ch18_monitor.py`，7 个，都是真实子进程：
+`tests/ch18_monitor.test.ts`（Python 版 `tests/test_ch18_monitor.py`），7 个，都是真实子进程：
 
 - 间隔 0.5 秒的两行 → 两个事件 + 一条 `stream ended (exit code 0, 2 events)`，输出文件完整。
 - 同时输出的三行 → 一个事件；stderr 不是事件但进了输出文件。
 - 到期：0.5 秒后杀掉，通知里有「expired」「re-arm」；刷屏：第 3 个事件后自动停止，「too many events」「tighter filter」；`seq 1 100` 的单个事件截断到 5 行。
 - 端到端：Monitor 工具监听 `tail -F`，测试往日志里追加一行 ERROR，空闲唤醒后模型看到 `<event>ERROR db timeout</event>`；`TaskStop` 停止；`/tasks` 显示 monitor。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 40%]
-........................................................................ [ 81%]
-................................                                         [100%]
-176 passed in 12.73s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[0-8]*.test.ts tests/extension_points.test.ts
+    ℹ tests 176
+    ℹ suites 0
+    ℹ pass 176
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 10170.098041
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 40%]
+    ........................................................................ [ 81%]
+    ................................                                         [100%]
+    176 passed in 12.73s
+    ```
 
 ## 和真实 Claude Code 的差异
 

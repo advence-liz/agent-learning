@@ -10,19 +10,35 @@
 
 ## 先跑起来看看
 
-代码在 [`code/agent/chatbot/bot.py`](../code/agent/chatbot/bot.py)，一共 80 行。离线跑一下（离线 fake 模型，回复和 token 数都是脚本预设的）：
+代码在 [`code/agent-node/chatbot/bot.ts`](../code/agent-node/chatbot/bot.ts)（Python 版 [`bot.py`](../code/agent/chatbot/bot.py)），一共 90 来行（Python 版 80 行）。离线跑一下（离线 fake 模型，回复和 token 数都是脚本预设的）：
 
-```text
-$ uv run python -m chatbot.bot --fake
-❯ 你好，我叫 Rason，是前端工程师
-⏺ 你好 Rason！有什么可以帮你？   [in=30 out=20 历史条数=2]
-❯ 我叫什么？
-⏺ 你叫 Rason，是前端工程师。   [in=62 out=20 历史条数=4]
-❯ /system 你是一只傲娇的猫，句尾带喵
-（人设已切换为：你是一只傲娇的猫，句尾带喵）
-❯ 我叫什么？
-⏺ 喵～本猫不认识你，你是谁喵？   [in=28 out=20 历史条数=2]
-```
+=== "Node"
+
+    ```text
+    $ node chatbot/bot.ts --fake
+    ❯ 你好，我叫 Rason，是前端工程师
+    ⏺ 你好 Rason！有什么可以帮你？   [in=30 out=20 历史条数=2]
+    ❯ 我叫什么？
+    ⏺ 你叫 Rason，是前端工程师。   [in=62 out=20 历史条数=4]
+    ❯ /system 你是一只傲娇的猫，句尾带喵
+    （人设已切换为：你是一只傲娇的猫，句尾带喵）
+    ❯ 我叫什么？
+    ⏺ 喵～本猫不认识你，你是谁喵？   [in=28 out=20 历史条数=2]
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m chatbot.bot --fake
+    ❯ 你好，我叫 Rason，是前端工程师
+    ⏺ 你好 Rason！有什么可以帮你？   [in=30 out=20 历史条数=2]
+    ❯ 我叫什么？
+    ⏺ 你叫 Rason，是前端工程师。   [in=62 out=20 历史条数=4]
+    ❯ /system 你是一只傲娇的猫，句尾带喵
+    （人设已切换为：你是一只傲娇的猫，句尾带喵）
+    ❯ 我叫什么？
+    ⏺ 喵～本猫不认识你，你是谁喵？   [in=28 out=20 历史条数=2]
+    ```
 
 注意右边那一栏。第二轮的「历史条数」是 4，说明发给模型的已经是两问一答再加一问。切换人设时我们顺手清空了数组，于是条数回到 2，它也就「忘了」你是谁。
 
@@ -32,27 +48,56 @@ $ uv run python -m chatbot.bot --fake
 
 核心就这几行：
 
-```python
-class Chatbot:
-    def __init__(self, client, system="你是一个简洁的中文助手。", max_tokens=2048):
-        self.client = client
-        self.system = system
-        self.messages = []          # ← 这就是「记忆」的全部
+=== "Node"
 
-    def send(self, user_text):
-        self.messages.append({"role": "user", "content": user_text})
-        resp = self.client.messages.create(
-            model="claude-opus-5-5",
-            max_tokens=self.max_tokens,
-            system=self.system,         # 人设：每次请求都重新发一遍
-            messages=self.messages,     # 历史：每次请求都完整发一遍
-        )
-        reply = "".join(b.text for b in resp.content if b.type == "text")
-        self.messages.append({"role": "assistant", "content": resp.content})
-        return reply
-```
+    ```ts
+    class Chatbot {
+      messages: Anthropic.MessageParam[] = []; // ← 这就是「记忆」的全部
 
-你可能会问：为什么回复也要 `append` 回去？我只关心用户说了什么。
+      constructor(client, { system = "你是一个简洁的中文助手。", maxTokens = 2048 } = {}) {
+        this.client = client;
+        this.system = system;
+        this.maxTokens = maxTokens;
+      }
+
+      async send(userText: string): Promise<string> {
+        this.messages.push({ role: "user", content: userText });
+        const resp = await this.client.messages.create({
+          model: "claude-opus-5-5",
+          max_tokens: this.maxTokens,
+          system: this.system, //       人设：每次请求都重新发一遍
+          messages: this.messages, //   历史：每次请求都完整发一遍
+        });
+        const reply = resp.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+        this.messages.push({ role: "assistant", content: resp.content });
+        return reply;
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    class Chatbot:
+        def __init__(self, client, system="你是一个简洁的中文助手。", max_tokens=2048):
+            self.client = client
+            self.system = system
+            self.messages = []          # ← 这就是「记忆」的全部
+
+        def send(self, user_text):
+            self.messages.append({"role": "user", "content": user_text})
+            resp = self.client.messages.create(
+                model="claude-opus-5-5",
+                max_tokens=self.max_tokens,
+                system=self.system,         # 人设：每次请求都重新发一遍
+                messages=self.messages,     # 历史：每次请求都完整发一遍
+            )
+            reply = "".join(b.text for b in resp.content if b.type == "text")
+            self.messages.append({"role": "assistant", "content": resp.content})
+            return reply
+    ```
+
+你可能会问：为什么回复也要 `push`（Python 里是 `append`）回去？我只关心用户说了什么。
 
 因为模型下一轮要预测的是「在这段对话之后，assistant 接下来说什么」。如果数组里只有用户的话，在模型眼里就是一个人自言自语了好几句，它不知道自己之前答过什么，很容易前后矛盾。
 
@@ -89,25 +134,53 @@ sequenceDiagram
 
 ## 测试替身：不调用真模型怎么验证
 
-这个教程有个约束：不主动调用 Anthropic API。所以所有 agent 代码都接受一个**可注入的 client**，测试里换成 [`fake_llm.FakeAnthropic`](../code/agent/fake_llm/__init__.py)：它有一个 `.messages.create()` 方法，按脚本依次返回预设的响应，返回值是 SDK 真实的 `anthropic.types.Message` 对象，所以业务代码一行不改。
+这个教程有个约束：不主动调用 Anthropic API。所以所有 agent 代码都接受一个**可注入的 client**，测试里换成 [`FakeAnthropic`](../code/agent-node/fake_llm/index.ts)（Python 版 [`fake_llm.FakeAnthropic`](../code/agent/fake_llm/__init__.py)）：它有一个 `.messages.create()` 方法，按脚本依次返回预设的响应，返回值和 SDK 真实的 `Message` 形状完全一致（Python 版直接就是 `anthropic.types.Message` 对象），所以业务代码一行不改。
 
 更有用的是它把每次调用的入参都记在 `client.calls` 里，测试就能断言「模型这一轮到底看到了什么」：
 
-```python
-def test_memory_is_the_messages_array():
-    client = FakeAnthropic([text("你好 Rason"), text("你叫 Rason")])
-    bot = Chatbot(client, system="S")
-    bot.send("我叫 Rason")
-    bot.send("我叫什么？")
-    second = client.calls[1]
-    assert [m["role"] for m in second["messages"]] == ["user", "assistant", "user"]
-```
+=== "Node"
 
-```text
-$ uv run pytest -q chatbot
-..                                                                       [100%]
-2 passed in 0.56s
-```
+    ```ts
+    test("记忆就是 messages 数组", async () => {
+      const client = new FakeAnthropic([text("你好 Rason"), text("你叫 Rason")]);
+      const bot = new Chatbot(client, { system: "S" });
+      await bot.send("我叫 Rason");
+      await bot.send("我叫什么？");
+      const second = client.calls[1];
+      assert.deepEqual(second.messages.map((m) => m.role), ["user", "assistant", "user"]);
+    });
+    ```
+
+=== "Python"
+
+    ```python
+    def test_memory_is_the_messages_array():
+        client = FakeAnthropic([text("你好 Rason"), text("你叫 Rason")])
+        bot = Chatbot(client, system="S")
+        bot.send("我叫 Rason")
+        bot.send("我叫什么？")
+        second = client.calls[1]
+        assert [m["role"] for m in second["messages"]] == ["user", "assistant", "user"]
+    ```
+
+跑一下：
+
+=== "Node"
+
+    ```text
+    $ node --test chatbot/*.test.ts
+    ✔ 记忆就是 messages 数组
+    ✔ reset 之后什么都不记得
+    ℹ pass 2
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run pytest -q chatbot
+    ..                                                                       [100%]
+    2 passed in 0.56s
+    ```
 
 这个「看模型看到了什么」的思路后面每一章都会用到。调 agent 的 bug，十有八九是上下文拼错了，而不是模型笨。
 

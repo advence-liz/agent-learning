@@ -39,11 +39,21 @@ flowchart LR
 
 **第三步，一个防幻觉的小技巧。** 旧记忆的 id 是 UUID，又长又随机。直接给模型看，它在输出里抄 id 时很容易抄错一两位，然后你就会去 UPDATE 一条不存在的记忆。v1 的做法是：
 
-```python
-# mapping UUIDs with integers for handling UUID hallucinations
-temp_uuid_mapping[str(idx)] = item["id"]
-retrieved_old_memory[idx]["id"] = str(idx)
-```
+=== "Node"
+
+    ```ts
+    // mapping UUIDs with integers for handling UUID hallucinations
+    tempUuidMapping[String(idx)] = item.id;
+    retrievedOldMemory[idx].id = String(idx);
+    ```
+
+=== "Python"
+
+    ```python
+    # mapping UUIDs with integers for handling UUID hallucinations
+    temp_uuid_mapping[str(idx)] = item["id"]
+    retrieved_old_memory[idx]["id"] = str(idx)
+    ```
 
 给模型看的是 0、1、2，模型输出的也是 0、1、2，程序再映射回真 UUID。这个技巧非常值得偷：**凡是要让模型引用一个程序里的 id，都给它一个短的临时编号。**
 
@@ -55,84 +65,190 @@ retrieved_old_memory[idx]["id"] = str(idx)
 
 下面用玩具 embedding（字符二元组词袋）和规则代替两次 LLM 调用，结构和 v1 一致：
 
-```python
-import hashlib, itertools, math
-from collections import Counter
+=== "Node"
 
-def embed(text):                                  # 玩具 embedding：字符二元组词袋
-    return Counter(text[i:i + 2] for i in range(len(text) - 1))
+    ```ts
+    import { createHash } from "node:crypto";
 
-def cos(a, b):
-    dot = sum(a[k] * b[k] for k in a)
-    return dot / (math.sqrt(sum(v * v for v in a.values())) * math.sqrt(sum(v * v for v in b.values())) or 1)
+    type Vec = Map<string, number>;
 
-_ids = itertools.count(1)
+    function embed(text: string): Vec {                 // 玩具 embedding：字符二元组词袋
+      const c: Vec = new Map();
+      for (let i = 0; i < text.length - 1; i++) c.set(text.slice(i, i + 2), (c.get(text.slice(i, i + 2)) ?? 0) + 1);
+      return c;
+    }
 
-class VectorStore:
-    def __init__(self): self.rows = {}            # id -> {data, vec, user_id, hash}
-    def search(self, q, user_id, limit=5):
-        hits = [(cos(embed(q), r["vec"]), i) for i, r in self.rows.items() if r["user_id"] == user_id]
-        return [{"id": i, "text": self.rows[i]["data"]} for s, i in sorted(hits, reverse=True)[:limit] if s > 0.2]
+    function cos(a: Vec, b: Vec): number {
+      let dot = 0;
+      for (const [k, v] of a) dot += v * (b.get(k) ?? 0);
+      const norm = (x: Vec) => Math.sqrt([...x.values()].reduce((s, v) => s + v * v, 0));
+      return dot / (norm(a) * norm(b) || 1);
+    }
 
-def fake_extract_facts(messages):                # 第 1 次 LLM 调用：对话 -> {"facts": [...]}
-    return {"facts": [s.strip() for m in messages if m["role"] == "user"
-                      for s in m["content"].replace("，", "。").split("。") if s.strip()]}
+    let nextId = 1;
 
-def fake_decide(old, facts):                     # 第 2 次 LLM 调用：旧记忆 + 新事实 -> ADD/UPDATE/DELETE/NONE
-    out = []
-    for f in facts:
-        same = next((o for o in old if o["text"] == f), None)
-        rel = next((o for o in old if cos(embed(o["text"]), embed(f)) > 0.6), None)  # 玩具规则：很像 = 同一主题
-        if same:   out.append({"id": same["id"], "text": f, "event": "NONE"})
-        elif rel and "不" in f and "不" not in rel["text"]:
-            out.append({"id": rel["id"], "text": f, "event": "UPDATE", "old_memory": rel["text"]})
-        else:      out.append({"id": "new", "text": f, "event": "ADD"})
-    return {"memory": out}
+    type Row = { data: string; vec: Vec; user_id: string; hash: string };
+    class VectorStore {
+      rows = new Map<string, Row>();                    // id -> {data, vec, user_id, hash}
+      search(q: string, userId: string, limit = 5) {
+        const hits = [...this.rows].filter(([, r]) => r.user_id === userId).map(([i, r]) => [cos(embed(q), r.vec), i] as const);
+        hits.sort((x, y) => y[0] - x[0] || (y[1] > x[1] ? 1 : -1));   // 对应 sorted(hits, reverse=True)
+        return hits.slice(0, limit).filter(([s]) => s > 0.2).map(([, i]) => ({ id: i, text: this.rows.get(i)!.data }));
+      }
+    }
 
-def add_v1(store, history, messages, user_id):
-    facts = fake_extract_facts(messages)["facts"]
-    old = {}
-    for f in facts:
-        for m in store.search(f, user_id):
-            old[m["id"]] = m
-    temp = {str(i): real for i, real in enumerate(old)}                # UUID -> 0,1,2… 防止模型编造 id
-    shown = [{"id": str(i), "text": old[real]["text"]} for i, real in enumerate(old)]
-    for act in fake_decide(shown, facts)["memory"]:
-        ev = act["event"]
-        if ev == "ADD":
-            mid = f"mem-{next(_ids):04d}-9f3c"            # 真实是 uuid4
-            store.rows[mid] = {"data": act["text"], "vec": embed(act["text"]), "user_id": user_id,
-                               "hash": hashlib.md5(act["text"].encode()).hexdigest()}
-            history.append((mid, None, act["text"], "ADD"))
-        elif ev == "UPDATE":
-            mid = temp[act["id"]]
-            history.append((mid, store.rows[mid]["data"], act["text"], "UPDATE"))
-            store.rows[mid].update(data=act["text"], vec=embed(act["text"]))
-        print(f"  {ev:<6} {act['text']}")
+    type Message = { role: string; content: string };
+    function fakeExtractFacts(messages: Message[]) {   // 第 1 次 LLM 调用：对话 -> {"facts": [...]}
+      return { facts: messages.filter((m) => m.role === "user")
+        .flatMap((m) => m.content.replaceAll("，", "。").split("。").map((s) => s.trim()).filter(Boolean)) };
+    }
 
-store, history = VectorStore(), []
-print("turn 1"); add_v1(store, history, [{"role": "user", "content": "我叫小李，我喜欢用 Vim 写代码。"}], "u1")
-print("turn 2"); add_v1(store, history, [{"role": "user", "content": "我叫小李。我现在不喜欢用 Vim 写代码了，改用 VS Code。"}], "u1")
-print("search('用什么写代码'):", [m['text'] for m in store.search('用什么写代码', 'u1')])
-print("history:"); [print("  ", h) for h in history]
-```
+    type Act = { id: string; text: string; event: string; old_memory?: string };
+    function fakeDecide(old: { id: string; text: string }[], facts: string[]) {   // 第 2 次 LLM 调用：旧记忆 + 新事实 -> ADD/UPDATE/DELETE/NONE
+      const out: Act[] = [];
+      for (const f of facts) {
+        const same = old.find((o) => o.text === f);
+        const rel = old.find((o) => cos(embed(o.text), embed(f)) > 0.6);   // 玩具规则：很像 = 同一主题
+        if (same) out.push({ id: same.id, text: f, event: "NONE" });
+        else if (rel && f.includes("不") && !rel.text.includes("不"))
+          out.push({ id: rel.id, text: f, event: "UPDATE", old_memory: rel.text });
+        else out.push({ id: "new", text: f, event: "ADD" });
+      }
+      return { memory: out };
+    }
 
-```text
-❯ uv run python mem0_v1_demo.py
-turn 1
-  ADD    我叫小李
-  ADD    我喜欢用 Vim 写代码
-turn 2
-  NONE   我叫小李
-  UPDATE 我现在不喜欢用 Vim 写代码了
-  ADD    改用 VS Code
-search('用什么写代码'): ['我现在不喜欢用 Vim 写代码了']
-history:
-   ('mem-0001-9f3c', None, '我叫小李', 'ADD')
-   ('mem-0002-9f3c', None, '我喜欢用 Vim 写代码', 'ADD')
-   ('mem-0002-9f3c', '我喜欢用 Vim 写代码', '我现在不喜欢用 Vim 写代码了', 'UPDATE')
-   ('mem-0003-9f3c', None, '改用 VS Code', 'ADD')
-```
+    function addV1(store: VectorStore, history: [string, string | null, string, string][], messages: Message[], userId: string) {
+      const facts = fakeExtractFacts(messages).facts;
+      const old = new Map<string, { id: string; text: string }>();
+      for (const f of facts) for (const m of store.search(f, userId)) old.set(m.id, m);
+      const realIds = [...old.keys()];
+      const temp = Object.fromEntries(realIds.map((real, i) => [String(i), real]));   // UUID -> 0,1,2… 防止模型编造 id
+      const shown = realIds.map((real, i) => ({ id: String(i), text: old.get(real)!.text }));
+      for (const act of fakeDecide(shown, facts).memory) {
+        const ev = act.event;
+        if (ev === "ADD") {
+          const mid = `mem-${String(nextId++).padStart(4, "0")}-9f3c`;   // 真实是 uuid4
+          store.rows.set(mid, { data: act.text, vec: embed(act.text), user_id: userId,
+                                hash: createHash("md5").update(act.text).digest("hex") });
+          history.push([mid, null, act.text, "ADD"]);
+        } else if (ev === "UPDATE") {
+          const mid = temp[act.id];
+          const row = store.rows.get(mid)!;
+          history.push([mid, row.data, act.text, "UPDATE"]);
+          Object.assign(row, { data: act.text, vec: embed(act.text) });
+        }
+        console.log(`  ${ev.padEnd(6)} ${act.text}`);
+      }
+    }
+
+    const store = new VectorStore(), history: [string, string | null, string, string][] = [];
+    console.log("turn 1"); addV1(store, history, [{ role: "user", content: "我叫小李，我喜欢用 Vim 写代码。" }], "u1");
+    console.log("turn 2"); addV1(store, history, [{ role: "user", content: "我叫小李。我现在不喜欢用 Vim 写代码了，改用 VS Code。" }], "u1");
+    console.log("search('用什么写代码'):", store.search("用什么写代码", "u1").map((m) => m.text));
+    console.log("history:"); for (const h of history) console.log("  ", h);
+    ```
+
+=== "Python"
+
+    ```python
+    import hashlib, itertools, math
+    from collections import Counter
+
+    def embed(text):                                  # 玩具 embedding：字符二元组词袋
+        return Counter(text[i:i + 2] for i in range(len(text) - 1))
+
+    def cos(a, b):
+        dot = sum(a[k] * b[k] for k in a)
+        return dot / (math.sqrt(sum(v * v for v in a.values())) * math.sqrt(sum(v * v for v in b.values())) or 1)
+
+    _ids = itertools.count(1)
+
+    class VectorStore:
+        def __init__(self): self.rows = {}            # id -> {data, vec, user_id, hash}
+        def search(self, q, user_id, limit=5):
+            hits = [(cos(embed(q), r["vec"]), i) for i, r in self.rows.items() if r["user_id"] == user_id]
+            return [{"id": i, "text": self.rows[i]["data"]} for s, i in sorted(hits, reverse=True)[:limit] if s > 0.2]
+
+    def fake_extract_facts(messages):                # 第 1 次 LLM 调用：对话 -> {"facts": [...]}
+        return {"facts": [s.strip() for m in messages if m["role"] == "user"
+                          for s in m["content"].replace("，", "。").split("。") if s.strip()]}
+
+    def fake_decide(old, facts):                     # 第 2 次 LLM 调用：旧记忆 + 新事实 -> ADD/UPDATE/DELETE/NONE
+        out = []
+        for f in facts:
+            same = next((o for o in old if o["text"] == f), None)
+            rel = next((o for o in old if cos(embed(o["text"]), embed(f)) > 0.6), None)  # 玩具规则：很像 = 同一主题
+            if same:   out.append({"id": same["id"], "text": f, "event": "NONE"})
+            elif rel and "不" in f and "不" not in rel["text"]:
+                out.append({"id": rel["id"], "text": f, "event": "UPDATE", "old_memory": rel["text"]})
+            else:      out.append({"id": "new", "text": f, "event": "ADD"})
+        return {"memory": out}
+
+    def add_v1(store, history, messages, user_id):
+        facts = fake_extract_facts(messages)["facts"]
+        old = {}
+        for f in facts:
+            for m in store.search(f, user_id):
+                old[m["id"]] = m
+        temp = {str(i): real for i, real in enumerate(old)}                # UUID -> 0,1,2… 防止模型编造 id
+        shown = [{"id": str(i), "text": old[real]["text"]} for i, real in enumerate(old)]
+        for act in fake_decide(shown, facts)["memory"]:
+            ev = act["event"]
+            if ev == "ADD":
+                mid = f"mem-{next(_ids):04d}-9f3c"            # 真实是 uuid4
+                store.rows[mid] = {"data": act["text"], "vec": embed(act["text"]), "user_id": user_id,
+                                   "hash": hashlib.md5(act["text"].encode()).hexdigest()}
+                history.append((mid, None, act["text"], "ADD"))
+            elif ev == "UPDATE":
+                mid = temp[act["id"]]
+                history.append((mid, store.rows[mid]["data"], act["text"], "UPDATE"))
+                store.rows[mid].update(data=act["text"], vec=embed(act["text"]))
+            print(f"  {ev:<6} {act['text']}")
+
+    store, history = VectorStore(), []
+    print("turn 1"); add_v1(store, history, [{"role": "user", "content": "我叫小李，我喜欢用 Vim 写代码。"}], "u1")
+    print("turn 2"); add_v1(store, history, [{"role": "user", "content": "我叫小李。我现在不喜欢用 Vim 写代码了，改用 VS Code。"}], "u1")
+    print("search('用什么写代码'):", [m['text'] for m in store.search('用什么写代码', 'u1')])
+    print("history:"); [print("  ", h) for h in history]
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node mem0_v1_demo.ts
+    turn 1
+      ADD    我叫小李
+      ADD    我喜欢用 Vim 写代码
+    turn 2
+      NONE   我叫小李
+      UPDATE 我现在不喜欢用 Vim 写代码了
+      ADD    改用 VS Code
+    search('用什么写代码'): [ '我现在不喜欢用 Vim 写代码了' ]
+    history:
+       [ 'mem-0001-9f3c', null, '我叫小李', 'ADD' ]
+       [ 'mem-0002-9f3c', null, '我喜欢用 Vim 写代码', 'ADD' ]
+       [ 'mem-0002-9f3c', '我喜欢用 Vim 写代码', '我现在不喜欢用 Vim 写代码了', 'UPDATE' ]
+       [ 'mem-0003-9f3c', null, '改用 VS Code', 'ADD' ]
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python mem0_v1_demo.py
+    turn 1
+      ADD    我叫小李
+      ADD    我喜欢用 Vim 写代码
+    turn 2
+      NONE   我叫小李
+      UPDATE 我现在不喜欢用 Vim 写代码了
+      ADD    改用 VS Code
+    search('用什么写代码'): ['我现在不喜欢用 Vim 写代码了']
+    history:
+       ('mem-0001-9f3c', None, '我叫小李', 'ADD')
+       ('mem-0002-9f3c', None, '我喜欢用 Vim 写代码', 'ADD')
+       ('mem-0002-9f3c', '我喜欢用 Vim 写代码', '我现在不喜欢用 Vim 写代码了', 'UPDATE')
+       ('mem-0003-9f3c', None, '改用 VS Code', 'ADD')
+    ```
 
 （离线 fake 模型：事实抽取按句号切分，裁判用相似度规则。）
 

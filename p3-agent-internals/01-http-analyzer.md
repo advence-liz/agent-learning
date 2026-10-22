@@ -53,73 +53,135 @@ sequenceDiagram
 
 ## 先跑起来看看
 
-代码在 `code/agent/http_analyzer/`。为了遵守「不主动调用 Anthropic」，仓库里带了一个离线假上游 `fake_upstream.py`：它会按 Messages API 的格式吐 SSE，还会粗糙地模拟 prompt cache。`demo.py` 把假上游、代理、两轮请求串起来跑一遍：
+代码在 [`code/agent-node/http_analyzer/`](../code/agent-node/http_analyzer/)（Python 版 [`code/agent/http_analyzer/`](../code/agent/http_analyzer/)）。为了遵守「不主动调用 Anthropic」，仓库里带了一个离线假上游 [`fake_upstream.ts`](../code/agent-node/http_analyzer/fake_upstream.ts)（[`fake_upstream.py`](../code/agent/http_analyzer/fake_upstream.py)）：它会按 Messages API 的格式吐 SSE，还会粗糙地模拟 prompt cache。[`demo.ts`](../code/agent-node/http_analyzer/demo.ts)（[`demo.py`](../code/agent/http_analyzer/demo.py)）把假上游、代理、两轮请求串起来跑一遍：
 
-```text
-❯ cd code/agent && uv run python -m http_analyzer.demo
-== proxy stdout
-{"id": "0001-POST-v1_messages", "status": 200, "secs": 0.0, "model": "claude-sonnet-5-5", "stream": true, "n_messages": 1, "n_tools": 2, "n_system_blocks": 2, "usage": {"input_tokens": 0, "cache_creation_input_tokens": 405, "cache_read_input_tokens": 0, "output_tokens": 5}}
-{"id": "0002-POST-v1_messages", "status": 200, "secs": 0.0, "model": "claude-sonnet-5-5", "stream": true, "n_messages": 3, "n_tools": 2, "n_system_blocks": 2, "usage": {"input_tokens": 0, "cache_creation_input_tokens": 21, "cache_read_input_tokens": 405, "output_tokens": 5}}
+=== "Node"
 
-== analyze --show 1
-POST /v1/messages  body=3371 bytes  model=claude-sonnet-5-5
-anthropic-beta: prompt-caching-demo
--- system
-  [0] 23 chars  'You are a coding agent.'
-  [1] 807 chars  '# 行为规范 规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规'
--- tools (2)
-  Read: 342 bytes
-  Bash: 335 bytes
--- messages (1)
-  [0] user: text:70
--- cache_control breakpoints
-  system[1] {'type': 'ephemeral'}
-  messages[0].content[0] {'type': 'ephemeral'}
--- usage {"input_tokens": 0, "cache_creation_input_tokens": 405, "cache_read_input_tokens": 0, "output_tokens": 5}
+    ```text
+    ❯ cd code/agent-node && node http_analyzer/demo.ts
+    == proxy stdout
+    {"id":"0001-POST-v1_messages","status":200,"secs":0.01,"model":"claude-sonnet-5-5","stream":true,"n_messages":1,"n_tools":2,"n_system_blocks":2,"usage":{"input_tokens":0,"cache_creation_input_tokens":396,"cache_read_input_tokens":0,"output_tokens":5}}
+    {"id":"0002-POST-v1_messages","status":200,"secs":0,"model":"claude-sonnet-5-5","stream":true,"n_messages":3,"n_tools":2,"n_system_blocks":2,"usage":{"input_tokens":0,"cache_creation_input_tokens":19,"cache_read_input_tokens":396,"output_tokens":5}}
 
-== analyze --prefix 1 2
-shared prefix blocks: 5 / 5 / 7
+    == analyze --show 1
+    POST /v1/messages  body=3371 bytes  model=claude-sonnet-5-5
+    anthropic-beta: prompt-caching-demo
+    -- system
+      [0] 23 chars  "You are a coding agent."
+      [1] 807 chars  "# 行为规范 规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规"
+    -- tools (2)
+      Read: 330 bytes
+      Bash: 323 bytes
+    -- messages (1)
+      [0] user: text:64
+    -- cache_control breakpoints
+      system[1] {"type":"ephemeral"}
+      messages[0].content[0] {"type":"ephemeral"}
+    -- usage {"input_tokens":0,"cache_creation_input_tokens":396,"cache_read_input_tokens":0,"output_tokens":5}
 
-== request.json headers (redacted)
-{
- "Host": "127.0.0.1:55634",
- ...
- "x-api-key": "sk-ant…***REDACTED***",
-```
+    == analyze --prefix 1 2
+    shared prefix blocks: 5 / 5 / 7
 
-（以上为离线 fake 上游的真实输出，中间的 header 省略了几行；token 数是假上游按字符数 / 4 估的，只用来演示字段关系。）
+    == request.json headers (redacted)
+    {
+     "host": "127.0.0.1:58155",
+     "connection": "keep-alive",
+     "x-api-key": "sk-ant…***REDACTED***",
+     "anthropic-version": "2023-06-01",
+     "anthropic-beta": "prompt-caching-demo",
+     "content-type": "application/json",
+     "accept": "*/*",
+     "accept-language": "*",
+     "sec-fetch-mode": "cors",
+     "user-agent": "node",
+     "accept-encoding": "gzip, deflate",
+     "content-length": "3371"
+    }
+    ```
 
-注意第二轮：`cache_read_input_tokens` 正好等于第一轮的 `cache_creation_input_tokens`（405）。第一轮写进缓存的前缀，第二轮整段读回来了。下一章你会在真实会话的 usage 里看到一模一样的规律。
+=== "Python"
+
+    ```text
+    ❯ cd code/agent && uv run python -m http_analyzer.demo
+    == proxy stdout
+    {"id": "0001-POST-v1_messages", "status": 200, "secs": 0.0, "model": "claude-sonnet-5-5", "stream": true, "n_messages": 1, "n_tools": 2, "n_system_blocks": 2, "usage": {"input_tokens": 0, "cache_creation_input_tokens": 405, "cache_read_input_tokens": 0, "output_tokens": 5}}
+    {"id": "0002-POST-v1_messages", "status": 200, "secs": 0.0, "model": "claude-sonnet-5-5", "stream": true, "n_messages": 3, "n_tools": 2, "n_system_blocks": 2, "usage": {"input_tokens": 0, "cache_creation_input_tokens": 21, "cache_read_input_tokens": 405, "output_tokens": 5}}
+
+    == analyze --show 1
+    POST /v1/messages  body=3371 bytes  model=claude-sonnet-5-5
+    anthropic-beta: prompt-caching-demo
+    -- system
+      [0] 23 chars  'You are a coding agent.'
+      [1] 807 chars  '# 行为规范 规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规则……规'
+    -- tools (2)
+      Read: 342 bytes
+      Bash: 335 bytes
+    -- messages (1)
+      [0] user: text:70
+    -- cache_control breakpoints
+      system[1] {'type': 'ephemeral'}
+      messages[0].content[0] {'type': 'ephemeral'}
+    -- usage {"input_tokens": 0, "cache_creation_input_tokens": 405, "cache_read_input_tokens": 0, "output_tokens": 5}
+
+    == analyze --prefix 1 2
+    shared prefix blocks: 5 / 5 / 7
+
+    == request.json headers (redacted)
+    {
+     "Host": "127.0.0.1:55634",
+     ...
+     "x-api-key": "sk-ant…***REDACTED***",
+    ```
+
+（以上为离线 fake 上游的真实输出，Python 版中间的 header 省略了几行；token 数是假上游按字符数 / 4 估的，只用来演示字段关系。）
+
+注意第二轮：`cache_read_input_tokens` 正好等于第一轮的 `cache_creation_input_tokens`（405；Node 版是 396，因为 `JSON.stringify` 不加空格，按字符数估出来的 token 少一点）。第一轮写进缓存的前缀，第二轮整段读回来了。下一章你会在真实会话的 usage 里看到一模一样的规律。
 
 ## 拆开代码
 
 ### 转发：边收边吐，不能攒
 
-`proxy.py` 用标准库 `ThreadingHTTPServer` 收请求，`httpx` 发上游。核心循环只有几行：
+[`proxy.ts`](../code/agent-node/http_analyzer/proxy.ts) 用 `node:http` 收请求，内置 `fetch` 发上游（Python 版 [`proxy.py`](../code/agent/http_analyzer/proxy.py) 用标准库 `ThreadingHTTPServer` 收请求，`httpx` 发上游）。核心循环只有几行：
 
-```python
-with client.stream(self.command, url, headers=req_headers, content=body) as r:
-    ...
-    self.send_header("transfer-encoding", "chunked")
-    self.end_headers()
-    for chunk in r.iter_bytes():
-        raw.extend(chunk)
-        self.wfile.write(f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n")
-        self.wfile.flush()
-    self._record(d, parsed, status, resp_headers, raw, t0)   # 先落盘
-    self.wfile.write(b"0\r\n\r\n")                           # 再结束
-```
+=== "Node"
+
+    ```ts
+    const r = await fetch(url, { method, headers: reqHeaders, body, redirect: "manual" });
+    // ...
+    res.writeHead(status, out);          // 不设 content-length，node:http 自动用 chunked
+    for await (const chunk of r.body) {
+      raw.push(Buffer.from(chunk));
+      res.write(chunk);                  // 每块立刻写出，不攒
+    }
+    record(recorder, d, parsed, status, respHeaders, Buffer.concat(raw), t0);   // 先落盘
+    res.end();                                                                  // 再结束
+    ```
+
+=== "Python"
+
+    ```python
+    with client.stream(self.command, url, headers=req_headers, content=body) as r:
+        ...
+        self.send_header("transfer-encoding", "chunked")
+        self.end_headers()
+        for chunk in r.iter_bytes():
+            raw.extend(chunk)
+            self.wfile.write(f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n")
+            self.wfile.flush()
+        self._record(d, parsed, status, resp_headers, raw, t0)   # 先落盘
+        self.wfile.write(b"0\r\n\r\n")                           # 再结束
+    ```
 
 为什么非得 chunked + 每块 flush？因为 SSE 就是一条不结束的长响应（见[流式响应](../p2-agent-basics/09-streaming-response.md)）。如果代理等上游说完再一次性转发，Claude Code 的界面会卡住几十秒，然后「啪」一下全出来，长任务里甚至可能触发客户端超时。
 
 还有两个细节：
 
 - **去掉 hop-by-hop header**（`connection`、`transfer-encoding`、`host`、`content-length` 等）。它们描述的是「这一跳」的连接，原样转发会让上游或客户端解析错。
-- **去掉 `accept-encoding`**。不然上游可能回 gzip，落盘的就是一堆二进制。代价是多费一点带宽，本机抓包无所谓。
+- **去掉 `accept-encoding`**。不然上游可能回 gzip，落盘的就是一堆二进制。代价是多费一点带宽，本机抓包无所谓。（Node 版的 `fetch` 会自己协商压缩并自动解压，所以同时要把 `content-encoding` 从转给客户端的 header 里去掉。）
 
 ### 脱敏：两道闸
 
-`redact.py` 做两件事：header 按名字整值替换（`x-api-key`、`authorization`、`cookie` 等，只留前 6 个字符方便你认出是哪把 key）；所有落盘文本再用正则扫一遍 `sk-ant-…`、`Bearer …`。
+[`redact.ts`](../code/agent-node/http_analyzer/redact.ts)（[`redact.py`](../code/agent/http_analyzer/redact.py)）做两件事：header 按名字整值替换（`x-api-key`、`authorization`、`cookie` 等，只留前 6 个字符方便你认出是哪把 key）；所有落盘文本再用正则扫一遍 `sk-ant-…`、`Bearer …`。
 
 注意脱敏只发生在**落盘**这一侧，转发给上游的必须是真 key，不然请求直接 401。测试里专门断言了这一点：上游收到的是原 key，磁盘上任何文件都找不到它。
 
@@ -127,33 +189,63 @@ with client.stream(self.command, url, headers=req_headers, content=body) as r:
 
 ### SSE 重组：把碎片拼回一条 message
 
-`sse.py` 先按空行切帧，再按事件类型拼：`message_start` 给出骨架和初始 usage，`content_block_delta` 往对应 index 的块里追加 `text_delta` / `thinking_delta` / `input_json_delta`，`content_block_stop` 时把攒起来的 `partial_json` 解析成工具入参，`message_delta` 补上 `stop_reason` 和最终的 `output_tokens`。
+[`sse.ts`](../code/agent-node/http_analyzer/sse.ts)（[`sse.py`](../code/agent/http_analyzer/sse.py)）先按空行切帧，再按事件类型拼：`message_start` 给出骨架和初始 usage，`content_block_delta` 往对应 index 的块里追加 `text_delta` / `thinking_delta` / `input_json_delta`，`content_block_stop` 时把攒起来的 `partial_json` 解析成工具入参，`message_delta` 补上 `stop_reason` 和最终的 `output_tokens`。
 
 拼出来的 `message` 和非流式响应同形，后面分析就不用关心它原来是不是流式的。
 
 ### 分析：按缓存前缀的顺序看请求
 
-`analyze.py` 的 `--show` 把一次请求拆成 system 块、tools、messages、cache 断点、usage。`--prefix` 更有意思：它按 API 规定的缓存前缀顺序 **tools → system → messages** 把请求展开成一串块，比较两次请求的公共前缀有多长。公共前缀越长，能读缓存的部分就越多。
+[`analyze.ts`](../code/agent-node/http_analyzer/analyze.ts)（[`analyze.py`](../code/agent/http_analyzer/analyze.py)）的 `--show` 把一次请求拆成 system 块、tools、messages、cache 断点、usage。`--prefix` 更有意思：它按 API 规定的缓存前缀顺序 **tools → system → messages** 把请求展开成一串块，比较两次请求的公共前缀有多长。公共前缀越长，能读缓存的部分就越多。
 
 ## 自测：不碰真实 API
 
-```text
-❯ uv run python -m unittest discover -s http_analyzer/tests -t . -v
-test_cache_read_on_second_identical_prefix (...ProxyTest...) ... {"id": "0001-POST-v1_messages", ...}
-ok
-test_sse_passthrough_and_key_forwarded_but_redacted_on_disk (...ProxyTest...) ... {"id": "0003-POST-v1_messages", "status": 200, ...}
-ok
-test_upstream_error_status_is_passed_through (...ProxyTest...) ... {"id": "0004-POST-v1_messages", "status": 401, ...}
-ok
-test_breakpoints_and_prefix (...UnitTest...) ... ok
-test_redact_text_patterns (...UnitTest...) ... ok
-test_tool_use_json_reassembly (...UnitTest...) ... ok
+=== "Node"
 
-----------------------------------------------------------------------
-Ran 6 tests in 1.034s
+    ```text
+    ❯ node --test 'http_analyzer/**/*.test.ts'
+    {"id":"0001-POST-v1_messages","status":200, ...}
+    ▶ ProxyTest
+      ✔ SSE 原样透传；上游拿到真 key，磁盘上脱敏 (31.197209ms)
+    {"id":"0002-POST-v1_messages","status":200, ...}
+    {"id":"0003-POST-v1_messages","status":200, ...}
+      ✔ 同一前缀第二次请求读缓存 (13.562375ms)
+    {"id":"0004-POST-v1_messages","status":401, ...}
+      ✔ 上游的错误状态码原样透传 (4.689917ms)
+    ✔ ProxyTest (67.517833ms)
+    ▶ UnitTest
+      ✔ 正则兜底抹掉 key 和 Bearer token (0.298416ms)
+      ✔ tool_use 的分片 JSON 能拼回入参 (2.6235ms)
+      ✔ 缓存断点定位和公共前缀 (0.735541ms)
+    ✔ UnitTest (3.951917ms)
+    ℹ tests 6
+    ℹ suites 2
+    ℹ pass 6
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 263.39525
+    ```
 
-OK
-```
+=== "Python"
+
+    ```text
+    ❯ uv run python -m unittest discover -s http_analyzer/tests -t . -v
+    test_cache_read_on_second_identical_prefix (...ProxyTest...) ... {"id": "0001-POST-v1_messages", ...}
+    ok
+    test_sse_passthrough_and_key_forwarded_but_redacted_on_disk (...ProxyTest...) ... {"id": "0003-POST-v1_messages", "status": 200, ...}
+    ok
+    test_upstream_error_status_is_passed_through (...ProxyTest...) ... {"id": "0004-POST-v1_messages", "status": 401, ...}
+    ok
+    test_breakpoints_and_prefix (...UnitTest...) ... ok
+    test_redact_text_patterns (...UnitTest...) ... ok
+    test_tool_use_json_reassembly (...UnitTest...) ... ok
+
+    ----------------------------------------------------------------------
+    Ran 6 tests in 1.034s
+
+    OK
+    ```
 
 六个测试覆盖了：SSE 原样透传、key 转发但不落盘、上游 401 原样透传、`tool_use` 入参的分片 JSON 拼接、缓存断点定位。
 
@@ -161,19 +253,37 @@ OK
 
 下面这几步需要你自己决定要不要跑，因为它会产生真实的 API 调用和费用：
 
-```bash
-# 终端 1：起代理。用中转站就把 --upstream 换成中转站地址
-cd ~/liz/agent-learn/code/agent
-uv run python -m http_analyzer.proxy --port 8787 --out ~/cc-captures
+=== "Node"
 
-# 终端 2：让一个新的 Claude Code 走代理，随便发一句 hi
-ANTHROPIC_BASE_URL=http://127.0.0.1:8787 claude
+    ```bash
+    # 终端 1：起代理。用中转站就把 --upstream 换成中转站地址
+    cd ~/liz/agent-learn/code/agent-node
+    node http_analyzer/proxy.ts --port 8787 --out ~/cc-captures
 
-# 看结果
-uv run python -m http_analyzer.analyze ~/cc-captures            # 每个请求一行
-uv run python -m http_analyzer.analyze ~/cc-captures --show 1   # 拆开第一个
-uv run python -m http_analyzer.analyze ~/cc-captures --prefix 1 2
-```
+    # 终端 2：让一个新的 Claude Code 走代理，随便发一句 hi
+    ANTHROPIC_BASE_URL=http://127.0.0.1:8787 claude
+
+    # 看结果
+    node http_analyzer/analyze.ts ~/cc-captures            # 每个请求一行
+    node http_analyzer/analyze.ts ~/cc-captures --show 1   # 拆开第一个
+    node http_analyzer/analyze.ts ~/cc-captures --prefix 1 2
+    ```
+
+=== "Python"
+
+    ```bash
+    # 终端 1：起代理。用中转站就把 --upstream 换成中转站地址
+    cd ~/liz/agent-learn/code/agent
+    uv run python -m http_analyzer.proxy --port 8787 --out ~/cc-captures
+
+    # 终端 2：让一个新的 Claude Code 走代理，随便发一句 hi
+    ANTHROPIC_BASE_URL=http://127.0.0.1:8787 claude
+
+    # 看结果
+    uv run python -m http_analyzer.analyze ~/cc-captures            # 每个请求一行
+    uv run python -m http_analyzer.analyze ~/cc-captures --show 1   # 拆开第一个
+    uv run python -m http_analyzer.analyze ~/cc-captures --prefix 1 2
+    ```
 
 几点提醒：
 
@@ -185,17 +295,31 @@ uv run python -m http_analyzer.analyze ~/cc-captures --prefix 1 2
 
 其实你本机已经有一份「半个抓包」。我在本机 Claude Code 2.1.306 的会话文件 `~/.claude/projects/*/*.jsonl` 里，看到了 `api-request`、`api-request-shape`、`api-request-blob` 三类记录：`api-request-shape` 存 system 块和工具定义的骨架，`api-request` 存模型名、beta 列表、cache_control 的位置，消息内容按哈希存在 `api-request-blob` 里。
 
-`http_analyzer/session_stats.py` 只读这些记录的**结构**（长度、数量、usage），不输出正文：
+[`session_stats.ts`](../code/agent-node/http_analyzer/session_stats.ts)（[`session_stats.py`](../code/agent/http_analyzer/session_stats.py)）只读这些记录的**结构**（长度、数量、usage），不输出正文：
 
-```text
-❯ uv run python -m http_analyzer.session_stats shape
-version 2.1.306
-system[0] 57 chars
-system[1] 2699 chars
-system[2] 5331 chars
-tools: 22 total, 5 mcp__*, built-in: ['Agent', 'Artifact', 'AskUserQuestion', 'Bash', 'Edit', 'ListAgents', 'Read', 'ReportFindings', 'ScheduleWakeup', 'SendFeedback', 'ShareOnboardingGuide', 'Skill', 'ToolSearch', 'Workflow', 'Write', 'DeferredToolPlaceholder', 'advisor']
-deferred: 7
-```
+=== "Node"
+
+    ```text
+    ❯ node http_analyzer/session_stats.ts shape
+    version 2.1.306
+    system[0] 57 chars
+    system[1] 2699 chars
+    system[2] 5331 chars
+    tools: 29 total, 9 mcp__*, built-in: ["Agent","Artifact","AskUserQuestion","Bash","Edit","EnterWorktree","ExitWorktree","ListAgents","Read","ReportFindings","ScheduleWakeup","SendFeedback","ShareOnboardingGuide","Skill","TaskStop","ToolSearch","Workflow","Write","DeferredToolPlaceholder","advisor"]
+    deferred: 14
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python -m http_analyzer.session_stats shape
+    version 2.1.306
+    system[0] 57 chars
+    system[1] 2699 chars
+    system[2] 5331 chars
+    tools: 29 total, 9 mcp__*, built-in: ['Agent', 'Artifact', 'AskUserQuestion', 'Bash', 'Edit', 'EnterWorktree', 'ExitWorktree', 'ListAgents', 'Read', 'ReportFindings', 'ScheduleWakeup', 'SendFeedback', 'ShareOnboardingGuide', 'Skill', 'TaskStop', 'ToolSearch', 'Workflow', 'Write', 'DeferredToolPlaceholder', 'advisor']
+    deferred: 14
+    ```
 
 但要说清楚：这几种记录类型**没有官方文档**，是我在本机文件里看到的，字段随版本可能随时变。它也不是线上真实字节，比如 HTTP header、SSE 帧序列它就没有。所以想看「线上到底发了什么」，还是得抓包；jsonl 适合事后统计。
 

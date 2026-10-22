@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.egg-info/
+node_modules/
 
 # 网页版：build 是构建产物，docs/ 是 tools/build_site.py 生成的软链接（绝对路径，换机器就失效）
 .site/build/

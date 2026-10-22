@@ -18,31 +18,70 @@
 
 离线 fake 模型，剧本 `examples/ch03.json` 依次模拟：一次 529 过载、一次参数名写错、一次文件不存在、一次命令失败，最后一轮再来一次 401：
 
-```console
-$ printf '总结一下 README\n再说一遍\n/status\n' | uv run python -m mini_cc --fake examples/ch03.json
-❯ 总结一下 README
-模型请求失败：529 Overloaded；1.4s 后第 1/5 次重试
-● 先读一下 README。
-⏺ Read(README.md)
-✘ Read -> <tool_use_error>InputValidationError: Read failed due to the following issues:
-  The required parameter `file_path` is missing</tool_use_error>
-● 参数名写错了，改成 file_path。
-⏺ Read(README.md)
-✘ Read -> <tool_use_error>FileNotFoundError: [Errno 2] No such file or directory: '/Users/liz/liz/agent-learn/
-● 文件好像不存在，确认一下。
-⏺ Bash(ls README.md)
-✘ Bash -> [stderr]
-  ls: README.md: No such file or directory
-  [exit code 1]
-● 项目根目录没有 README.md，需要我创建一个吗？
-❯ 再说一遍
-✗ 模型请求失败（auth）：401 invalid x-api-key
-❯ /status
-model     claude-opus-5-5
-...
-messages  9
-total     in 400 / out 80 / 4 requests
-```
+=== "Node"
+
+    ```console
+    $ printf '总结一下 README\n再说一遍\n/status\n' | node mini_cc/cli.ts --fake examples/ch03.json
+    ❯ 总结一下 README
+    ◇ system  项目说明 0 个文件、git 快照
+    ◇ system  日期 2026-10-22
+    模型请求失败：529 Overloaded；1.2s 后第 1/5 次重试
+    ● 先读一下 README。
+    ⏺ Read(README.md)
+    ✘ Read -> <tool_use_error>InputValidationError: Read failed due to the following issues:
+      The required parameter `file_path` is missing
+      An unexpected parameter `path` was provided</tool_use_error>
+    ● 参数名写错了，改成 file_path。
+    ⏺ Read(README.md)
+    ✘ Read -> <tool_use_error>Error: ENOENT: no such file or directory, open '/Users/liz/liz/agent-learn/code/mini
+    ● 文件好像不存在，确认一下。
+    ⏺ Bash(ls README.md)
+    ✘ Bash -> [stderr]
+      ls: README.md: No such file or directory
+      [exit code 1]
+    ● 项目根目录没有 README.md，需要我创建一个吗？
+    ❯ 再说一遍
+    ✗ 模型请求失败（auth）：401 invalid x-api-key
+    ❯ /status
+    model     claude-opus-5-5
+    effort    medium
+    cwd       /Users/liz/liz/agent-learn/code/mini_cc-node
+    session   240b7c01-2a15-4df8-aa69-1a21073a1407
+    mode      default
+    allow     -
+    reviewer  0 calls
+    messages  9
+    context   100 tokens（最近一次请求的输入）
+    total     in 400 / out 80 / 4 requests
+    ```
+
+=== "Python"
+
+    ```console
+    $ printf '总结一下 README\n再说一遍\n/status\n' | uv run python -m mini_cc --fake examples/ch03.json
+    ❯ 总结一下 README
+    模型请求失败：529 Overloaded；1.4s 后第 1/5 次重试
+    ● 先读一下 README。
+    ⏺ Read(README.md)
+    ✘ Read -> <tool_use_error>InputValidationError: Read failed due to the following issues:
+      The required parameter `file_path` is missing</tool_use_error>
+    ● 参数名写错了，改成 file_path。
+    ⏺ Read(README.md)
+    ✘ Read -> <tool_use_error>FileNotFoundError: [Errno 2] No such file or directory: '/Users/liz/liz/agent-learn/
+    ● 文件好像不存在，确认一下。
+    ⏺ Bash(ls README.md)
+    ✘ Bash -> [stderr]
+      ls: README.md: No such file or directory
+      [exit code 1]
+    ● 项目根目录没有 README.md，需要我创建一个吗？
+    ❯ 再说一遍
+    ✗ 模型请求失败（auth）：401 invalid x-api-key
+    ❯ /status
+    model     claude-opus-5-5
+    ...
+    messages  9
+    total     in 400 / out 80 / 4 requests
+    ```
 
 五种错误，进程一次都没退。而且你注意到没有：三个 `✘` 之后，模型都**自己调整了做法**——参数名改对了、改用 `ls` 确认、最后反问用户。真模型就是这么用错误信息的。
 
@@ -79,11 +118,19 @@ flowchart TB
 
 ### 先把 SDK 的重试关掉
 
-`mini_cc/model.py:AnthropicClient.__init__`：
+`mini_cc/model.ts:AnthropicClient.constructor`（Python 版 `model.py:AnthropicClient.__init__`）：
 
-```python
-self._sdk = sdk_client or anthropic.Anthropic(max_retries=0)
-```
+=== "Node"
+
+    ```ts
+    this.sdk = sdkClient ?? new Anthropic({ maxRetries: 0 });
+    ```
+
+=== "Python"
+
+    ```python
+    self._sdk = sdk_client or anthropic.Anthropic(max_retries=0)
+    ```
 
 你可能会问：SDK 默认对 408/409/429/5xx 和连接错误重试 2 次，白送的功能为什么不要？
 
@@ -91,47 +138,90 @@ self._sdk = sdk_client or anthropic.Anthropic(max_retries=0)
 
 ### 把 SDK 异常翻译成一种
 
-`mini_cc/model.py:to_model_error` 把五花八门的 SDK 异常收敛成一个 `ModelError(retryable, kind, status, retry_after)`。判断顺序从具体到宽泛：
+`mini_cc/model.ts:toModelError`（Python 版 `model.py:to_model_error`）把五花八门的 SDK 异常收敛成一个 `ModelError(retryable, kind, status, retry_after)`。判断顺序从具体到宽泛：
 
-```python
-if isinstance(e, anthropic.APIStatusError):
-    status = e.status_code
-    retryable = status in (408, 409, 429) or status >= 500   # 529 overloaded 也在这里
-    ...
-if isinstance(e, (anthropic.APITimeoutError, anthropic.APIConnectionError)):
-    return ModelError(..., retryable=True, kind="network")
-if isinstance(e, ValueError):
-    # eager_input_streaming 下 SDK 解析不了工具参数 JSON，会从流迭代器里抛 ValueError
-    return ModelError(..., retryable=True, kind="invalid_json")
-```
+=== "Node"
 
-401（key 错了）、400（请求格式错了）重试多少次结果都一样，立刻失败。最后那条 `ValueError` 是上一章埋的伏笔：开了 `eager_input_streaming` 之后，偶尔会收到完全解析不了的工具参数 JSON，这时还没有完整的 `tool_use` 块可以回填错误，唯一的办法是**重发这一轮**。
+    ```ts
+    if (e instanceof APIConnectionError)                 // 网络错误（含超时）没有状态码，先判
+      return new ModelError(`network: ${e.message}`, { retryable: true, kind: "network" });
+    if (e instanceof APIError && typeof e.status === "number") {
+      const status = e.status;
+      const retryable = [408, 409, 429].includes(status) || status >= 500;   // 529 overloaded 也在这里
+      ...
+    }
+    if (e instanceof SyntaxError)
+      // eager_input_streaming 下 SDK 用 JSON.parse 解析不了工具参数，会从流迭代器里抛 SyntaxError
+      return new ModelError(`invalid tool input json: ${e.message}`, { retryable: true, kind: "invalid_json" });
+    ```
+
+=== "Python"
+
+    ```python
+    if isinstance(e, anthropic.APIStatusError):
+        status = e.status_code
+        retryable = status in (408, 409, 429) or status >= 500   # 529 overloaded 也在这里
+        ...
+    if isinstance(e, (anthropic.APITimeoutError, anthropic.APIConnectionError)):
+        return ModelError(..., retryable=True, kind="network")
+    if isinstance(e, ValueError):
+        # eager_input_streaming 下 SDK 解析不了工具参数 JSON，会从流迭代器里抛 ValueError
+        return ModelError(..., retryable=True, kind="invalid_json")
+    ```
+
+401（key 错了）、400（请求格式错了）重试多少次结果都一样，立刻失败。最后那条 `ValueError`（Node 版是 `SyntaxError`）是上一章埋的伏笔：开了 `eager_input_streaming` 之后，偶尔会收到完全解析不了的工具参数 JSON，这时还没有完整的 `tool_use` 块可以回填错误，唯一的办法是**重发这一轮**。
 
 ### 退避和「半截输出」
 
-`mini_cc/retry.py:RetryPolicy.delay`：有 `retry-after` 头就听服务端的，否则 `1s, 2s, 4s, 8s…` 指数增长再加一点随机抖动（jitter），上限 30 秒。抖动是为了避免一大批客户端在同一时刻一起重试，再把服务打挂一次。
+`mini_cc/retry.ts:RetryPolicy.delay`（Python 版 `retry.py:RetryPolicy.delay`）：有 `retry-after` 头就听服务端的，否则 `1s, 2s, 4s, 8s…` 指数增长再加一点随机抖动（jitter），上限 30 秒。抖动是为了避免一大批客户端在同一时刻一起重试，再把服务打挂一次。
 
 重试循环在 `mini_cc/loop.py:Agent._call_model`：
 
-```python
-attempt = 0
-while True:
-    streamed = False
-    try:
-        for ev in self.client.stream(self._request()):
-            if not isinstance(ev, MessageDone):
-                streamed = True
-            yield ev
-        return
-    except ModelError as err:
-        attempt += 1
-        if not self.retry.should_retry(attempt, err):
-            raise
-        delay = self.retry.delay(attempt, err)
-        cut = "（上面的输出不完整，已丢弃）" if streamed else ""
-        yield Notice(f"{cut}模型请求失败：{err}；{delay:.1f}s 后第 {attempt}/{self.retry.max_retries} 次重试", "warn")
-        self.sleep(delay)
-```
+=== "Node"
+
+    ```ts
+    let attempt = 0;
+    for (;;) {
+      let streamed = false;
+      try {
+        for await (const ev of this.client.stream(this.request())) {
+          if (ev.type !== "MessageDone") streamed = true;
+          yield ev;
+        }
+        return;
+      } catch (e) {
+        if (!(e instanceof ModelError)) throw e;
+        attempt++;
+        if (!this.retry.shouldRetry(attempt, e)) throw e;
+        const delay = this.retry.delay(attempt, e);
+        const cut = streamed ? "（上面的输出不完整，已丢弃）" : "";
+        yield notice(`${cut}模型请求失败：${e.message}；${delay.toFixed(1)}s 后第 ${attempt}/${this.retry.maxRetries} 次重试`, "warn");
+        await this.sleep(delay);
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    attempt = 0
+    while True:
+        streamed = False
+        try:
+            for ev in self.client.stream(self._request()):
+                if not isinstance(ev, MessageDone):
+                    streamed = True
+                yield ev
+            return
+        except ModelError as err:
+            attempt += 1
+            if not self.retry.should_retry(attempt, err):
+                raise
+            delay = self.retry.delay(attempt, err)
+            cut = "（上面的输出不完整，已丢弃）" if streamed else ""
+            yield Notice(f"{cut}模型请求失败：{err}；{delay:.1f}s 后第 {attempt}/{self.retry.max_retries} 次重试", "warn")
+            self.sleep(delay)
+    ```
 
 为什么重试是安全的？因为上一章定下的规矩：**历史只在 `MessageDone` 之后才写入**。网络在流到一半时断开，已经流出去的半截文字只上了屏幕，没进 `self.messages`。重试时请求和上一次一字不差，UI 补一句「上面的输出不完整」就行。
 
@@ -139,23 +229,45 @@ while True:
 
 ## 第二层：工具执行的两道防线
 
-`mini_cc/tools/registry.py:ToolRegistry.execute`：
+`mini_cc/tools/registry.ts:ToolRegistry.execute`（Python 版 `registry.py:ToolRegistry.execute`）：
 
-```python
-tool = self._tools.get(name)
-if tool is None:
-    return tool_error(f"Error: No such tool available: {name}. Available: ...")
-# 防线 1：参数校验
-errors = validate(args, tool.input_schema)
-if errors:
-    return tool_error(f"InputValidationError: {name} failed due to the following issues:\n" + "\n".join(errors))
-# 防线 2：执行期异常
-try:
-    result = tool.run(args, ctx)
-except Exception as e:
-    return tool_error(f"{type(e).__name__}: {e}")
-return truncate(result, max_output)
-```
+=== "Node"
+
+    ```ts
+    const tool = this.tools.get(name);
+    if (tool === undefined)
+      return toolError(`Error: No such tool available: ${name}. Available: ...`);
+    // 防线 1：参数校验
+    const errors = validate(args, tool.inputSchema);
+    if (errors.length)
+      return toolError(`InputValidationError: ${name} failed due to the following issues:\n` + errors.join("\n"));
+    // 防线 2：执行期异常（同步抛的、异步 reject 的都在这里接住）
+    let result: ToolResult;
+    try {
+      result = await tool.run(args, ctx);
+    } catch (e) {
+      return toolError(`${e.name}: ${e.message}`);
+    }
+    return truncate(result, maxOutput);
+    ```
+
+=== "Python"
+
+    ```python
+    tool = self._tools.get(name)
+    if tool is None:
+        return tool_error(f"Error: No such tool available: {name}. Available: ...")
+    # 防线 1：参数校验
+    errors = validate(args, tool.input_schema)
+    if errors:
+        return tool_error(f"InputValidationError: {name} failed due to the following issues:\n" + "\n".join(errors))
+    # 防线 2：执行期异常
+    try:
+        result = tool.run(args, ctx)
+    except Exception as e:
+        return tool_error(f"{type(e).__name__}: {e}")
+    return truncate(result, max_output)
+    ```
 
 **防线 1：执行前校验。** `mini_cc/tools/validate.py` 是一个五十行的 JSON Schema 子集校验器，查 `type / required / enum / additionalProperties / items`。为什么不直接信模型？上一章开了 `eager_input_streaming`，服务端就不再校验参数；就算没开，模型也会写错参数名（演示里的 `path` vs `file_path`）。不校验的话，错误会变成工具内部一个莫名其妙的 `KeyError: 'file_path'`，模型很难看懂。
 
@@ -165,31 +277,50 @@ return truncate(result, max_output)
 
 还有两个小防护：
 
-- `Bash` 超时（`subprocess.TimeoutExpired`）返回已产生的部分输出加 `[timed out after Ns]`。
+- `Bash` 超时（`subprocess.TimeoutExpired`；Node 版是计时器到点后把子进程组整个杀掉）返回已产生的部分输出加 `[timed out after Ns]`。
 - 输出超过 `settings.max_tool_output`（默认 3 万字符）就截断并注明。一条 `cat` 一个 2MB 的日志能把上下文直接撑爆，而这个错误要到**下一次请求**才会以 400 的形式出现，那时已经很难定位了。
 
 说穿了，第二层就是**把 `raise` 改成 `return`**：异常不再是程序的控制流，而是给模型看的一段文本。
 
 ## 第三层：主循环安全网
 
-`mini_cc/loop.py:Agent.run_turn` 现在只是一层壳，真正的循环搬进了 `_loop()`：
+`mini_cc/loop.ts:Agent.runTurn`（Python 版 `loop.py:Agent.run_turn`）现在只是一层壳，真正的循环搬进了 `_loop()`：
 
-```python
-def run_turn(self, prompt):
-    self.messages.append({"role": "user", "content": prompt})
-    try:
-        yield from self._loop()
-    except ModelError as err:
-        yield Notice(f"模型请求失败（{err.kind}）：{err}", "error")
-        yield TurnEnd("error", "")
-    except Exception as err:            # 我们自己代码里的 bug 也不能让 REPL 退出
-        yield Notice(f"内部错误：{type(err).__name__}: {err}", "error")
-        yield TurnEnd("error", "")
-    finally:
-        self.repair_history()           # 包括 Ctrl+C
-```
+=== "Node"
 
-`finally` 里的 `repair_history()` 是这一层最关键的一行。API 有一条硬规定：**每个 `tool_use` 后面必须紧跟对应的 `tool_result`**。如果用户在工具跑到一半时按了 Ctrl+C（生成器被 `close()`，或者 `KeyboardInterrupt` 穿过生成器），历史最后一条就是一个悬空的 `tool_use`，下一次请求必然 400——而且会一直 400，这个会话就废了。`repair_history()` 发现悬空的 `tool_use`，就补一条 `"Interrupted by user before this tool finished."` 的错误结果。
+    ```ts
+    async *runTurn(prompt: string | Block[]): AsyncGenerator<Event> {
+      this.messages.push({ role: "user", content: prompt });
+      try {
+        yield* this.loop();
+      } catch (err) {
+        if (err instanceof ModelError) yield notice(`模型请求失败（${err.kind}）：${err.message}`, "error");
+        else yield notice(`内部错误：${err.name}: ${err.message}`, "error");  // 我们自己代码里的 bug 也不能让 REPL 退出
+        yield turnEnd("error", "");
+      } finally {
+        this.repairHistory();             // 包括 Ctrl+C（调用方提前结束了 for await）
+      }
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def run_turn(self, prompt):
+        self.messages.append({"role": "user", "content": prompt})
+        try:
+            yield from self._loop()
+        except ModelError as err:
+            yield Notice(f"模型请求失败（{err.kind}）：{err}", "error")
+            yield TurnEnd("error", "")
+        except Exception as err:            # 我们自己代码里的 bug 也不能让 REPL 退出
+            yield Notice(f"内部错误：{type(err).__name__}: {err}", "error")
+            yield TurnEnd("error", "")
+        finally:
+            self.repair_history()           # 包括 Ctrl+C
+    ```
+
+`finally` 里的 `repair_history()` 是这一层最关键的一行。API 有一条硬规定：**每个 `tool_use` 后面必须紧跟对应的 `tool_result`**。如果用户在工具跑到一半时按了 Ctrl+C（生成器被 `close()`，或者 `KeyboardInterrupt` 穿过生成器；Node 版是 `for await` 里 `break`，等价于调用生成器的 `return()`，同样会跑 `finally`），历史最后一条就是一个悬空的 `tool_use`，下一次请求必然 400——而且会一直 400，这个会话就废了。`repair_history()` 发现悬空的 `tool_use`，就补一条 `"Interrupted by user before this tool finished."` 的错误结果。
 
 Claude Code 也有同样的机制，二进制里能看到它补的文案：`[Request interrupted by user for tool use]`。
 
@@ -203,23 +334,39 @@ Claude Code 也有同样的机制，二进制里能看到它补的文案：`[Req
 
 关于 `refusal`：`AnthropicClient` 默认开启了**服务端 fallback**——走 `client.beta.messages.stream(..., betas=["server-side-fallback-2026-07-01"], fallbacks="default")`，模型因安全分类器拒答时，API 会在同一次调用里按拒答类别换一个模型重跑。这是 claude-api 文档对 `claude-opus-5-5` 的默认建议。如果你走的中转站（`ANTHROPIC_BASE_URL`）不认这个 beta，设 `MINI_CC_FALLBACKS=0` 关掉。
 
-最后，`cli.py:App.handle_line` 接住 `KeyboardInterrupt`，打印「已中断」，回到输入提示符。
+最后，`cli.py:App.handle_line` 接住 `KeyboardInterrupt`，打印「已中断」，回到输入提示符。（Node 版没有 `KeyboardInterrupt`：REPL 收到 Ctrl+C 时让 `App` 中止这一轮——正在跑的 Bash 被杀掉、`for await` 退出——再打印同一句话。）
 
 还有一个细节：401 那一轮失败后，历史末尾留下一条孤零零的 user 消息「再说一遍」。下一次输入会形成两条连续的 user 消息——这是合法的，API 会把连续同角色消息合并成一个 turn。所以我没有回滚它：用户修好 key 后说一句「继续」，模型能看到完整的意图。
 
 ## 测试
 
-`tests/test_ch03_errors.py`，16 个测试按三层组织：
+`tests/ch03_errors.test.ts`（Python 版 `tests/test_ch03_errors.py`），16 个测试按三层组织：
 
-- 第一层：两次 529 后成功、退避增长与 `retry-after`、401 立即失败且 REPL 还能继续用、重试次数用尽、**流到一半断开后历史里只有完整的那次回答**、SDK 异常翻译（用 `httpx2.Response(529, headers={"retry-after": "3"})` 构造真实的 `APIStatusError`）、fallback 参数、`ValueError` 可重试。
+- 第一层：两次 529 后成功、退避增长与 `retry-after`、401 立即失败且 REPL 还能继续用、重试次数用尽、**流到一半断开后历史里只有完整的那次回答**、SDK 异常翻译（用 `httpx2.Response(529, headers={"retry-after": "3"})` 构造真实的 `APIStatusError`；Node 版用 `APIError.generate(529, …, new Headers({"retry-after": "3"}))`）、fallback 参数、`ValueError` 可重试。
 - 第二层：除零异常、参数类型错误、未知工具、`Bash` 超时、超长输出截断。
 - 第三层：`max_tokens` 截断的 `Write` 不执行、`refusal`、**模拟 Ctrl+C 后历史被修复**、我们自己代码抛 `KeyError` 也不逃逸。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-..............................                                           [100%]
-30 passed in 1.44s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test 'tests/ch0[1-3]*.test.ts'
+    ℹ tests 30
+    ℹ suites 0
+    ℹ pass 30
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 2382.33725
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ..............................                                           [100%]
+    30 passed in 1.44s
+    ```
 
 ## 回到开头
 

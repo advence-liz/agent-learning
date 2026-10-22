@@ -12,28 +12,50 @@
 
 ## 先跑起来看看
 
-代码在 [`code/agent/coding_agent/agent.py`](../code/agent/coding_agent/agent.py)，核心 ~100 行。演示脚本 [`demo.py`](../code/agent/coding_agent/demo.py) 在临时目录放一个把加法写成减法的 `calc.py` 和一个测试：
+代码在 [`code/agent-node/coding_agent/agent.ts`](../code/agent-node/coding_agent/agent.ts)（Python 版 [`agent.py`](../code/agent/coding_agent/agent.py)），核心 ~100 行。演示脚本 [`demo.ts`](../code/agent-node/coding_agent/demo.ts)（[`demo.py`](../code/agent/coding_agent/demo.py)）在临时目录放一个把加法写成减法的 `calc` 模块和一个测试：
 
-```text
-$ uv run python -m coding_agent.demo        # 离线 fake 模型；工具是真的在执行
-❯ test_calc.py 挂了，帮我修好
-⏺ run_command(command='python test_calc.py')
-  ✔ AssertionError: -1
-⏺ read_file(path='calc.py')
-  ✔     return a - b
-⏺ write_file(path='calc.py', content='def add(a, b):\n    return a + b\n')
-  ✔ 已写入 calc.py（32 字符）
-⏺ run_command(command='python test_calc.py')
-  ✔ ok
-⏺ 修复完成：calc.add 把 `a - b` 改成了 `a + b`，test_calc.py 通过。
----- 第 2 次请求时 messages 的角色序列 ----
-['user', 'assistant', 'user']
----- calc.py 现在的内容 ----
-def add(a, b):
-    return a + b
-```
+=== "Node"
 
-这里要说清楚哪些是真的：**「模型决定调哪个工具」是脚本预设的**（离线 fake 模型），但工具真的在临时目录里读写了文件、真的跑了 `python test_calc.py`，`AssertionError: -1` 和 `ok` 都是真实输出。换成真 client（`uv run python -m coding_agent.agent "修好测试" ./项目`），决策就交给 Claude。
+    ```text
+    $ node coding_agent/demo.ts                 # 离线 fake 模型；工具是真的在执行
+    ❯ test_calc.mjs 挂了，帮我修好
+    ⏺ run_command(command="node test_calc.mjs")
+      ✔ AssertionError: -1
+    ⏺ read_file(path="calc.mjs")
+      ✔ export const add = (a, b) => a - b;
+    ⏺ write_file(path="calc.mjs", content="export const add = (a, b) => a + b…)
+      ✔ 已写入 calc.mjs（36 字符）
+    ⏺ run_command(command="node test_calc.mjs")
+      ✔ ok
+    ⏺ 修复完成：calc.add 把 `a - b` 改成了 `a + b`，test_calc.mjs 通过。
+    ---- 第 2 次请求时 messages 的角色序列 ----
+    [ 'user', 'assistant', 'user' ]
+    ---- calc.mjs 现在的内容 ----
+    export const add = (a, b) => a + b;
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python -m coding_agent.demo        # 离线 fake 模型；工具是真的在执行
+    ❯ test_calc.py 挂了，帮我修好
+    ⏺ run_command(command='python test_calc.py')
+      ✔ AssertionError: -1
+    ⏺ read_file(path='calc.py')
+      ✔     return a - b
+    ⏺ write_file(path='calc.py', content='def add(a, b):\n    return a + b\n')
+      ✔ 已写入 calc.py（32 字符）
+    ⏺ run_command(command='python test_calc.py')
+      ✔ ok
+    ⏺ 修复完成：calc.add 把 `a - b` 改成了 `a + b`，test_calc.py 通过。
+    ---- 第 2 次请求时 messages 的角色序列 ----
+    ['user', 'assistant', 'user']
+    ---- calc.py 现在的内容 ----
+    def add(a, b):
+        return a + b
+    ```
+
+这里要说清楚哪些是真的：**「模型决定调哪个工具」是脚本预设的**（离线 fake 模型），但工具真的在临时目录里读写了文件、真的跑了测试脚本，`AssertionError: -1` 和 `ok` 都是真实输出。换成真 client（`node coding_agent/agent.ts "修好测试" ./项目`，Python 版 `uv run python -m coding_agent.agent "修好测试" ./项目`），决策就交给 Claude。
 
 ## Agent：给 LLM 套上循环
 
@@ -49,36 +71,75 @@ flowchart TD
 
 对应的代码几乎一行对一个方框：
 
-```python
-def run_agent(client, task, cwd, *, tools=None, tool_specs=None, system=None, max_turns=20, log=print):
-    tools = tools or make_tools(cwd)
-    messages = [{"role": "user", "content": task}]
+=== "Node"
 
-    for turn in range(1, max_turns + 1):
-        resp = client.messages.create(
-            model="claude-opus-5-5", max_tokens=16000,
-            system=system or SYSTEM.format(cwd=cwd),
-            tools=tool_specs or TOOLS,
-            messages=messages,
-        )
-        messages.append({"role": "assistant", "content": resp.content})
+    ```ts
+    async function runAgent(client, task, cwd, {
+      tools = makeTools(cwd), toolSpecs = TOOLS,
+      system = SYSTEM(cwd), maxTurns = 20, log = console.log,
+    } = {}) {
+      const messages: Anthropic.MessageParam[] = [{ role: "user", content: task }];
 
-        calls = [b for b in resp.content if b.type == "tool_use"]
-        if not calls:                       # 模型不再要工具 → 任务结束
-            return "".join(b.text for b in resp.content if b.type == "text")
+      for (let turn = 1; turn <= maxTurns; turn++) {
+        const resp = await client.messages.create({
+          model: "claude-opus-5-5", max_tokens: 16000,
+          system, tools: toolSpecs, messages,
+        });
+        messages.push({ role: "assistant", content: resp.content });
 
-        results = []
-        for call in calls:                  # 一轮可能有多个并行 tool_use
-            try:
-                out, is_error = tools[call.name](**call.input), False
-            except Exception as e:          # 工具出错也要回报给模型
-                out, is_error = f"{type(e).__name__}: {e}", True
-            results.append({"type": "tool_result", "tool_use_id": call.id,
-                            "content": out, "is_error": is_error})
-        messages.append({"role": "user", "content": results})
+        const calls = resp.content.filter((b) => b.type === "tool_use");
+        if (calls.length === 0)                 // 模型不再要工具 → 任务结束
+          return resp.content.map((b) => (b.type === "text" ? b.text : "")).join("");
 
-    return f"（达到 max_turns={max_turns}，强制停止）"
-```
+        const results = [];
+        for (const call of calls) {             // 一轮可能有多个并行 tool_use
+          let out, isError;
+          try {
+            [out, isError] = [tools[call.name](call.input), false];
+          } catch (e) {                         // 工具出错也要回报给模型
+            [out, isError] = [`${e.name}: ${e.message}`, true];
+          }
+          results.push({ type: "tool_result", tool_use_id: call.id,
+                         content: out, is_error: isError });
+        }
+        messages.push({ role: "user", content: results });
+      }
+      return `（达到 maxTurns=${maxTurns}，强制停止）`;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def run_agent(client, task, cwd, *, tools=None, tool_specs=None, system=None, max_turns=20, log=print):
+        tools = tools or make_tools(cwd)
+        messages = [{"role": "user", "content": task}]
+
+        for turn in range(1, max_turns + 1):
+            resp = client.messages.create(
+                model="claude-opus-5-5", max_tokens=16000,
+                system=system or SYSTEM.format(cwd=cwd),
+                tools=tool_specs or TOOLS,
+                messages=messages,
+            )
+            messages.append({"role": "assistant", "content": resp.content})
+
+            calls = [b for b in resp.content if b.type == "tool_use"]
+            if not calls:                       # 模型不再要工具 → 任务结束
+                return "".join(b.text for b in resp.content if b.type == "text")
+
+            results = []
+            for call in calls:                  # 一轮可能有多个并行 tool_use
+                try:
+                    out, is_error = tools[call.name](**call.input), False
+                except Exception as e:          # 工具出错也要回报给模型
+                    out, is_error = f"{type(e).__name__}: {e}", True
+                results.append({"type": "tool_result", "tool_use_id": call.id,
+                                "content": out, "is_error": is_error})
+            messages.append({"role": "user", "content": results})
+
+        return f"（达到 max_turns={max_turns}，强制停止）"
+    ```
 
 你可能会问：`tool_result` 为什么是 `role: "user"`？明明是我的程序执行的，又不是用户说的。
 
@@ -86,17 +147,33 @@ def run_agent(client, task, cwd, *, tools=None, tool_specs=None, system=None, ma
 
 再问一句：模型怎么知道有哪些工具？靠请求里的 `tools` 字段，每个工具一段 JSON Schema：
 
-```python
-{
-    "name": "run_command",
-    "description": "在工作目录执行一条 shell 命令，返回退出码和输出（超时 60 秒）。",
-    "input_schema": {
-        "type": "object",
-        "properties": {"command": {"type": "string"}},
-        "required": ["command"],
-    },
-}
-```
+=== "Node"
+
+    ```ts
+    {
+      name: "run_command",
+      description: "在工作目录执行一条 shell 命令，返回退出码和输出（超时 60 秒）。",
+      input_schema: {
+        type: "object",
+        properties: { command: { type: "string" } },
+        required: ["command"],
+      },
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    {
+        "name": "run_command",
+        "description": "在工作目录执行一条 shell 命令，返回退出码和输出（超时 60 秒）。",
+        "input_schema": {
+            "type": "object",
+            "properties": {"command": {"type": "string"}},
+            "required": ["command"],
+        },
+    }
+    ```
 
 这三个字段最终都会被渲染进模型的上下文。所以 `description` 不是写给人看的注释，是写给模型看的说明书。模型选错工具，第一个要查的就是描述写得清不清楚。
 
@@ -106,21 +183,34 @@ def run_agent(client, task, cwd, *, tools=None, tool_specs=None, system=None, ma
 
 ## 三个工具，安全边界在哪
 
-[`make_tools()`](../code/agent/coding_agent/agent.py) 里三个工具都只有几行，值得看的是边界处理：
+[`makeTools()`](../code/agent-node/coding_agent/agent.ts)（Python 版 [`make_tools()`](../code/agent/coding_agent/agent.py)）里三个工具都只有几行，值得看的是边界处理：
 
-- **路径校验**：模型给的 `path` 是不可信输入。`safe()` 把路径 `resolve()` 后检查 `is_relative_to(root)`，`../../etc/passwd` 会直接抛 `ValueError`。
+- **路径校验**：模型给的 `path` 是不可信输入。`safe()` 把路径 `resolve()` 后检查它是否还在 `root` 下面（Node 用 `path.relative()` 看是否以 `..` 开头，Python 用 `is_relative_to(root)`），`../../etc/passwd` 会直接抛错。
 - **输出截尾**：`run_command` 只回最后 4000 字符。一个打印了十万行日志的命令，不截断就能把上下文撑爆。
-- **错误也是结果**：工具抛异常时我们不让程序崩，而是把异常文本作为 `is_error: true` 的 `tool_result` 回给模型。模型看到 `FileNotFoundError` 自己会换个路径再试。
+- **错误也是结果**：工具抛异常时我们不让程序崩，而是把异常文本作为 `is_error: true` 的 `tool_result` 回给模型。模型看到 `ENOENT`（Python 里是 `FileNotFoundError`）自己会换个路径再试。
 
-还有一个我写 demo 时真踩到的坑。最初测试偶尔失败，修好的 `calc.py` 跑出来还是 `-1`。原因是 Python 的 `.pyc` 缓存按「源文件 mtime + 大小」判断是否过期：Agent 在同一秒内把 `a - b` 改成 `a + b`，长度没变，Python 就用了旧缓存。修法是跑命令时设 `PYTHONDONTWRITEBYTECODE=1`。人手改代码很少在一秒内完成，Agent 会。
+还有一个我写 Python 版 demo 时真踩到的坑。最初测试偶尔失败，修好的 `calc.py` 跑出来还是 `-1`。原因是 Python 的 `.pyc` 缓存按「源文件 mtime + 大小」判断是否过期：Agent 在同一秒内把 `a - b` 改成 `a + b`，长度没变，Python 就用了旧缓存。修法是跑命令时设 `PYTHONDONTWRITEBYTECODE=1`。人手改代码很少在一秒内完成，Agent 会。Node 版的测试每次都起新进程重新读源文件，没有落盘的字节码缓存，不受影响。
 
-```text
-$ uv run pytest -q coding_agent
-....                                                                     [100%]
-4 passed in 0.45s
-```
+=== "Node"
 
-四个测试分别覆盖：完整修 bug 流程、工具报错回传、路径越界、`max_turns` 防止失控循环。
+    ```text
+    $ node --test coding_agent/*.test.ts
+    ✔ agent 按脚本修好 bug
+    ✔ 工具出错被回报而不是抛出
+    ✔ 路径越界被拦下
+    ✔ maxTurns 拦住失控循环
+    ℹ pass 4
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run pytest -q coding_agent
+    ....                                                                     [100%]
+    4 passed in 0.45s
+    ```
+
+四个测试分别覆盖：完整修 bug 流程、工具报错回传、路径越界、`maxTurns`（`max_turns`）防止失控循环。
 
 **回到主线**：模型只会预测下一个 token，它不能真的去读文件。Function Calling 让它「预测」出一段结构化的调用请求，循环负责把真实世界的结果塞回上下文。Agent 用多轮请求换来了能力边界的扩展，代价是上下文随步数线性膨胀，这正是第 8 章要观测、p3 要压缩的东西。
 

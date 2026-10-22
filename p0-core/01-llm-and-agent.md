@@ -112,60 +112,109 @@ sequenceDiagram
 
 ## 动手：30 行的 Agent 循环
 
-说穿了，Agent 就是一个 while 循环加一个不断变长的 `messages` 数组。代码在 [`code/agent/core/agent_loop.py`](../code/agent/core/agent_loop.py)，用的是知识库里现成的离线 fake 模型（`fake_llm.FakeAnthropic`，响应形状与 anthropic SDK 的真实 `Message` 一致）。先看效果：
+说穿了，Agent 就是一个 while 循环加一个不断变长的 `messages` 数组。代码在 [`code/agent-node/core/agent_loop.ts`](../code/agent-node/core/agent_loop.ts)（Python 版 [`agent_loop.py`](../code/agent/core/agent_loop.py)），用的是知识库里现成的离线 fake 模型（`FakeAnthropic`，响应形状与 SDK 的真实 `Message` 一致）。先看效果：
 
-```text
-$ cd code/agent && uv run python -m core.agent_loop
-❯ webapp 的 vitest 单测超时设的是多少？
-⏺ read_file({'path': 'apps/web/vitest.config.ts'})
-✔ export default defineConfig({ test: { environment: 'jsdom', testTimeout: 15000 }
-⏺ webapp 的 vitest 单测超时是 15000ms（15 秒），环境是 jsdom。
+=== "Node"
 
-[离线 fake 模型] 共请求模型 2 次；第 2 次请求里 messages 的角色序列：['user', 'assistant', 'user']
-```
+    ```text
+    $ cd code/agent-node && node core/agent_loop.ts
+    ❯ webapp 的 vitest 单测超时设的是多少？
+    ⏺ read_file({"path":"apps/web/vitest.config.ts"})
+    ✔ export default defineConfig({ test: { environment: 'jsdom', testTimeout: 15000 }
+    ⏺ webapp 的 vitest 单测超时是 15000ms（15 秒），环境是 jsdom。
+
+    [离线 fake 模型] 共请求模型 2 次；第 2 次请求里 messages 的角色序列：["user","assistant","user"]
+    ```
+
+=== "Python"
+
+    ```text
+    $ cd code/agent && uv run python -m core.agent_loop
+    ❯ webapp 的 vitest 单测超时设的是多少？
+    ⏺ read_file({'path': 'apps/web/vitest.config.ts'})
+    ✔ export default defineConfig({ test: { environment: 'jsdom', testTimeout: 15000 }
+    ⏺ webapp 的 vitest 单测超时是 15000ms（15 秒），环境是 jsdom。
+
+    [离线 fake 模型] 共请求模型 2 次；第 2 次请求里 messages 的角色序列：['user', 'assistant', 'user']
+    ```
 
 （离线 fake 模型，配置文件内容是演示用的假仓库，数字是编的。）
 
 核心就是这一个函数：
 
-```python
-def run_agent(client, task: str, tools: list[dict], handlers: dict[str, Callable[..., str]],
-              *, system: str = "", max_turns: int = 10, log: Callable[[str], None] = print) -> str:
-    messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
-    for _ in range(max_turns):
-        resp = client.messages.create(model=MODEL, max_tokens=16000, system=system,
-                                      tools=tools, messages=messages)
-        messages.append({"role": "assistant", "content": resp.content})  # 原样追加，别只留文字
-        if resp.stop_reason != "tool_use":  # 模型不再要工具 → 这一轮就是最终回答
-            return "".join(b.text for b in resp.content if b.type == "text")
-        results = []
-        for block in resp.content:
-            if block.type != "tool_use":
-                continue
-            log(f"⏺ {block.name}({block.input})")
-            try:
-                out, err = handlers[block.name](**block.input), False
-            except Exception as e:  # 工具失败也要回给模型，而不是让循环崩掉
-                out, err = f"{type(e).__name__}: {e}", True
-            log(f"✔ {out[:80]}")
-            results.append({"type": "tool_result", "tool_use_id": block.id,
-                            "content": out, "is_error": err})
-        messages.append({"role": "user", "content": results})  # 所有结果放进同一条 user 消息
-    raise RuntimeError(f"超过 {max_turns} 轮仍未结束")
-```
+=== "Node"
+
+    ```ts
+    async function runAgent(client: LLMClient, task: string, tools: Anthropic.Tool[], handlers: Record<string, Handler>,
+      { system = "", maxTurns = 10, log = console.log } = {}): Promise<string> {
+      const messages: Anthropic.MessageParam[] = [{ role: "user", content: task }];
+      for (let i = 0; i < maxTurns; i++) {
+        const resp = await client.messages.create({ model: MODEL, max_tokens: 16000, system, tools, messages });
+        messages.push({ role: "assistant", content: resp.content }); // 原样追加，别只留文字
+        if (resp.stop_reason !== "tool_use") {
+          // 模型不再要工具 → 这一轮就是最终回答
+          return resp.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+        }
+        const results: Anthropic.ToolResultBlockParam[] = [];
+        for (const block of resp.content) {
+          if (block.type !== "tool_use") continue;
+          log(`⏺ ${block.name}(${JSON.stringify(block.input)})`);
+          let out: string, isError: boolean;
+          try {
+            [out, isError] = [await handlers[block.name](block.input), false];
+          } catch (e) {
+            // 工具失败也要回给模型，而不是让循环崩掉
+            [out, isError] = [`${(e as Error).name}: ${(e as Error).message}`, true];
+          }
+          log(`✔ ${out.slice(0, 80)}`);
+          results.push({ type: "tool_result", tool_use_id: block.id, content: out, is_error: isError });
+        }
+        messages.push({ role: "user", content: results }); // 所有结果放进同一条 user 消息
+      }
+      throw new Error(`超过 ${maxTurns} 轮仍未结束`);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def run_agent(client, task: str, tools: list[dict], handlers: dict[str, Callable[..., str]],
+                  *, system: str = "", max_turns: int = 10, log: Callable[[str], None] = print) -> str:
+        messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
+        for _ in range(max_turns):
+            resp = client.messages.create(model=MODEL, max_tokens=16000, system=system,
+                                          tools=tools, messages=messages)
+            messages.append({"role": "assistant", "content": resp.content})  # 原样追加，别只留文字
+            if resp.stop_reason != "tool_use":  # 模型不再要工具 → 这一轮就是最终回答
+                return "".join(b.text for b in resp.content if b.type == "text")
+            results = []
+            for block in resp.content:
+                if block.type != "tool_use":
+                    continue
+                log(f"⏺ {block.name}({block.input})")
+                try:
+                    out, err = handlers[block.name](**block.input), False
+                except Exception as e:  # 工具失败也要回给模型，而不是让循环崩掉
+                    out, err = f"{type(e).__name__}: {e}", True
+                log(f"✔ {out[:80]}")
+                results.append({"type": "tool_result", "tool_use_id": block.id,
+                                "content": out, "is_error": err})
+            messages.append({"role": "user", "content": results})  # 所有结果放进同一条 user 消息
+        raise RuntimeError(f"超过 {max_turns} 轮仍未结束")
+    ```
 
 逐段看：
 
 - **循环出口只有一个判断**：`stop_reason` 是不是 `tool_use`。模型说「我要用工具」，程序就转下一圈；否则就把这轮的文字当最终回答。
 - **`assistant` 消息原样追加**。只存文字会丢掉 `tool_use` 块，下一轮的 `tool_result` 就对不上 `tool_use_id`，API 会报错。
-- **工具报错也回给模型**（`is_error: True`）。模型看到 `FileNotFoundError` 往往会自己换个路径重试，这比让整个循环崩掉有用得多。
-- **`max_turns` 是最朴素的 harness**：模型可能永远想再调一次工具，循环上限必须由程序来定。
+- **工具报错也回给模型**（`is_error: true`）。模型看到 `FileNotFoundError` 往往会自己换个路径重试，这比让整个循环崩掉有用得多。
+- **`maxTurns`（Python 版 `max_turns`）是最朴素的 harness**：模型可能永远想再调一次工具，循环上限必须由程序来定。
 
-真实运行时，只要把 `FakeAnthropic([...])` 换成 `anthropic.Anthropic()`，它会自动读 `ANTHROPIC_API_KEY` 和 `ANTHROPIC_BASE_URL`，`run_agent` 一行不用改。这个骨架后面会一路长大：[动手实现一个 Coding Agent](../p2-agent-basics/02-coding-agent.md) 的 `coding_agent/agent.py` 给它加上读写文件和跑命令的工具，[p4 的 mini Claude Code](../p4-mini-cc/01-cli.md) 再往上加流式输出、权限、恢复会话。
+真实运行时，只要把 `new FakeAnthropic([...])` 换成 `new Anthropic()`（Python 版是 `anthropic.Anthropic()`），它会自动读 `ANTHROPIC_API_KEY` 和 `ANTHROPIC_BASE_URL`，`runAgent` 一行不用改。这个骨架后面会一路长大：[动手实现一个 Coding Agent](../p2-agent-basics/02-coding-agent.md) 的 `coding_agent/agent.ts`（`agent.py`）给它加上读写文件和跑命令的工具，[p4 的 mini Claude Code](../p4-mini-cc/01-cli.md) 再往上加流式输出、权限、恢复会话。
 
 > ⚠️ 两条和当前 API 有关的事实（核对自 `claude-api` skill，模型表缓存于 2026-10-06）：
 > - **思考强度**：Claude 这边控制「想多深」的参数是 `output_config.effort`（`low` / `medium` / `high` / `xhigh` / `max`），配合 `thinking: {type: "adaptive"}`。在 `claude-opus-5-5` 上思考**关不掉**：`{type: "disabled"}` 返回 400，默认 effort 是 `medium`。旧的 `budget_tokens` 写法在当前一代模型上也会返回 400。你 `settings.json` 里的 `effortLevel`（当前是 `high`）就是 Claude Code 对这个参数的封装。
-> - **MCP Python SDK 2.x 改了名**：很多教程里的 `from mcp.server.fastmcp import FastMCP`，在本机 `code/agent` 装的 mcp 2.3.0 上会报 `No module named 'mcp.server.fastmcp'`。报错信息本身就说明 FastMCP 改名成了 `MCPServer`，要改成 `from mcp.server.mcpserver import MCPServer`（本机实测可导入）。要跑 v1 的老代码，就固定 `mcp<2`。另外，FastMCP 是官方 `mcp` SDK 里的模块；名叫 `fastmcp` 的独立 pip 包是另一个项目，别混了。
+> - **MCP Python SDK 2.x 改了名**：很多教程里的 `from mcp.server.fastmcp import FastMCP`，在本机 `code/agent` 装的 mcp 2.3.0 上会报 `No module named 'mcp.server.fastmcp'`。报错信息本身就说明 FastMCP 改名成了 `MCPServer`，要改成 `from mcp.server.mcpserver import MCPServer`（本机实测可导入）。要跑 v1 的老代码，就固定 `mcp<2`。Node 版用的 `@modelcontextprotocol/sdk`（本机 1.32.1）没有这次改名，服务端类一直是 `McpServer`（`@modelcontextprotocol/sdk/server/mcp.js`）。另外，FastMCP 是官方 `mcp` SDK 里的模块；名叫 `fastmcp` 的独立 pip 包是另一个项目，别混了。
 
 ## 对照你的环境
 

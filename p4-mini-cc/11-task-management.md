@@ -16,61 +16,120 @@
 
 ## 先跑起来看看
 
-离线 fake 模型（`examples/ch11.json`），`--permission-mode acceptEdits`：
+离线 fake 模型（`examples/ch11.json`），`--permission-mode acceptEdits`（Node 版的演示项目是 `posts.js`，Python 版是 `posts.py`）：
 
-```console
-❯ 给 list_posts 加上分页
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-● 这个改动分三步，先建任务清单。
-⏺ TaskCreate(读 posts 路由)
-⏺ TaskCreate(给 list_posts 加 page/page_size)
-⏺ TaskCreate(跑测试验证)
-  ☐ #1 读 posts 路由
-  ☐ #2 给 list_posts 加 page/page_size
-  ☐ #3 跑测试验证
-  (0/3 completed)
-⏺ TaskUpdate(#1 → in_progress)
-  ◼ #1 读 posts 路由  ← 读 posts 路由
-  ☐ #2 给 list_posts 加 page/page_size
-  ☐ #3 跑测试验证
-  (0/3 completed)
-⏺ Read(posts.py)
-✔ Read ->      1        def list_posts(posts):
-       2            return posts
-⏺ TaskUpdate(#1 → completed)
-⏺ TaskUpdate(#2 → in_progress)
-  ☒ #1 读 posts 路由
-  ◼ #2 给 list_posts 加 page/page_size  ← 加分页参数
-  ☐ #3 跑测试验证
-  (1/3 completed)
-⏺ Edit(posts.py)
-✔ Edit -> The file posts.py has been updated (1 replacement). Snippet:
-...
-⏺ TaskUpdate(#2 → completed)
-⏺ TaskUpdate(#3 → in_progress)
-  ☒ #1 读 posts 路由
-  ☒ #2 给 list_posts 加 page/page_size
-  ◼ #3 跑测试验证  ← 跑测试
-  (2/3 completed)
-⏺ Bash(python3 -c "from posts import list_posts; assert list_posts(list(range(50)), 2, 20) == list(range(20, 40)); print('ok')")
-...
-选择 [1/2/3]: 1
-✔ Bash -> ok
-⏺ TaskUpdate(#3 → completed)
-  ☒ #1 读 posts 路由
-  ☒ #2 给 list_posts 加 page/page_size
-  ☒ #3 跑测试验证
-  (3/3 completed)
-● 分页加好了：list_posts(posts, page=1, page_size=20)，测试通过。
-❯ /todos
-☒ #1 读 posts 路由
-☒ #2 给 list_posts 加 page/page_size
-☒ #3 跑测试验证
-(3/3 completed)
---- 磁盘上的清单（节选）
-{"id": "2", "subject": "给 list_posts 加 page/page_size", "description": "", "active_form": "加分页参数", "status": "completed"}
-```
+=== "Node"
+
+    ```console
+    ❯ 给 list_posts 加上分页
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 这个改动分三步，先建任务清单。
+    ⏺ TaskCreate(读 posts 路由)
+    ⏺ TaskCreate(给 list_posts 加 page/page_size)
+    ⏺ TaskCreate(跑测试验证)
+      ☐ #1 读 posts 路由
+      ☐ #2 给 list_posts 加 page/page_size
+      ☐ #3 跑测试验证
+      (0/3 completed)
+    ⏺ TaskUpdate(#1 → in_progress)
+      ◼ #1 读 posts 路由  ← 读 posts 路由
+      ☐ #2 给 list_posts 加 page/page_size
+      ☐ #3 跑测试验证
+      (0/3 completed)
+    ⏺ Read(posts.js)
+    ✔ Read ->      1	function list_posts(posts) {
+           2	  return posts;
+           3	}  …(+2 lines)
+    ⏺ TaskUpdate(#1 → completed)
+    ⏺ TaskUpdate(#2 → in_progress)
+      ☒ #1 读 posts 路由
+      ◼ #2 给 list_posts 加 page/page_size  ← 加分页参数
+      ☐ #3 跑测试验证
+      (1/3 completed)
+    ⏺ Edit(posts.js)
+    ✔ Edit -> The file posts.js has been updated (1 replacement). Snippet:
+    ...
+    ⏺ TaskUpdate(#2 → completed)
+    ⏺ TaskUpdate(#3 → in_progress)
+      ☒ #1 读 posts 路由
+      ☒ #2 给 list_posts 加 page/page_size
+      ◼ #3 跑测试验证  ← 跑测试
+      (2/3 completed)
+    ⏺ Bash(node -e "const { list_posts } = require('./posts.js'); const r = list_posts([...Array(50).keys()], 2, 20); if (r[0] !== 20 || r.length !== 20) process.exit(1); console.log('ok')")
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> ok
+    ⏺ TaskUpdate(#3 → completed)
+      ☒ #1 读 posts 路由
+      ☒ #2 给 list_posts 加 page/page_size
+      ☒ #3 跑测试验证
+      (3/3 completed)
+    ● 分页加好了：list_posts(posts, page=1, page_size=20)，测试通过。
+    ❯ /todos
+    ☒ #1 读 posts 路由
+    ☒ #2 给 list_posts 加 page/page_size
+    ☒ #3 跑测试验证
+    (3/3 completed)
+    --- 磁盘上的清单（节选）
+    {"id":"2","subject":"给 list_posts 加 page/page_size","description":"","active_form":"加分页参数","status":"completed"}
+    ```
+
+=== "Python"
+
+    ```console
+    ❯ 给 list_posts 加上分页
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ● 这个改动分三步，先建任务清单。
+    ⏺ TaskCreate(读 posts 路由)
+    ⏺ TaskCreate(给 list_posts 加 page/page_size)
+    ⏺ TaskCreate(跑测试验证)
+      ☐ #1 读 posts 路由
+      ☐ #2 给 list_posts 加 page/page_size
+      ☐ #3 跑测试验证
+      (0/3 completed)
+    ⏺ TaskUpdate(#1 → in_progress)
+      ◼ #1 读 posts 路由  ← 读 posts 路由
+      ☐ #2 给 list_posts 加 page/page_size
+      ☐ #3 跑测试验证
+      (0/3 completed)
+    ⏺ Read(posts.py)
+    ✔ Read ->      1        def list_posts(posts):
+           2            return posts
+    ⏺ TaskUpdate(#1 → completed)
+    ⏺ TaskUpdate(#2 → in_progress)
+      ☒ #1 读 posts 路由
+      ◼ #2 给 list_posts 加 page/page_size  ← 加分页参数
+      ☐ #3 跑测试验证
+      (1/3 completed)
+    ⏺ Edit(posts.py)
+    ✔ Edit -> The file posts.py has been updated (1 replacement). Snippet:
+    ...
+    ⏺ TaskUpdate(#2 → completed)
+    ⏺ TaskUpdate(#3 → in_progress)
+      ☒ #1 读 posts 路由
+      ☒ #2 给 list_posts 加 page/page_size
+      ◼ #3 跑测试验证  ← 跑测试
+      (2/3 completed)
+    ⏺ Bash(python3 -c "from posts import list_posts; assert list_posts(list(range(50)), 2, 20) == list(range(20, 40)); print('ok')")
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> ok
+    ⏺ TaskUpdate(#3 → completed)
+      ☒ #1 读 posts 路由
+      ☒ #2 给 list_posts 加 page/page_size
+      ☒ #3 跑测试验证
+      (3/3 completed)
+    ● 分页加好了：list_posts(posts, page=1, page_size=20)，测试通过。
+    ❯ /todos
+    ☒ #1 读 posts 路由
+    ☒ #2 给 list_posts 加 page/page_size
+    ☒ #3 跑测试验证
+    (3/3 completed)
+    --- 磁盘上的清单（节选）
+    {"id": "2", "subject": "给 list_posts 加 page/page_size", "description": "", "active_form": "加分页参数", "status": "completed"}
+    ```
 
 每一步开始前标 `◼`，做完立刻标 `☒`。你在任何时候都能一眼看到进度；清单同时落在磁盘上，和对话历史是**两个文件**。
 
@@ -106,7 +165,7 @@ flowchart LR
 
 ## 三个工具，一份清单
 
-`mini_cc/tools/task_tools.py` 里三个工具共用一份 `TaskStore`（`ctx.extras["tasks"]`）：
+`mini_cc/tools/task_tools.ts`（Python 版 `task_tools.py`）里三个工具共用一份 `TaskStore`（`ctx.extras["tasks"]`）：
 
 | 工具 | 参数 | 结果 |
 |---|---|---|
@@ -130,15 +189,28 @@ Claude Code 其实两种都做过：本机二进制里既有 `TodoWrite` 的描�
 
 ## 清单存哪：和历史分开
 
-`mini_cc/tasks.py:TaskStore` 每次改动都写 `<session>.tasks.json`：
+`mini_cc/tasks.ts:TaskStore`（Python 版 `tasks.py:TaskStore`）每次改动都写 `<session>.tasks.json`：
 
-```python
-def save(self):
-    ...
-    tmp = self.path.with_suffix(".tmp")
-    tmp.write_text(json.dumps([asdict(t) for t in self.tasks], ensure_ascii=False, indent=1), encoding="utf-8")
-    tmp.replace(self.path)  # 先写临时文件再改名：崩溃时不会留下半个 JSON
-```
+=== "Node"
+
+    ```ts
+    save(): void {
+      ...
+      const tmp = this.path.replace(/\.json$/, ".tmp");
+      writeFileSync(tmp, JSON.stringify(this.tasks, null, 1), "utf8");
+      renameSync(tmp, this.path); // 先写临时文件再改名：崩溃时不会留下半个 JSON
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def save(self):
+        ...
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps([asdict(t) for t in self.tasks], ensure_ascii=False, indent=1), encoding="utf-8")
+        tmp.replace(self.path)  # 先写临时文件再改名：崩溃时不会留下半个 JSON
+    ```
 
 清单是「整体覆盖」的小文件，用「写临时文件 + 原子改名」保证不会写坏。这和第 4 章会话历史的 JSONL 追加是两种不同的持久化策略：**追加适合只增不改的日志，原子覆盖适合会被修改的小状态**。
 
@@ -146,18 +218,32 @@ def save(self):
 
 ## 把清单贴回模型眼前
 
-`mini_cc/tasks.py:task_reminder_provider` 挂在第 9 章的提供者列表里。它判断两件事：
+`mini_cc/tasks.ts:taskReminderProvider`（Python 版 `tasks.py:task_reminder_provider`）挂在第 9 章的提供者列表里。它判断两件事：
 
-```python
-store = st.agent.ctx.extras.get("tasks")
-if store is None or not store.unfinished():
-    return None                       # 清单做完了（或没有清单）：不打扰
-gap, seen = 0, False
-for m in reversed(st.messages):       # 从后往前数：最近一次碰清单 / 最近一次提醒之后，过了几条 assistant 消息
-    ...
-if seen and gap < every:
-    return None
-```
+=== "Node"
+
+    ```ts
+    const store: TaskStore | undefined = st.agent.ctx.extras.tasks;
+    if (store === undefined || !store.unfinished().length) return null; // 清单做完了（或没有清单）：不打扰
+    let gap = 0, seen = false;
+    for (const m of [...st.messages].reverse()) { // 从后往前数：最近一次碰清单 / 最近一次提醒之后，过了几条 assistant 消息
+      ...
+    }
+    if (seen && gap < every) return null;
+    ```
+
+=== "Python"
+
+    ```python
+    store = st.agent.ctx.extras.get("tasks")
+    if store is None or not store.unfinished():
+        return None                       # 清单做完了（或没有清单）：不打扰
+    gap, seen = 0, False
+    for m in reversed(st.messages):       # 从后往前数：最近一次碰清单 / 最近一次提醒之后，过了几条 assistant 消息
+        ...
+    if seen and gap < every:
+        return None
+    ```
 
 - 模型已经 **连续 6 次请求**没碰过清单 → 注入「You have not updated the task list in the last 6 steps」+ 当前清单。
 - 历史里**根本看不到**任何清单操作或提醒（`seen == False`）→ 注入「This is the current task list for this session」+ 当前清单。
@@ -170,14 +256,26 @@ if seen and gap < every:
 
 工具在执行期间会改清单，但工具本身不能 `yield` 事件。所以 `ToolContext` 加了一个通用的小机制：
 
-```python
-pending_events: list[Any] = field(default_factory=list)
+=== "Node"
 
-def emit(self, event: Any) -> None:
-    self.pending_events.append(event)
-```
+    ```ts
+    pendingEvents: Event[] = [];
 
-任务工具改完清单就 `ctx.emit(TasksUpdated(store.render()))`；循环在 `ToolEnd` 之后把攒下的事件转发给 UI。一批里多次修改（演示里一次建三个任务、或「完成 #1 + 开始 #2」）只在批末转发一次最终状态，屏幕上不会刷三遍清单。
+    emit(event: Event): void {
+      this.pendingEvents.push(event);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    pending_events: list[Any] = field(default_factory=list)
+
+    def emit(self, event: Any) -> None:
+        self.pending_events.append(event)
+    ```
+
+任务工具改完清单就 `ctx.emit(TasksUpdated(store.render()))`（Node 版是 `ctx.emit(tasksUpdated(...))`，事件是带 `type` 标签的普通对象）；循环在 `ToolEnd` 之后把攒下的事件转发给 UI。一批里多次修改（演示里一次建三个任务、或「完成 #1 + 开始 #2」）只在批末转发一次最终状态，屏幕上不会刷三遍清单。
 
 `emit()` 不是专门为任务清单写的。第 16 章后台命令的进度、第 17 章 sub agent 的状态变化，都可以走这条路。
 
@@ -185,7 +283,7 @@ def emit(self, event: Any) -> None:
 
 ## 测试
 
-`tests/test_ch11_tasks.py`，8 个：
+`tests/ch11_tasks.test.ts`（Python 版 `tests/test_ch11_tasks.py`），8 个：
 
 - `TaskStore` 的落盘与读回、清单渲染格式。
 - 模型建清单 → 开始 → 完成，事件次数（批内合并）、最终状态、免审批、「2 task(s) remaining」。
@@ -193,14 +291,30 @@ def emit(self, event: Any) -> None:
 - 提醒：连续 6 次不碰清单后恰好在第 7 次请求前注入；历史里看不见清单时首条消息就注入；全部完成时不提醒。
 - 更新不存在的任务报错、两个 `in_progress` 时提示；UI 清单渲染。
 
-这一章收尾时，还给第 12–21 章留了两个生命周期钩子：`Agent.before_request`（每次请求模型之前，第 14 章自动压缩会挂在这里）和 `Agent.turn_end`（一轮结束时，第 12 章提取记忆、第 13 章打检查点）。`tests/test_extension_points.py` 的 3 个测试守着所有预留的扩展点，完整清单见 `code/mini_cc/ARCHITECTURE.md`。
+这一章收尾时，还给第 12–21 章留了两个生命周期钩子：`Agent.before_request`（每次请求模型之前，第 14 章自动压缩会挂在这里）和 `Agent.turn_end`（一轮结束时，第 12 章提取记忆、第 13 章打检查点）。`tests/extension_points.test.ts`（Python 版 `tests/test_extension_points.py`）的 3 个测试守着所有预留的扩展点，完整清单见 `code/mini_cc/ARCHITECTURE.md`。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 59%]
-..................................................                       [100%]
-122 passed in 3.69s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[01]*.test.ts tests/extension_points.test.ts
+    ℹ tests 122
+    ℹ suites 0
+    ℹ pass 122
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 3737.579167
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 59%]
+    ..................................................                       [100%]
+    122 passed in 3.69s
+    ```
 
 ## 回到开头
 

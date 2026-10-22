@@ -6,7 +6,7 @@
 
 ## dev server 起来 30 秒，为什么就「失败」了？
 
-mini-cc 的 `Bash` 从第 1 章起就是 `subprocess.run(..., timeout=30)`：命令 30 秒内不结束就被杀掉，返回一个超时错误。
+mini-cc 的 `Bash` 从第 1 章起就是 `subprocess.run(..., timeout=30)`（Node 版是 `spawn` 加一个 30 秒的定时器）：命令 30 秒内不结束就被杀掉，返回一个超时错误。
 
 对 `ls`、`git status` 来说这很合理。但你让它「把 webapp 的 dev server 起起来，我看看页面」：`pnpm dev` 永远不会自己退出，30 秒后被杀，模型还会一本正经地告诉你「启动超时，可能是端口被占用」。跑一遍完整测试、装一个大依赖，也会撞上同一堵墙。
 
@@ -18,35 +18,69 @@ mini-cc 的 `Bash` 从第 1 章起就是 `subprocess.run(..., timeout=30)`：命
 
 离线 fake 模型（`examples/ch16.json`）。项目里有一个要跑 2 秒的 `slow_tests.sh`。输入用 `(printf …; sleep 4; printf …)` 分两段喂进去，中间 4 秒**你什么都没输入**：
 
-```console
-$ (printf '跑一下完整测试，同时帮我看看 README 有没有写安装步骤\n1\n/tasks\n'; sleep 4; printf '/tasks\n/exit\n') \
-    | uv run python -m mini_cc --fake examples/ch16.json --permission-mode acceptEdits
-❯ 跑一下完整测试，同时帮我看看 README 有没有写安装步骤
-◇ system  项目说明 0 个文件
-◇ system  日期 2026-10-21
-● 测试要跑一阵，放后台。
-⏺ Bash(./slow_tests.sh)
-是否允许 Bash(./slow_tests.sh)？（needs approval）
-...
-选择 [1/2/3]: 1
-✔ Bash -> Command running in background with ID: b1. Output is being written to: $DEMO/home/tasks/…
-● 趁这段时间看 README。
-⏺ Read(README.md)
-✔ Read ->      1        # demo
-       2        一个演示项目。
-● README 里只有项目简介，没有安装步骤，建议补一节「pnpm install && pnpm dev」。测试还在后台跑，结束了我再告诉你。
-❯ /tasks
-b1  bash     running       0.0s  完整测试套件
-◇ system  1 条通知
-● 后台测试结束了，看一眼结果。
-⏺ Bash(tail -n 2 "$MINI_CC_HOME"/tasks/*/b1.output)
-✔ Bash -> collecting...
-  12 passed in 2.01s
-● 测试全部通过：12 passed。
-❯ /tasks
-b1  bash     completed     2.6s  完整测试套件
-❯ /exit
-```
+=== "Node"
+
+    ```console
+    $ (printf '跑一下完整测试，同时帮我看看 README 有没有写安装步骤\n1\n/tasks\n'; sleep 4; printf '/tasks\n/exit\n') \
+        | node mini_cc/cli.ts --fake examples/ch16.json --permission-mode acceptEdits
+    ❯ 跑一下完整测试，同时帮我看看 README 有没有写安装步骤
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-22
+    ● 测试要跑一阵，放后台。
+    ⏺ Bash(./slow_tests.sh)
+    是否允许 Bash(./slow_tests.sh)？（needs approval）
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> Command running in background with ID: b1. Output is being written to: $DEMO/home/tasks/…
+    ● 趁这段时间看 README。
+    ⏺ Read(README.md)
+    ✔ Read ->      1	# demo
+           2	一个演示项目。
+    ● README 里只有项目简介，没有安装步骤，建议补一节「pnpm install && pnpm dev」。测试还在后台跑，结束了我再告诉你。
+    ❯ /tasks
+    b1  bash     running       0.0s  完整测试套件
+    ◇ system  1 条通知
+    ● 后台测试结束了，看一眼结果。
+    ⏺ Bash(tail -n 2 "$MINI_CC_HOME"/tasks/*/b1.output)
+    ✔ Bash -> collecting...
+      12 passed in 2.01s
+    ● 测试全部通过：12 passed。
+    ❯ /tasks
+    b1  bash     completed     2.6s  完整测试套件
+    ❯ /exit
+    ```
+
+=== "Python"
+
+    ```console
+    $ (printf '跑一下完整测试，同时帮我看看 README 有没有写安装步骤\n1\n/tasks\n'; sleep 4; printf '/tasks\n/exit\n') \
+        | uv run python -m mini_cc --fake examples/ch16.json --permission-mode acceptEdits
+    ❯ 跑一下完整测试，同时帮我看看 README 有没有写安装步骤
+    ◇ system  项目说明 0 个文件
+    ◇ system  日期 2026-10-21
+    ● 测试要跑一阵，放后台。
+    ⏺ Bash(./slow_tests.sh)
+    是否允许 Bash(./slow_tests.sh)？（needs approval）
+    ...
+    选择 [1/2/3]: 1
+    ✔ Bash -> Command running in background with ID: b1. Output is being written to: $DEMO/home/tasks/…
+    ● 趁这段时间看 README。
+    ⏺ Read(README.md)
+    ✔ Read ->      1        # demo
+           2        一个演示项目。
+    ● README 里只有项目简介，没有安装步骤，建议补一节「pnpm install && pnpm dev」。测试还在后台跑，结束了我再告诉你。
+    ❯ /tasks
+    b1  bash     running       0.0s  完整测试套件
+    ◇ system  1 条通知
+    ● 后台测试结束了，看一眼结果。
+    ⏺ Bash(tail -n 2 "$MINI_CC_HOME"/tasks/*/b1.output)
+    ✔ Bash -> collecting...
+      12 passed in 2.01s
+    ● 测试全部通过：12 passed。
+    ❯ /tasks
+    b1  bash     completed     2.6s  完整测试套件
+    ❯ /exit
+    ```
 
 注意 `◇ system 1 条通知` 那一行：它出现时你没有输入任何东西。后台命令结束，mini-cc 发现自己闲着，主动开了一轮，把通知交给模型，模型自己去看了结果。
 
@@ -77,7 +111,7 @@ sequenceDiagram
     end
 ```
 
-图注：通知是第 9 章就预留好的通道，`Agent.notify()` 线程安全，`notifications_provider` 在下一次追加 user 消息时把队列清空送进去。本章只是第一次往里放东西。
+图注：通知是第 9 章就预留好的通道，`Agent.notify()` 线程安全（Node 版是单线程事件循环，子进程的 `close` 事件和 agent 循环交替执行，一个数组就够；图里的「等待线程」对应 `close` 回调），`notifications_provider` 在下一次追加 user 消息时把队列清空送进去。本章只是第一次往里放东西。
 
 打个比方，这像在餐厅点了一份要做 40 分钟的菜。服务员不会让你干坐着等，而是给你一个取餐号（任务 id），你可以先吃前菜、聊天。菜好了，取餐器响一声（通知）。
 
@@ -89,49 +123,96 @@ sequenceDiagram
 
 ### 1. 后台任务表：`mini_cc/jobs.py`
 
-```python
-@dataclass
-class Job:
-    id: str
-    kind: str                 # bash | agent | monitor（后两种是第 17、18 章的）
-    description: str
-    output_file: Path
-    tool_use_id: str = ""
-    status: str = "running"   # running | completed | failed | killed
-    exit_code: int | None = None
-    proc: subprocess.Popen | None = None
-    thread: threading.Thread | None = None
-    stop_requested: bool = False
-```
+=== "Node"
+
+    ```ts
+    export class Job {
+      id: string;
+      kind: string; // bash | agent | monitor（后两种是第 17、18 章的）
+      description: string;
+      outputFile: string;
+      toolUseId: string;
+      status: JobStatus = "running"; // running | completed | failed | killed
+      exitCode: number | null = null;
+      proc: ChildProcess | null = null;
+      done: Promise<void> = Promise.resolve(); // 对应 Python 的 thread：任务（连同通知）彻底结束时 resolve
+      stopRequested = false;
+      ...
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    @dataclass
+    class Job:
+        id: str
+        kind: str                 # bash | agent | monitor（后两种是第 17、18 章的）
+        description: str
+        output_file: Path
+        tool_use_id: str = ""
+        status: str = "running"   # running | completed | failed | killed
+        exit_code: int | None = None
+        proc: subprocess.Popen | None = None
+        thread: threading.Thread | None = None
+        stop_requested: bool = False
+    ```
 
 `JobManager.start_bash`：
 
-```python
-job = self._new("bash", "b", description or command, tool_use_id)
-out = open(job.output_file, "w", encoding="utf-8")
-job.proc = subprocess.Popen(command, shell=True, cwd=cwd, stdout=out, stderr=subprocess.STDOUT,
-                            stdin=subprocess.DEVNULL, start_new_session=True)
-out.close()
+=== "Node"
 
-def wait():
-    rc = job.proc.wait()
-    job.exit_code, job.ended = rc, time.time()
-    if job.stop_requested:
-        job.status = "killed"
-        return                                   # 主动停的：调用方已经知道了，不再通知
-    job.status = "completed" if rc == 0 else "failed"
-    verb = "completed (exit code 0)" if rc == 0 else f"failed with exit code {rc}"
-    self.notify(render_notification(job, f'Background command "{job.description}" {verb}'))
+    ```ts
+    const job = this.newJob("bash", "b", description || command, toolUseId);
+    const out = openSync(job.outputFile, "w");
+    job.proc = spawn(command, { shell: true, cwd, stdio: ["ignore", out, out], detached: true });
+    closeSync(out);
 
-job.thread = threading.Thread(target=wait, daemon=True)
-job.thread.start()
-```
+    job.done = new Promise((resolve) => {
+      job.proc!.on("close", (code, sig) => { // 不用等待线程：子进程退出时事件循环回调这里
+        const rc = exitCode(code, sig);
+        job.exitCode = rc;
+        job.ended = Date.now() / 1000;
+        if (job.stopRequested) {
+          job.status = "killed";
+          return resolve(); // 主动停的：调用方已经知道了，不再通知
+        }
+        job.status = rc === 0 ? "completed" : "failed";
+        const verb = rc === 0 ? "completed (exit code 0)" : `failed with exit code ${rc}`;
+        this.notify(renderNotification(job, `Background command "${job.description}" ${verb}`));
+        resolve();
+      });
+    });
+    ```
+
+=== "Python"
+
+    ```python
+    job = self._new("bash", "b", description or command, tool_use_id)
+    out = open(job.output_file, "w", encoding="utf-8")
+    job.proc = subprocess.Popen(command, shell=True, cwd=cwd, stdout=out, stderr=subprocess.STDOUT,
+                                stdin=subprocess.DEVNULL, start_new_session=True)
+    out.close()
+
+    def wait():
+        rc = job.proc.wait()
+        job.exit_code, job.ended = rc, time.time()
+        if job.stop_requested:
+            job.status = "killed"
+            return                                   # 主动停的：调用方已经知道了，不再通知
+        job.status = "completed" if rc == 0 else "failed"
+        verb = "completed (exit code 0)" if rc == 0 else f"failed with exit code {rc}"
+        self.notify(render_notification(job, f'Background command "{job.description}" {verb}'))
+
+    job.thread = threading.Thread(target=wait, daemon=True)
+    job.thread.start()
+    ```
 
 三个细节：
 
 - **输出写文件，不进内存**。dev server 能跑一整天，日志几百 MB。文件放在 `<home>/tasks/<会话 id>/b1.output`，模型要看进度就用 `Read` 读它。
-- **`start_new_session=True`**。`pnpm dev` 会拉起一串子进程（node、esbuild……）。新开一个进程组，`TaskStop` 用 `os.killpg` 能把整串一起杀掉；只杀 shell 的话，node 会变成孤儿继续占着端口。
-- **`stdin=DEVNULL`**。后台命令要是读 stdin（比如某个交互式脚手架问你「是否覆盖？」），它会和 REPL 抢输入。直接给它一个空的 stdin。
+- **`start_new_session=True`**（Node 版是 `spawn(..., { detached: true })`，停止时 `process.kill(-pid)` 杀整组）。`pnpm dev` 会拉起一串子进程（node、esbuild……）。新开一个进程组，`TaskStop` 用 `os.killpg` 能把整串一起杀掉；只杀 shell 的话，node 会变成孤儿继续占着端口。
+- **`stdin=DEVNULL`**（Node 版 `stdio` 的第一项写 `"ignore"`）。后台命令要是读 stdin（比如某个交互式脚手架问你「是否覆盖？」），它会和 REPL 抢输入。直接给它一个空的 stdin。
 
 ### 2. 通知长什么样
 
@@ -149,18 +230,33 @@ job.thread.start()
 
 你本机的一条真实记录是 `<summary>Background command "Start local dev server on port 3692" failed with exit code 143</summary>`（143 是被 SIGTERM 杀掉）。有 `description` 时用它，没有就用命令本身，这样通知短而且可读。
 
-`tool-use-id` 指回当初那次 `Bash` 调用，模型能把「这个结果」和「那次决定」对上。为了拿到它，`ToolContext` 加了一个 `tool_use_id` 字段，循环在执行每个工具前填上（`loop.py:_run_tools`）。
+`tool-use-id` 指回当初那次 `Bash` 调用，模型能把「这个结果」和「那次决定」对上。为了拿到它，`ToolContext` 加了一个 `tool_use_id` 字段（Node 版 `toolUseId`），循环在执行每个工具前填上（`loop.py:_run_tools`，Node 版 `loop.ts` 的 `runTools`）。
 
 ### 3. Bash 工具：多一个参数，多一段说明
 
-```python
-def run(self, args, ctx):
-    if args.get("run_in_background"):
-        job = ctx.extras["jobs"].start_bash(args["command"], ctx.cwd, args.get("description", ""), ctx.tool_use_id)
-        return ToolResult(f"Command running in background with ID: {job.id}. Output is being written to: "
-                          f"{job.output_file}. You will be notified when it completes. "
-                          "To check interim output, use Read on that file path.")
-```
+=== "Node"
+
+    ```ts
+    override async run(args: Args, ctx: ToolContext): Promise<ToolResult> {
+      if (args.run_in_background) {
+        const job = ctx.extras.jobs.startBash(args.command, ctx.cwd, args.description ?? "", ctx.toolUseId);
+        return new ToolResult(`Command running in background with ID: ${job.id}. Output is being written to: ` +
+          `${job.outputFile}. You will be notified when it completes. ` +
+          "To check interim output, use Read on that file path.");
+      }
+      ...
+    ```
+
+=== "Python"
+
+    ```python
+    def run(self, args, ctx):
+        if args.get("run_in_background"):
+            job = ctx.extras["jobs"].start_bash(args["command"], ctx.cwd, args.get("description", ""), ctx.tool_use_id)
+            return ToolResult(f"Command running in background with ID: {job.id}. Output is being written to: "
+                              f"{job.output_file}. You will be notified when it completes. "
+                              "To check interim output, use Read on that file path.")
+    ```
 
 返回文案也是 Claude Code 的原文（本机会话里能搜到）。每一句都在回答模型的一个问题：任务叫什么、输出在哪、什么时候知道结果、等不及了怎么办。
 
@@ -174,26 +270,51 @@ def run(self, args, ctx):
 
 ### 4. `TaskStop`
 
-```python
-def run(self, args, ctx):
-    job = ctx.extras["jobs"].get(args["task_id"])
-    if job is None:
-        return ToolResult(f"No task {args['task_id']}. Running: …", True)
-    jobs.stop(job.id)
-    return ToolResult(f"Stopped task {job.id} ({job.description}).")
-```
+=== "Node"
+
+    ```ts
+    override async run(args: Args, ctx: ToolContext): Promise<ToolResult> {
+      const job = ctx.extras.jobs.get(args.task_id);
+      if (job === undefined) return new ToolResult(`No task ${args.task_id}. Running: …`, true);
+      await jobs.stop(job.id);
+      return new ToolResult(`Stopped task ${job.id} (${job.description}).`);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def run(self, args, ctx):
+        job = ctx.extras["jobs"].get(args["task_id"])
+        if job is None:
+            return ToolResult(f"No task {args['task_id']}. Running: …", True)
+        jobs.stop(job.id)
+        return ToolResult(f"Stopped task {job.id} ({job.description}).")
+    ```
 
 工具名和参数名 `task_id` 跟 Claude Code 一致（它的旧参数名 `shell_id` 已标为 deprecated）。`self_check` 返回 `"allow"`：停掉 agent 自己启动的进程不需要审批。被主动停掉的任务不再发通知，不然模型会收到一条它自己造成的「failed with exit code -15」。
 
 ### 5. 空闲时怎么唤醒：`App.wake_if_idle`
 
-```python
-def wake_if_idle(self) -> bool:
-    if self.busy or self.agent.notifications.empty():
-        return False
-    self._run([])   # 空内容：providers 会把通知作为 <system-reminder> 放进这条 user 消息
-    return True
-```
+=== "Node"
+
+    ```ts
+    async wakeIfIdle(): Promise<boolean> {
+      if (this.busy || !this.agent.notifications.length) return false;
+      await this.run([]); // 空内容：providers 会把通知作为 <system-reminder> 放进这条 user 消息
+      return true;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def wake_if_idle(self) -> bool:
+        if self.busy or self.agent.notifications.empty():
+            return False
+        self._run([])   # 空内容：providers 会把通知作为 <system-reminder> 放进这条 user 消息
+        return True
+    ```
 
 `run_turn([])` 走的是普通的一轮，第 9 章的 `inject()` 把通知并进这条空的 user 消息。第 13 章写 `is_prompt()` 时特意排除了「只有 `<system-reminder>` 的 user 消息」，就是为这里准备的：唤醒不是你发的话，不该成为 rewind 的检查点。
 
@@ -201,6 +322,8 @@ def wake_if_idle(self) -> bool:
 
 - **管道模式**：原来是 `sys.stdin.readline()` 一直阻塞。改成 `LineReader`：一个线程读 stdin 放进队列，主线程 `queue.get(timeout=0.2)`，超时就调一次 `wake_if_idle`。权限弹窗的答案也从同一个队列取（`ui.line_source`），否则读线程会把你给弹窗的「1」抢走。
 - **终端模式**：`prompt_toolkit` 的输入框是它自己的事件循环。加一个看门线程，每 0.3 秒看一眼「空闲且有通知」，满足就用 `pt.loop.call_soon_threadsafe(...)` 让输入框以一个哨兵值退出，主循环拿到哨兵就去唤醒。我用一个 pty 脚本驱动真实终端验证过这条路径（通知到达后模型自己开口了）。
+
+Node 版没有线程，两条路径都换成了定时器：管道模式的 `LineReader.get(onIdle)` 让「新的一行到达」和一个 0.2 秒的定时器赛跑，定时器先到就调一次 `wakeIfIdle`；终端模式用 `setInterval` 每 0.3 秒看一眼，满足条件就用 `AbortController` 取消正在等待的 `rl.question()`，主循环捕获到取消就去唤醒。终端这条路径我同样用 `script` 开的伪终端验证过。
 
 你可能会问：唤醒的时候你正打字打到一半怎么办？
 
@@ -214,7 +337,7 @@ def wake_if_idle(self) -> bool:
 
 ## 测试
 
-`tests/test_ch16_background.py`，8 个，用的是真实子进程（`sleep`、`echo`）：
+`tests/ch16_background.test.ts`（Python 版 `tests/test_ch16_background.py`），8 个，用的是真实子进程（`sleep`、`echo`）：
 
 - 后台命令立即返回、结束后产生 `completed` 通知、空闲唤醒把通知送给模型、队列空了不再唤醒。
 - 失败的命令 → `failed with exit code 3`，stderr 也进了输出文件。
@@ -222,13 +345,29 @@ def wake_if_idle(self) -> bool:
 - `TaskStop` 杀掉任务且不再通知；`/tasks` 列表与 `/tasks stop`。
 - Read 输出文件不触发「外部修改」提醒；前台超时提示改用后台；`close()` 杀掉所有任务。
 
-```console
-$ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
-........................................................................ [ 44%]
-........................................................................ [ 89%]
-.................                                                        [100%]
-161 passed in 9.37s
-```
+=== "Node"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc-node && node --test tests/ch0*.test.ts tests/ch1[0-6]*.test.ts tests/extension_points.test.ts
+    ℹ tests 161
+    ℹ suites 0
+    ℹ pass 161
+    ℹ fail 0
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 7000.35675
+    ```
+
+=== "Python"
+
+    ```console
+    $ cd /Users/liz/liz/agent-learn/code/mini_cc && uv run pytest -q
+    ........................................................................ [ 44%]
+    ........................................................................ [ 89%]
+    .................                                                        [100%]
+    161 passed in 9.37s
+    ```
 
 测试变慢了几秒，来自几个真实的 `sleep`。
 

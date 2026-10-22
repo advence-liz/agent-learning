@@ -63,34 +63,59 @@ sequenceDiagram
 
 ## 先跑起来：同一个问题，两种做法
 
-`code/agent/subagent_demo/subagent.py` 用一个剧本式的 fake client，把同一个问题按两种方式各跑一遍：
+[`code/agent-node/subagent_demo/subagent.ts`](../code/agent-node/subagent_demo/subagent.ts)（Python 版 [`subagent.py`](../code/agent/subagent_demo/subagent.py)）用一个剧本式的 fake client，把同一个问题按两种方式各跑一遍：
 
 - **inline**：父 agent 自己 grep，再读 3 个文件。
 - **subagent**：父 agent 只调用一次 `agent` 工具，让子 agent 去 grep 和读文件。
 
-两种方式读的都是本仓库里的真实文件。运行 `uv run python subagent_demo/subagent.py`（离线 fake 模型，真实输出）：
+两种方式读的都是本仓库里的真实文件（Node 版读 `code/agent-node` 下的 `.ts`，Python 版读 `code/agent` 下的 `.py`，所以字符数略有出入）。离线 fake 模型，真实输出：
 
-```text
-[inline]   父 messages =  11517 字符  (父请求 3 次, 工具 4 次)
-[subagent] 父 messages =    636 字符  (父请求 2 次, 工具 1 次)
-           子 messages =  11524 字符  (子请求 3 次, 工具 4 次，用完即弃)
-父上下文缩小到 inline 的 5.5%
-```
+=== "Node"
+
+    ```text
+    $ node subagent_demo/subagent.ts
+    [inline]   父 messages =  12227 字符  (父请求 3 次, 工具 4 次)
+    [subagent] 父 messages =    649 字符  (父请求 2 次, 工具 1 次)
+               子 messages =  12234 字符  (子请求 3 次, 工具 4 次，用完即弃)
+    父上下文缩小到 inline 的 5.3%
+    ```
+
+=== "Python"
+
+    ```text
+    $ uv run python subagent_demo/subagent.py
+    [inline]   父 messages =  11517 字符  (父请求 3 次, 工具 4 次)
+    [subagent] 父 messages =    636 字符  (父请求 2 次, 工具 1 次)
+               子 messages =  11524 字符  (子请求 3 次, 工具 4 次，用完即弃)
+    父上下文缩小到 inline 的 5.5%
+    ```
 
 总工作量没有变，子 agent 照样调用了 4 次工具、读了一万多字符。变化在于这一万多字符**住在哪里**。inline 模式下，它们会一直跟着父会话，后面每一轮请求都要重发一遍；subagent 模式下，它们跟着子数组一起被扔掉了。
 
-实现的关键只有三行，在 `make_agent_tool()` 里：
+实现的关键只有三行，在 `makeAgentTool()`（`make_agent_tool()`）里：
 
-```python
-def agent(description: str, prompt: str) -> str:
-    child_messages = [{"role": "user", "content": prompt}]   # ← 全新数组，看不到父历史
-    result = run_agent(client, child_system, child_messages, CHILD_TOOLS, child_stats)
-    return result                                            # ← 父亲只拿到这一段
-```
+=== "Node"
 
-说穿了，子 agent 就是「在一次工具调用的内部，又跑了一遍完整的 agent 循环」。`run_agent` 是同一个函数，父 agent 和子 agent 共用，区别只在于传进去的 messages 是哪个数组。
+    ```ts
+    async ({ description, prompt }) => {
+      const childMessages = [{ role: "user", content: prompt }];   // ← 全新数组，看不到父历史
+      const result = await runAgent(client, childSystem, childMessages, CHILD_TOOLS, childStats);
+      return result;                                               // ← 父亲只拿到这一段
+    }
+    ```
 
-测试：`uv run pytest -q subagent_demo`，结果 `2 passed`。其中一条用 spy 断言：子 agent 第一次请求的 messages 里**只有**任务描述，没有父亲最初的提问。
+=== "Python"
+
+    ```python
+    def agent(description: str, prompt: str) -> str:
+        child_messages = [{"role": "user", "content": prompt}]   # ← 全新数组，看不到父历史
+        result = run_agent(client, child_system, child_messages, CHILD_TOOLS, child_stats)
+        return result                                            # ← 父亲只拿到这一段
+    ```
+
+说穿了，子 agent 就是「在一次工具调用的内部，又跑了一遍完整的 agent 循环」。`runAgent`（`run_agent`）是同一个函数，父 agent 和子 agent 共用，区别只在于传进去的 messages 是哪个数组。
+
+测试：`node --test 'subagent_demo/*.test.ts'`，结果 `ℹ pass 2`（Python 版 `uv run pytest -q subagent_demo`，结果 `2 passed`）。其中一条用 spy 断言：子 agent 第一次请求的 messages 里**只有**任务描述，没有父亲最初的提问。
 
 ## 在真实 transcript 里看这道墙
 
@@ -129,8 +154,8 @@ def agent(description: str, prompt: str) -> str:
 
 ## 练习
 
-1. 在 `subagent.py` 里加一个场景：子 agent 返回的不是 5 行结论，而是 3 个文件的全文拼接。重新对比父上下文的字符数，验证常见坑第 2 条。
-2. 给 `make_agent_tool` 加一个 `max_turns` 参数：子循环超过 N 次请求就停下，返回 `[partial] ` 前缀加上目前为止最后一段文字，模拟文档里说的 partial 结果。
+1. 在 `subagent.ts`（`subagent.py`）里加一个场景：子 agent 返回的不是 5 行结论，而是 3 个文件的全文拼接。重新对比父上下文的字符数，验证常见坑第 2 条。
+2. 给 `makeAgentTool`（`make_agent_tool`）加一个 `maxTurns`（`max_turns`）参数：子循环超过 N 次请求就停下，返回 `[partial] ` 前缀加上目前为止最后一段文字，模拟文档里说的 partial 结果。
 3. （开放题）你的 `feishu-bug-intake` 流程要求「图和视频必须下载看完」。如果把「看图定性」派给子 agent，结论里要包含哪些字段，父 agent 才能放心地基于它建单？请设计一个结构化的返回格式。
 
 ## 延伸阅读

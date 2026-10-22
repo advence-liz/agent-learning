@@ -100,71 +100,153 @@ flowchart TB
 
 下面的 `Edge` 字段名和 Graphiti 的 `EntityEdge` 一致，矛盾判断用规则代替 LLM，失效逻辑按上面两条规则写：
 
-```python
-from dataclasses import dataclass, field
-from datetime import date
+=== "Node"
 
-@dataclass
-class Edge:                       # 对应 graphiti 的 EntityEdge（字段名一致，类型简化成 date）
-    source: str
-    name: str
-    target: str
-    fact: str
-    valid_at: date                # 事实在现实世界里何时开始成立（时间线 T）
-    invalid_at: date | None = None   # 何时不再成立（T）
-    created_at: date = None       # 系统何时知道的（时间线 T'）
-    expired_at: date | None = None   # 系统何时把它标记失效（T'）
-    episodes: list = field(default_factory=list)
+    ```ts
+    type Day = string;                 // "YYYY-MM-DD"：同格式的日期字符串按字典序比较就是按时间比较
 
-class Graph:
-    def __init__(self): self.edges: list[Edge] = []
+    class Edge {                       // 对应 graphiti 的 EntityEdge（字段名一致，类型简化成日期字符串）
+      source: string;
+      name: string;
+      target: string;
+      fact: string;
+      valid_at: Day;                   // 事实在现实世界里何时开始成立（时间线 T）
+      invalid_at: Day | null = null;   // 何时不再成立（T）
+      created_at: Day | null = null;   // 系统何时知道的（时间线 T'）
+      expired_at: Day | null = null;   // 系统何时把它标记失效（T'）
+      episodes: string[] = [];
+      constructor(source: string, name: string, target: string, fact: string, { valid_at }: { valid_at: Day }) {
+        [this.source, this.name, this.target, this.fact, this.valid_at] = [source, name, target, fact, valid_at];
+      }
+    }
 
-    def contradicts(self, old: Edge, new: Edge) -> bool:
-        # 真实实现：同一实体对上 BM25+向量检索出候选，再让 LLM 判断 contradicted_facts
-        return old.source == new.source and old.name == new.name and old.target != new.target
+    class Graph {
+      edges: Edge[] = [];
 
-    def add(self, new: Edge, today: date):
-        new.created_at = today
-        for old in self.edges:
-            if not self.contradicts(old, new):
-                continue
-            if old.valid_at < new.valid_at:
-                # 正常顺序：旧事实在新事实生效那一刻失效（只在区间还重叠时才改）
-                if old.invalid_at is None or old.invalid_at > new.valid_at:
-                    old.invalid_at, old.expired_at = new.valid_at, today
-            else:
-                # 乱序到达：新来的其实是更早的事实，它的有效期截止到后一个事实开始
-                if new.invalid_at is None or old.valid_at < new.invalid_at:
-                    new.invalid_at, new.expired_at = old.valid_at, today
-        self.edges.append(new)
+      contradicts(old: Edge, neu: Edge): boolean {
+        // 真实实现：同一实体对上 BM25+向量检索出候选，再让 LLM 判断 contradicted_facts
+        return old.source === neu.source && old.name === neu.name && old.target !== neu.target;
+      }
 
-    def as_of(self, t: date):                        # 「t 时刻什么是真的」
-        return [e.fact for e in self.edges if e.valid_at <= t and (e.invalid_at is None or t < e.invalid_at)]
+      add(neu: Edge, { today }: { today: Day }): void {
+        neu.created_at = today;
+        for (const old of this.edges) {
+          if (!this.contradicts(old, neu)) continue;
+          if (old.valid_at < neu.valid_at) {
+            // 正常顺序：旧事实在新事实生效那一刻失效（只在区间还重叠时才改）
+            if (old.invalid_at === null || old.invalid_at > neu.valid_at)
+              [old.invalid_at, old.expired_at] = [neu.valid_at, today];
+          } else {
+            // 乱序到达：新来的其实是更早的事实，它的有效期截止到后一个事实开始
+            if (neu.invalid_at === null || old.valid_at < neu.invalid_at)
+              [neu.invalid_at, neu.expired_at] = [old.valid_at, today];
+          }
+        }
+        this.edges.push(neu);
+      }
 
-    def believed_at(self, t: date):                  # 「t 时刻系统当时认为哪些边有效」（时间线 T'）
-        return [e.fact for e in self.edges if e.created_at <= t and (e.expired_at is None or t < e.expired_at)]
+      asOf(t: Day): string[] {                         // 「t 时刻什么是真的」
+        return this.edges.filter((e) => e.valid_at <= t && (e.invalid_at === null || t < e.invalid_at)).map((e) => e.fact);
+      }
 
-g = Graph()
-g.add(Edge("小李", "WORKS_AT", "A公司", "小李在 A 公司工作", valid_at=date(2024, 3, 1)), today=date(2024, 3, 5))
-g.add(Edge("小李", "WORKS_AT", "B公司", "小李跳槽到 B 公司", valid_at=date(2026, 6, 1)), today=date(2026, 6, 3))
-g.add(Edge("小李", "WORKS_AT", "C公司", "小李 2022 年在 C 公司实习", valid_at=date(2022, 7, 1)), today=date(2026, 7, 1))
-for e in g.edges:
-    print(f"{e.fact:<22} valid={e.valid_at} invalid={e.invalid_at} expired={e.expired_at}")
-for t in (date(2023, 1, 1), date(2025, 1, 1), date(2026, 10, 1)):
-    print(t, "->", g.as_of(t))
-print("系统在 2026-06-02 相信:", g.believed_at(date(2026, 6, 2)))
-```
+      believedAt(t: Day): string[] {                   // 「t 时刻系统当时认为哪些边有效」（时间线 T'）
+        return this.edges.filter((e) => e.created_at! <= t && (e.expired_at === null || t < e.expired_at)).map((e) => e.fact);
+      }
+    }
 
-```text
-❯ uv run python bitemporal_demo.py
-小李在 A 公司工作             valid=2024-03-01 invalid=2026-06-01 expired=2026-06-03
-小李跳槽到 B 公司             valid=2026-06-01 invalid=None expired=None
-小李 2022 年在 C 公司实习      valid=2022-07-01 invalid=2024-03-01 expired=2026-07-01
-2023-01-01 -> ['小李 2022 年在 C 公司实习']
-2025-01-01 -> ['小李在 A 公司工作']
-2026-10-01 -> ['小李跳槽到 B 公司']
-系统在 2026-06-02 相信: ['小李在 A 公司工作']
-```
+    const g = new Graph();
+    g.add(new Edge("小李", "WORKS_AT", "A公司", "小李在 A 公司工作", { valid_at: "2024-03-01" }), { today: "2024-03-05" });
+    g.add(new Edge("小李", "WORKS_AT", "B公司", "小李跳槽到 B 公司", { valid_at: "2026-06-01" }), { today: "2026-06-03" });
+    g.add(new Edge("小李", "WORKS_AT", "C公司", "小李 2022 年在 C 公司实习", { valid_at: "2022-07-01" }), { today: "2026-07-01" });
+    for (const e of g.edges)
+      console.log(`${e.fact.padEnd(22)} valid=${e.valid_at} invalid=${e.invalid_at} expired=${e.expired_at}`);
+    for (const t of ["2023-01-01", "2025-01-01", "2026-10-01"])
+      console.log(t, "->", g.asOf(t));
+    console.log("系统在 2026-06-02 相信:", g.believedAt("2026-06-02"));
+    ```
+
+=== "Python"
+
+    ```python
+    from dataclasses import dataclass, field
+    from datetime import date
+
+    @dataclass
+    class Edge:                       # 对应 graphiti 的 EntityEdge（字段名一致，类型简化成 date）
+        source: str
+        name: str
+        target: str
+        fact: str
+        valid_at: date                # 事实在现实世界里何时开始成立（时间线 T）
+        invalid_at: date | None = None   # 何时不再成立（T）
+        created_at: date = None       # 系统何时知道的（时间线 T'）
+        expired_at: date | None = None   # 系统何时把它标记失效（T'）
+        episodes: list = field(default_factory=list)
+
+    class Graph:
+        def __init__(self): self.edges: list[Edge] = []
+
+        def contradicts(self, old: Edge, new: Edge) -> bool:
+            # 真实实现：同一实体对上 BM25+向量检索出候选，再让 LLM 判断 contradicted_facts
+            return old.source == new.source and old.name == new.name and old.target != new.target
+
+        def add(self, new: Edge, today: date):
+            new.created_at = today
+            for old in self.edges:
+                if not self.contradicts(old, new):
+                    continue
+                if old.valid_at < new.valid_at:
+                    # 正常顺序：旧事实在新事实生效那一刻失效（只在区间还重叠时才改）
+                    if old.invalid_at is None or old.invalid_at > new.valid_at:
+                        old.invalid_at, old.expired_at = new.valid_at, today
+                else:
+                    # 乱序到达：新来的其实是更早的事实，它的有效期截止到后一个事实开始
+                    if new.invalid_at is None or old.valid_at < new.invalid_at:
+                        new.invalid_at, new.expired_at = old.valid_at, today
+            self.edges.append(new)
+
+        def as_of(self, t: date):                        # 「t 时刻什么是真的」
+            return [e.fact for e in self.edges if e.valid_at <= t and (e.invalid_at is None or t < e.invalid_at)]
+
+        def believed_at(self, t: date):                  # 「t 时刻系统当时认为哪些边有效」（时间线 T'）
+            return [e.fact for e in self.edges if e.created_at <= t and (e.expired_at is None or t < e.expired_at)]
+
+    g = Graph()
+    g.add(Edge("小李", "WORKS_AT", "A公司", "小李在 A 公司工作", valid_at=date(2024, 3, 1)), today=date(2024, 3, 5))
+    g.add(Edge("小李", "WORKS_AT", "B公司", "小李跳槽到 B 公司", valid_at=date(2026, 6, 1)), today=date(2026, 6, 3))
+    g.add(Edge("小李", "WORKS_AT", "C公司", "小李 2022 年在 C 公司实习", valid_at=date(2022, 7, 1)), today=date(2026, 7, 1))
+    for e in g.edges:
+        print(f"{e.fact:<22} valid={e.valid_at} invalid={e.invalid_at} expired={e.expired_at}")
+    for t in (date(2023, 1, 1), date(2025, 1, 1), date(2026, 10, 1)):
+        print(t, "->", g.as_of(t))
+    print("系统在 2026-06-02 相信:", g.believed_at(date(2026, 6, 2)))
+    ```
+
+===! "Node"
+
+    ```text
+    ❯ node bitemporal_demo.ts
+    小李在 A 公司工作             valid=2024-03-01 invalid=2026-06-01 expired=2026-06-03
+    小李跳槽到 B 公司             valid=2026-06-01 invalid=null expired=null
+    小李 2022 年在 C 公司实习      valid=2022-07-01 invalid=2024-03-01 expired=2026-07-01
+    2023-01-01 -> [ '小李 2022 年在 C 公司实习' ]
+    2025-01-01 -> [ '小李在 A 公司工作' ]
+    2026-10-01 -> [ '小李跳槽到 B 公司' ]
+    系统在 2026-06-02 相信: [ '小李在 A 公司工作' ]
+    ```
+
+=== "Python"
+
+    ```text
+    ❯ uv run python bitemporal_demo.py
+    小李在 A 公司工作             valid=2024-03-01 invalid=2026-06-01 expired=2026-06-03
+    小李跳槽到 B 公司             valid=2026-06-01 invalid=None expired=None
+    小李 2022 年在 C 公司实习      valid=2022-07-01 invalid=2024-03-01 expired=2026-07-01
+    2023-01-01 -> ['小李 2022 年在 C 公司实习']
+    2025-01-01 -> ['小李在 A 公司工作']
+    2026-10-01 -> ['小李跳槽到 B 公司']
+    系统在 2026-06-02 相信: ['小李在 A 公司工作']
+    ```
 
 （纯本地运行，矛盾判断是规则，不是 LLM。）
 
