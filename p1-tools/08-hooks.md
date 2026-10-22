@@ -198,12 +198,12 @@ $ python3 hooks_demo/hook_runner.py hooks_demo/demo_settings.json <rm -rf / 的�
 
 你的配置几乎把三种输出通道都用上了，正好拿来对照：
 
-- **`inject-guardrails.sh`（SessionStart）用的是纯文本 stdout。** 脚本头部注释写着「SessionStart 只把纯 stdout 当上下文；JSON 形状不对会被静默丢弃」。这和文档一致：纯文本最省事，JSON 一旦写错字段层级，hook 就悄无声息地失效了。我本机实测，同一个脚本在不同 cwd 下注入的字符数是：
+- **`inject-guardrails.sh`（SessionStart）用的是纯文本 stdout。** 脚本头部注释写着「SessionStart 只把纯 stdout 当上下文；JSON 形状不对会被静默丢弃」。这和文档一致：纯文本最省事，JSON 一旦写错字段层级，hook 就悄无声息地失效了。我本机实测，同一个脚本在不同 cwd 下注入的量是：
   - `~/liz/agent-learn`（不是 git 仓库）：0 字符。这正是脚本设计的「拿不到身份就什么都不注入」（deny by default）。
-  - `~/dotfiles/claude-skills`：5,767 字符。
-  - `~/work/webapp/apps/web`：12,008 字符，公司层加项目层两层累积。
+  - `~/dotfiles/claude-skills`：4,017 字符（5,767 字节）。
+  - `~/work/webapp/apps/web`：7,683 字符（12,008 字节），公司层加项目层两层累积。
 
-  12,008 已经超过了 `additionalContext` 的 10,000 字符阈值。纯文本 stdout 是否也按这个阈值截断，我没有在文档里找到明确说法（**待核实**）。可以去 webapp 会话的 jsonl 里找 `hook_success` 记录，对比 `stdout` 和 `content` 的长度来确认。
+  官方文档写明纯文本 stdout 和 `additionalContext` 一样受这个上限约束：「A hook's `additionalContext`, `systemMessage`, and `initialUserMessage` strings, and its plain stdout, are capped at 10,000 characters」。上限按**字符**算，不是字节。中文在 UTF-8 里一个字占 3 字节，所以 `wc -c` 量出来的 12,008 是字节数，按字符只有 7,683，没超，离上限还有约 2,300 字符。这里踩过一次坑：最早用 `wc -c` 量，误判成了超限。量字符要用 `wc -m`（并确保 locale 是 UTF-8）或 Python 的 `len(text)`。
 - **`enforce-worktree.py`（PreToolUse: Bash）用的是 exit 2 + stderr。** 它的 docstring 写得很清楚：「2 = 拒绝该次工具调用，stderr 回灌给模型」。它还专门处理了「heredoc 和引号里出现的 `git worktree add` 是数据不是调用」这种误伤，这正是常见坑第 3 条。
 - **`cc-status` 挂在 10 个事件上**，全部不带 matcher，所以每个事件都会触发。我统计了最近 40 个会话的 jsonl，`hook_success` 类型的 attachment 有一万三千多条。每条都记着 `hookName`（例如 `SessionStart:startup`）、`exitCode`、`stdout`、`durationMs`。hook 不生效时，先翻 jsonl 里的这些记录，比盲猜快得多。
 - **你的 CLAUDE.md 原则 1「工具链能强制的就别写进上下文」**，说的就是本章这件事。原则 3 说「关流程 = 关规则 + 卸工具」，hook 就是那个「卸工具」的手段：deny 掉的那条路，模型想走也走不了。
