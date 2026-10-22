@@ -3,7 +3,7 @@
 #
 # 启用前：仓库 Settings → Pages → Source 选「GitHub Actions」。
 # 注意：Pages 站点是公开的。发布检查（tools/check_publish.py）默认不放行内部信息，
-#       需要在 publish/allow.txt 里逐类确认后才会通过。
+#       需要在 publish/allow.txt 里逐类确认后才会通过；私有规则放在 repo secret KB_PRIVATE_TERMS。
 name: Pages
 
 on:
@@ -49,6 +49,8 @@ jobs:
           KB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           KB_REPO_REF: ${{ github.sha }}
           KB_SITE_URL: ${{ steps.pages.outputs.base_url }}/
+          # 公司名等私有检查规则，格式同 publish/private-terms.txt；没配就只跑公开规则
+          KB_PRIVATE_TERMS: ${{ secrets.KB_PRIVATE_TERMS }}
         run: tools/build_pages.sh
 
       - uses: actions/upload-pages-artifact@v3

@@ -143,7 +143,7 @@ L3 支持文件合计:            873,313 字节
 
 - **43 倍。** 这是渐进式披露在你机器上的实测收益：如果把所有正文都写进 CLAUDE.md，常驻层要大 43 倍。这正是你 CLAUDE.md 原则 2「多步流程一律进 skill；常驻层只回答『走哪条轨』」能成立的原因。
 - **12,635 字符的 description 会不会超预算？** 预算是「上下文窗口的 1%」，所以答案取决于你当前模型的窗口有多大。它的单位我按「字符」理解，因为用来覆盖它的环境变量 `SLASH_COMMAND_TOOL_CHAR_BUDGET` 是一个字符数，但这一点属于**推测**。最可靠的办法是在会话里看 `/context` 的 Skills 一行，或者跑 `/doctor` 看 listing 的估算成本。你的 description 普遍很长：`doc-narrative` 的 description 就把整套方法论压缩了进去。窗口小的模型上，最先被擦掉描述的会是那些不常用的 skill。
-- **你的 内部平台 系列 skill 用了 `allowed-tools`。** 注意它的语义：它只是在**调用 skill 的那一轮**里免除权限确认，「The grant clears when you send your next message」。它不是这个 skill 的工具白名单，也不会限制模型使用别的工具。
+- **你的内部平台系列 skill 用了 `allowed-tools`。** 注意它的语义：它只是在**调用 skill 的那一轮**里免除权限确认，「The grant clears when you send your next message」。它不是这个 skill 的工具白名单，也不会限制模型使用别的工具。
 - **命名规范。** 你 CLAUDE.md 里规定「带项目前缀 `<project>-<能力>`」，这对 L1 也有好处：名字永远不会被预算砍掉，即使描述被擦掉了，`webapp-` 这个前缀也还能给模型一点提示。
 
 我的观点：**description 是整个 skill 里最值钱的一段文字，要当成检索用的 query 来写，而不是当成摘要来写。** 把用户真正会说的话放在最前面，比如「写周报」「查日志」「这个 bug 帮我看下」，因为模型拿来匹配的是用户的原话。文档在排障一节也是这么建议的：把关键用例放在最前面，因为每条描述最多只保留 1,536 字符。

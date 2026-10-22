@@ -76,20 +76,20 @@ LLM 每一轮都要把上下文重新算一遍，所以「上下文里放什么�
 
 - **你已经把这套做到了工程化**。你的 `~/.claude/CLAUDE.md` 开头那条「常驻层是稀缺资源，每加一行都在和别的行抢注意力」，和原文「CLAUDE.md 越短越好」说的是同一件事。你又往前走了一步：带场景的规则不放进 CLAUDE.md，而是交给 SessionStart hook `~/.claude/bin/inject-guardrails.sh` 按 cwd 注入。这相当于自己实现了「子目录 CLAUDE.md 按需加载」，而且粒度更细，可以按公司层和项目层累积注入。
 - **memory**：本机 `~/.claude/projects/-Users-me-work-ai-coding/memory/` 下有 91 个文件，`MEMORY.md` 有 98 行，没超过 200 行的上限。等它涨到接近 200 行，末尾的索引条目就不会自动进上下文了，所以值得定期整理。你的 `env/backup-memory.sh` 解决的正是原文说的「memory 不跨机器」这个问题。
-- **权限**：你的 `settings.json` 里 `permissions.defaultMode` 是 `bypassPermissions`，同时开着 `skipDangerousModePermissionPrompt`。所以真正把关的不是权限模式，而是 PreToolUse hook，比如 `enforce-worktree.py`（拦 Bash）和 内部平台 的 `check-deploy.py`（拦发布）。这正对应你 CLAUDE.md 里的原则：「工具链能强制的就别写进上下文」。
+- **权限**：你的 `settings.json` 里 `permissions.defaultMode` 是 `bypassPermissions`，同时开着 `skipDangerousModePermissionPrompt`。所以真正把关的不是权限模式，而是 PreToolUse hook，比如 `enforce-worktree.py`（拦 Bash）和内部平台的 `check-deploy.py`（拦发布）。这正对应你 CLAUDE.md 里的原则：「工具链能强制的就别写进上下文」。
 - **会话即分支**：你 CLAUDE.md 里「代码变更默认走独立 worktree」的做法，配合 `claude -w`、`-n`，就是原文「一个待办一个会话」的加强版，连文件系统也一起隔离了。
 
 ## 自测题
 
 1. 你在 `/Users/me/work/webapp` 攒了很多 memory，后来把仓库挪到了 `/Users/me/code/webapp`。为什么 memory「消失」了？怎么找回来？
 2. Claude 通过 Bash 执行了 `sed -i` 改坏了一个文件，你按两下 Esc 回退到上一个 checkpoint，文件能恢复吗？为什么？
-3. 一条规则「webapp 的文案必须写进 内部平台 的 webapp 项目」，应该放进用户级 CLAUDE.md、项目 CLAUDE.md，还是按 cwd 注入的 guardrails？依据是什么？
+3. 一条规则「webapp 的文案必须写进内部平台的 webapp 项目」，应该放进用户级 CLAUDE.md、项目 CLAUDE.md，还是按 cwd 注入的 guardrails？依据是什么？
 
 <details><summary>参考答案</summary>
 
 1. memory 目录名是由项目的绝对路径编码出来的（把 `/` 等字符换成 `-`）。路径变了，Claude 就会去找 `-Users-me-code-webapp/memory/`，旧目录 `-Users-me-work-webapp/memory/` 还在，只是不会再被加载。把旧目录里的文件拷到新目录下就能找回来。
 2. 不一定能。checkpoint 只追踪 Edit/Write 等文件编辑工具产生的改动，Bash 命令改的文件不在快照里。对话可以退回去，那个文件不会恢复，只能靠 git 恢复。
-3. 放进按 cwd 注入的项目层 guardrails。这条规则只在 webapp 目录下成立，放进用户级会污染兄弟项目，比如 web-h5 对应的是另一个 内部平台 项目。如果所有协作者都需要它，也可以放进 webapp 子目录的 CLAUDE.md，但你的环境选的是个人层的 hook 注入，这样不用往团队仓库里塞东西。
+3. 放进按 cwd 注入的项目层 guardrails。这条规则只在 webapp 目录下成立，放进用户级会污染兄弟项目，比如 web-h5 对应的是另一个内部平台项目。如果所有协作者都需要它，也可以放进 webapp 子目录的 CLAUDE.md，但你的环境选的是个人层的 hook 注入，这样不用往团队仓库里塞东西。
 
 </details>
 

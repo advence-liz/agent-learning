@@ -134,7 +134,7 @@ $ uv run pytest -q rag
 
 ## 对照你的环境
 
-你在 webapp 里接 内部平台 的 i18n、查 Linear 单、翻 Notion 知识库，都是「先找资料再回答」。区别在于你让 Claude Code 自己去搜（MCP 工具 + grep），而不是预先建好向量索引。这两条路线各适合什么场景，是下一章的主题。
+你在 webapp 里接内部平台的 i18n、查 Linear 单、翻 Notion 知识库，都是「先找资料再回答」。区别在于你让 Claude Code 自己去搜（MCP 工具 + grep），而不是预先建好向量索引。这两条路线各适合什么场景，是下一章的主题。
 
 ## 常见坑
 

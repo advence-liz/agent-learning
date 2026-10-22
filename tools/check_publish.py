@@ -30,13 +30,10 @@ BLOCK = {
     'private-key': r'-----BEGIN [A-Z ]*PRIVATE KEY-----',
     'bearer-token': r'Bearer [A-Za-z0-9._-]{30,}',
     'public-ip': r'\b(?!127\.0\.0\.1\b)(?!0\.0\.0\.0\b)(?:\d{1,3}\.){3}\d{1,3}\b',
-    'internal-domain': r'<private>',
+    # 公司内部域名：规则本身也算内部信息，不进公开仓库，见 private_rules()
 }
 
 REVIEW = {
-    'company-name': r'<private>',
-    'project-webapp': r'<private>',
-    'internal-services': r'\b(?:<private>)\b',
     'personal-toolchain': r'\b(?:claude-skills|inject-guardrails|enforce-worktree)\b',
     'local-paths': r'/Users/[^/\s`]+',
     'session-dir-names': r'-Users-[A-Za-z0-9]+-[A-Za-z0-9-]*',
@@ -45,12 +42,37 @@ REVIEW = {
     'cloud-config': r'\b(?:env2|Vertex|CLOUD_ML_REGION|ANTHROPIC_VERTEX_PROJECT_ID)\b',
 }
 
+PRIVATE_FILE = os.path.join(ROOT, 'publish', 'private-terms.txt')
+
+
+def private_rules():
+    """公司名、内部服务名、内部域名这类词本身就不该出现在公开仓库里，所以规则不写在这里。
+
+    来源（两处合并）：publish/private-terms.txt（已 gitignore，本机维护），
+    环境变量 KB_PRIVATE_TERMS（CI 里从 repo secret 注入）。每行一条：
+        BLOCK  <规则名>  <正则>
+        REVIEW <规则名>  <正则>
+    """
+    lines = []
+    if os.path.exists(PRIVATE_FILE):
+        lines += open(PRIVATE_FILE, encoding='utf-8').read().splitlines()
+    lines += os.environ.get('KB_PRIVATE_TERMS', '').splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        level, name, rx = line.split(None, 2)
+        (BLOCK if level == 'BLOCK' else REVIEW)[name] = rx
+    return len(lines)
+
+
 # local-paths 在发布构建时会被 .site/hooks.py 自动改写成 `~`，所以默认就放行
 AUTO_REWRITTEN = {'local-paths'}
 
 
 def files():
     yield os.path.join(ROOT, 'README.md')
+    yield os.path.join(ROOT, 'STYLE.md')
     for d in CONTENT_DIRS:
         base = os.path.join(ROOT, d)
         for dirpath, _, names in os.walk(base):
@@ -88,6 +110,8 @@ def scan():
 
 def main():
     verbose = '--verbose' in sys.argv
+    if not private_rules():
+        print('⚠️  没有加载私有规则（publish/private-terms.txt / KB_PRIVATE_TERMS），公司名等内部词不会被检查\n')
     allow = load_allow() | AUTO_REWRITTEN
     unknown = allow - set(REVIEW) - AUTO_REWRITTEN
     hits = scan()

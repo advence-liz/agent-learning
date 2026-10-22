@@ -1,12 +1,9 @@
 # 发布放行清单：tools/check_publish.py 的 REVIEW 规则名，一行一个。
 # 写上某个规则名 = 确认「这一类内容可以出现在公开网页上」。
-# 默认全部注释掉：不做决定就不会发布任何内部信息。
-#
-# company-name        公司名（会话目录名、护栏路由等）
-# project-webapp        项目名 webapp（各章「对照你的环境」）
-# internal-services   内部服务名
-# personal-toolchain  claude-skills / inject-guardrails / enforce-worktree
-# session-dir-names   会话目录名（-Users-me-work-webapp 这类，含本机用户名和公司项目路径）
-# session-ids         会话 UUID
-# spend-amounts       会话花费金额（$237 等）
-# cloud-config        Vertex / env2 等云配置键名（只有键名，没有值）
+# 公司名、内部服务名等私有规则在 publish/private-terms.txt（不进仓库），一律 BLOCK，不能在这里放行。
+
+personal-toolchain  # 自己写的 hook / skill 名（inject-guardrails、enforce-worktree 等），不含公司信息
+session-dir-names   # 正文里的会话目录名已替换成 -Users-me-work-webapp 这类示例
+session-ids         # 正文里的会话 UUID 已替换成示例值
+spend-amounts       # 公开的 API 标价 + 个人会话的 token 费用估算；$ARGUMENTS 等是误报
+cloud-config        # 只有 Vertex 相关的公开变量名，没有值

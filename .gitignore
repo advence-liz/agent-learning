@@ -27,3 +27,6 @@ captures/
 *.gguf
 *.pt
 *.ckpt
+
+# 发布检查的私有规则（公司名、内部服务名本身就不该进公开仓库）
+publish/private-terms.txt

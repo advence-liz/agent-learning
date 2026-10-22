@@ -3,7 +3,7 @@
 只读取每条 assistant 记录的 message.model / message.id / message.usage，**不读、不打印任何会话正文**。
 
 用法：
-    uv run python -m core.usage_stats                       # 默认：webapp 项目目录下最大的那个会话
+    uv run python -m core.usage_stats                       # 默认：~/.claude/projects 下最大的那个会话
     uv run python -m core.usage_stats <a.jsonl> [b.jsonl…]  # 指定会话文件（可多个，例如连同 subagents/*.jsonl）
 """
 
@@ -105,8 +105,8 @@ def scan(paths: list[Path]) -> Report:
 
 
 def default_session() -> Path:
-    proj = Path.home() / ".claude/projects/-Users-me-work-webapp"
-    files = sorted(proj.glob("*.jsonl"), key=lambda p: p.stat().st_size, reverse=True)
+    proj = Path.home() / ".claude/projects"
+    files = sorted(proj.glob("*/*.jsonl"), key=lambda p: p.stat().st_size, reverse=True)
     if not files:
         raise SystemExit(f"在 {proj} 下没找到会话 jsonl，请显式传路径")
     return files[0]

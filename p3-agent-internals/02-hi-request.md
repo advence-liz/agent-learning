@@ -145,7 +145,7 @@ def usage_chain(path: Path, limit: int = 5):
 ## 对照你的环境
 
 - 你的 `~/.claude/CLAUDE.md` 每个会话都会作为第一条 user 消息的第一块发出去，大约 5000 字符。你在 CLAUDE.md 里写的那句「常驻层是稀缺资源，每加一行都在和别的行抢注意力」，从计费角度看也成立：它每轮都在缓存前缀里，第一轮按写入价计费，之后每轮按读取价计费。读取虽然便宜，但它**一直占着上下文窗口**。
-- MCP 越多，环境块里的 server instructions 越长（你那块 内部平台 的说明就不短）。deferred tools 省掉了 schema，省不掉 instructions。
+- MCP 越多，环境块里的 server instructions 越长（你那块内部平台的说明就不短）。deferred tools 省掉了 schema，省不掉 instructions。
 - 中途改 CLAUDE.md 不会立即生效。官方文档说要 `/clear`、`/compact` 或重启后才重新读，这恰恰是为了不打断缓存。
 
 ## 回到开头的问题

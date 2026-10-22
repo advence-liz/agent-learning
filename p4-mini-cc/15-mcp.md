@@ -227,7 +227,7 @@ self.read_only = bool(ann and ann.read_only_hint)
 
 `initialize` 的结果里有一个 `instructions` 字段，是 server 作者写给模型的使用说明。tracker 的是「先 list 找 id，再 get，只有用户要求时才 add_comment」。
 
-`McpManager.instructions_section()` 挂在 `system_sections` 上。你这个会话的 system prompt 里就有一段 `# MCP Server Instructions`，开头是「The following MCP servers have provided instructions for how to use their tools and resources」，下面按 server 分小节（Figma、Linear、Notion、内部平台 的说明都在那里）。mini-cc 照这个结构写了一段。
+`McpManager.instructions_section()` 挂在 `system_sections` 上。你这个会话的 system prompt 里就有一段 `# MCP Server Instructions`，开头是「The following MCP servers have provided instructions for how to use their tools and resources」，下面按 server 分小节（Figma、Linear、Notion、内部平台的说明都在那里）。mini-cc 照这个结构写了一段。
 
 `App.start_mcp()` 最后调 `context.invalidate()`，因为 system 多了一段。它在第一次请求之前调用，所以不会打断已有的 prompt cache。
 

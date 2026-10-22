@@ -204,7 +204,7 @@ print(x)
 
 ## 对照你的环境
 
-- 你 `settings.json` 里有一个 PreToolUse hook，匹配 `Edit|Write|MultiEdit|NotebookEdit`，跑的是 内部平台 的 `check-i18n.py`。它在**权限层**拦截写操作，和本章的「文件状态表」是两道不同的闸：一道管「该不该写」，一道管「写得对不对」。下一篇[权限检查](10-permission-check.md)会把两者的先后关系讲清楚。
+- 你 `settings.json` 里有一个 PreToolUse hook，匹配 `Edit|Write|MultiEdit|NotebookEdit`，跑的是内部平台的 `check-i18n.py`。它在**权限层**拦截写操作，和本章的「文件状态表」是两道不同的闸：一道管「该不该写」，一道管「写得对不对」。下一篇[权限检查](10-permission-check.md)会把两者的先后关系讲清楚。
 - 本机错误统计里有一条「Refusing to write … it is a symbolic link」。你的 `~/.claude/skills` 和 `~/.claude/CLAUDE.md` 都是指向 `claude-skills` 的 symlink，让 Claude 改这些文件时，要给它真实路径 `~/dotfiles/claude-skills/...`。
 - 你在 CLAUDE.md 里要求「代码变更走独立 worktree」。worktree 里的文件和主工作区是不同路径，状态表按路径记，所以在主工作区读过的文件，到了 worktree 里还得重新读一遍。
 

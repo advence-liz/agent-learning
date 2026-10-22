@@ -112,7 +112,7 @@ prompt + hook  violations executed:   0   blocked by hook:  49
 **硬约束（代码层）：**
 
 - `enforce-worktree.py`（PreToolUse:Bash，退出码 2）：把 worktree 纪律从 memory 变成了拦截。
-- 内部平台 的 `check-i18n.py`、`check-deploy.py`、`check-pipeline.py`（PreToolUse）：发布、回滚、审批前的检查。
+- 内部平台的 `check-i18n.py`、`check-deploy.py`、`check-pipeline.py`（PreToolUse）：发布、回滚、审批前的检查。
 - `doctor.sh` 的 §11.5「护栏注入链路」：脚本注释写着「文件在仓库 ≠ 真的会注入」，它逐条跑真实注入探针。这是对 harness **本身**的测试，很少有人做到这一步。
 - TDD 铁律（先写失败测试）：测试是给「代码对不对」做的硬约束，模型说「改好了」不算数，测试绿了才算。
 - 「完成前跑命令贴真实输出」：把「我觉得做完了」换成「机器证明做完了」。
