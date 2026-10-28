@@ -32,19 +32,19 @@
 
 类比不成立的地方也要说清：收发室能看到包裹内容，所以**抓包文件本身就是敏感物**。key 要脱敏，会话正文里也可能有你公司的代码，抓包目录绝对不能进 git。
 
-```mermaid
-sequenceDiagram
-    participant CC as Claude Code
-    participant P as 本地代理 127.0.0.1:8787
-    participant D as captures/ 目录
-    participant A as 上游 (api.anthropic.com 或中转站)
-    CC->>P: POST /v1/messages (明文 HTTP, 带 x-api-key)
-    P->>D: request.json（header 脱敏）
-    P->>A: HTTPS 转发（原样带 key）
-    A-->>P: SSE: message_start / content_block_delta ...
-    P-->>CC: 逐块转发 + flush
-    P->>D: response.raw + 重组后的 message + usage
-    P-->>CC: 最后一个 chunk（0\r\n\r\n）
+```d2
+shape: sequence_diagram
+cc: Claude Code
+p: "本地代理 127.0.0.1:8787"
+d: "captures/ 目录"
+a: "上游 (api.anthropic.com 或中转站)"
+cc -> p: "POST /v1/messages (明文 HTTP, 带 x-api-key)"
+p -> d: "request.json（header 脱敏）"
+p -> a: "HTTPS 转发（原样带 key）"
+a -> p: "SSE: message_start / content_block_delta ..." {style.stroke-dash: 3}
+p -> cc: "逐块转发 + flush" {style.stroke-dash: 3}
+p -> d: "response.raw + 重组后的 message + usage"
+p -> cc: '最后一个 chunk（0\r\n\r\n）' {style.stroke-dash: 3}
 ```
 
 图里有一个顺序上的小心机：代理**先落盘，再发结束块**。这样 Claude Code（或测试脚本）读完响应的那一刻，记录一定已经写好了，不会有竞态。

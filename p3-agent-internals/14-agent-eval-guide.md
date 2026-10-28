@@ -35,21 +35,32 @@ Agent 和普通 LLM 调用不一样：一次任务是多轮的，中间有多次
 
 Anthropic 的评测文章定义了一组术语，本章用其中六个：task、trial、transcript、outcome、grader，以及把 task 归组的 suite（评测集）。它们就是这一章所有内容的骨架。
 
-```mermaid
-flowchart LR
-  subgraph S["① 定义：suite 评测集"]
-    T["task 一条用例<br/>输入：历史 + 本轮输入<br/>工具假返回（fixture）<br/>判据：挂哪些 grader"]
-  end
-  subgraph R["② 运行：每次留下两种产物"]
-    TR["trial 一次运行"] --> TS["transcript 过程<br/>工具调用、参数、回复"]
-    TR --> OC["outcome 结果<br/>环境的最终状态"]
-  end
-  subgraph J["③ 判定，再逐层汇总"]
-    G["grader 评分器<br/>代码规则 / LLM 评审<br/>→ 这次过或不过"] --> TK["task 得分<br/>k 次 trial 汇成 pass^k"] --> SR["suite 报告<br/>红线 · 新增失败 · 分场景"]
-  end
-  T -- 跑 k 次 --> TR
-  TS --> G
-  OC --> G
+```d2
+direction: down
+s: "① 定义：suite 评测集" {
+  t: "task 一条用例\n输入：历史 + 本轮输入\n工具假返回（fixture）\n判据：挂哪些 grader"
+}
+r: "② 运行：\n每次留下两种产物" {
+  # 标题放左上角并折行，避开从上方进来的连线
+  label.near: top-left
+  tr: "trial 一次运行"
+  ts: "transcript 过程\n工具调用、参数、回复"
+  oc: "outcome 结果\n环境的最终状态"
+  tr -> ts
+  tr -> oc
+}
+j: "③ 判定，再逐层汇总" {
+  # 标题放底部，避开从上方进来的两条连线
+  label.near: bottom-center
+  g: "grader 评分器\n代码规则 / LLM 评审\n→ 这次过或不过"
+  tk: "task 得分\nk 次 trial 汇成 pass^k"
+  sr: "suite 报告\n红线 · 新增失败 · 分场景"
+  g -> tk
+  tk -> sr
+}
+s.t -> r.tr: 跑 k 次
+r.ts -> j.g
+r.oc -> j.g
 ```
 
 三句话记住它们的关系：
@@ -82,15 +93,15 @@ flowchart LR
 
 Hamel 把评测分成三层：便宜的断言每次改动都跑，人工和模型评审定期跑，A/B 只在产品成熟后用。展开到 Agent 是下面四层，越往上越真实，也越贵、越慢、越少：
 
-```mermaid
-flowchart TB
-  L4["线上：监控、抽样评分、A/B<br/>真实流量，滞后且有噪声"]
-  L3["真实环境端到端<br/>真实依赖下交付，如 SWE-bench、WebArena"]
-  L2["模拟环境 + 模拟用户<br/>多轮任务与最终状态，如 τ-bench"]
-  L1["单步决策回放 + 轨迹断言<br/>固定上下文，断言 tool call 与回复，秒级"]
-  L1 --> L2 --> L3 --> L4
-  classDef base stroke-width:3px
-  class L1 base
+```d2
+direction: down
+l4: "线上：监控、抽样评分、A/B\n真实流量，滞后且有噪声"
+l3: "真实环境端到端\n真实依赖下交付，如 SWE-bench、WebArena"
+l2: "模拟环境 + 模拟用户\n多轮任务与最终状态，如 τ-bench"
+l1: "单步决策回放 + 轨迹断言\n固定上下文，断言 tool call 与回复，秒级" {style.stroke-width: 3}
+l1 -> l2
+l2 -> l3
+l3 -> l4
 ```
 
 底层覆盖面大，每次改动都能跑，是门禁的主力；顶层反映真实但滞后，用来发现底层漏掉的问题。
@@ -227,37 +238,60 @@ reference: 用户要的是在原手册里追加一天，不是新任务
 
 假设下一个能力是「跨轮记住用户偏好」（比如总选靠窗座位、不吃辣）：立项时先写 20 条它现在还过不了的用例，起始通过率 10% 也没关系。每次迭代看通过率涨了多少，失败按类型（没记住、记错、该忘没忘）汇总，数量最多的类型就是下一步的重点。连续稳定通过的用例移进回归集，「做到了」从此变成「不许丢」。
 
-```mermaid
-flowchart LR
-  subgraph UP["让它变好 · 能力集驱动"]
-    N["新能力立项<br/>产品与研发写用例"] --> CAP["能力集<br/>起始通过率低是正常的"] --> IT["迭代<br/>每次改动看通过率涨跌"] --> Q{"连续稳定通过？"}
-    Q -- 否：失败归类定下一步 --> IT
-  end
-  subgraph DOWN["防它变差 · 回归集兜底"]
-    ON["线上失败<br/>标注队列确认"] --> REG["回归集<br/>通过率应接近 100%"]
-    RULE["prompt 硬规则<br/>每条一正一反"] --> REG
-    REG --> GATE["发布门禁<br/>回归集下降即拦截"]
-  end
-  Q -- 是：毕业 --> REG
+```d2
+direction: down
+up: "让它变好 · 能力集驱动" {
+  n: "新能力立项\n产品与研发写用例"
+  cap: "能力集\n起始通过率低是正常的"
+  it: "迭代\n每次改动看通过率涨跌"
+  q: 连续稳定通过？ {shape: diamond}
+  n -> cap
+  cap -> it
+  it -> q
+}
+down: "防它变差 · 回归集兜底" {
+  on: "线上失败\n标注队列确认"
+  reg: "回归集\n通过率应接近 100%"
+  rule: "prompt 硬规则\n每条一正一反"
+  gate: "发布门禁\n回归集下降即拦截"
+  on -> reg
+  rule -> reg
+  reg -> gate
+}
+up.q -> down.reg: "是：毕业"
+# 回环写成 it <- q（语义仍是 q 指向 it），ELK 才不会把判断节点排到迭代前面
+up.it <- up.q: "否：失败归类定下一步"
 ```
 
 ## 门禁要挂在行为真正变化的入口，而不只是代码 PR
 
 很多 Agent 的 prompt 和模型可以不经过代码发布就生效。只在 PR 上挂评测，会漏掉最常见的两类变更。
 
-```mermaid
-flowchart TB
-  P1["prompt 发布<br/>配置中心热发布"] --> OFF
-  P2["模型切换<br/>路由 / 开关配置"] --> OFF
-  P3["代码 PR<br/>Agent 代码改动"] --> OFF
-  P4["工具与运行时<br/>工具、镜像、插件"] --> OFF
-  subgraph OFF["离线评测 · 发布前（评分器：代码规则 → 已校准的 LLM 评审 → 红线一票否决）"]
-    direction LR
-    D1["单步决策集<br/>每次 prompt / 代码改动"] ~~~ D2["多轮场景集<br/>每晚 + 模型切换前"] ~~~ D3["端到端交付集<br/>运行时投放前"]
-  end
-  OFF --> GATE["发布门禁<br/>红线硬卡 · 质量配对对比 · 评测出错分三类"]
-  GATE --> PROD["生产流量<br/>全量 trace + 弱信号"] --> ONL["在线抽样评分<br/>完成隐私合规后 · 同一评分器"] --> LAB["人工标注队列<br/>确认失败 · 校准评审"]
-  LAB -- 回流成新用例 --> OFF
+```d2
+direction: down
+p1: "prompt 发布\n配置中心热发布"
+p2: "模型切换\n路由 / 开关配置"
+p3: "代码 PR\nAgent 代码改动"
+p4: "工具与运行时\n工具、镜像、插件"
+off: "离线评测 · 发布前\n（评分器：代码规则 → 已校准的 LLM 评审\n→ 红线一票否决）" {
+  grid-rows: 1
+  d1: "单步决策集\n每次 prompt / 代码改动"
+  d2: "多轮场景集\n每晚 + 模型切换前"
+  d3: "端到端交付集\n运行时投放前"
+}
+gate: "发布门禁\n红线硬卡 · 质量配对对比 ·\n评测出错分三类"
+prod: "生产流量\n全量 trace + 弱信号"
+onl: "在线抽样评分\n完成隐私合规后 · 同一评分器"
+lab: "人工标注队列\n确认失败 · 校准评审"
+p1 -> off
+p2 -> off
+p3 -> off
+p4 -> off
+off -> gate
+gate -> prod
+prod -> onl
+onl -> lab
+lab -> off: 回流成新用例
 ```
 
 三环：离线评测给变更当门禁，线上评分做质量监控，确认的失败回流成新用例。离线和线上复用同一套评分器代码和同一种评测记录格式。
@@ -271,15 +305,24 @@ flowchart TB
 
 以 prompt 发布为例，一次门禁判断是这样的：
 
-```mermaid
-flowchart TB
-  C["候选 prompt<br/>离线渲染候选版本，尚未发布"] --> PAIR["配对跑：候选 vs 线上<br/>决策集 + 相关场景，两边次数相同"]
-  PAIR --> INF{"评测设施正常？"}
-  INF -- 否 --> NE["未评测，不等于通过<br/>发布人显式豁免并留痕"]
-  INF -- 是 --> OK{"红线全过，且质量无显著退化？"}
-  OK -- 否 --> BLOCK["拦截（前期只出报告）<br/>新增失败要复现过才算退化"]
-  BLOCK -. 改 prompt 或修用例后重跑 .-> C
-  OK -- 是 --> REL["放行：发布新 prompt<br/>报告归档到本次发布"] --> WATCH["线上抽样评分对照<br/>按 prompt 版本 / 模型切片"]
+```d2
+direction: down
+c: "候选 prompt\n离线渲染候选版本，尚未发布"
+pair: "配对跑：候选 vs 线上\n决策集 + 相关场景，\n两边次数相同"
+inf: 评测设施正常？ {shape: diamond}
+ne: "未评测，不等于通过\n发布人显式豁免并留痕"
+ok: "红线全过，\n且质量无显著退化？" {shape: diamond}
+block: "拦截（前期只出报告）\n新增失败要复现过\n才算退化"
+rel: "放行：发布新 prompt\n报告归档到本次发布"
+watch: "线上抽样评分对照\n按 prompt 版本 / 模型切片"
+c -> pair
+pair -> inf
+inf -> ne: 否
+inf -> ok: 是
+ok -> block: 否
+block -> c: "改 prompt 或\n修用例后重跑" {style.stroke-dash: 3}
+ok -> rel: 是
+rel -> watch
 ```
 
 模型切换走同一张图，只是「候选」换成新模型；代码 PR 的门禁也是同一套判断，放在 CI 里。
@@ -310,11 +353,25 @@ flowchart TB
 
 单步决策集里一条用例的执行流程，不起完整服务栈，只调真实模型：
 
-```mermaid
-flowchart LR
-  A["① 载入 task<br/>用例 + 历史 + 工具 fixture<br/>候选 prompt 版本"] --> B["② 渲染 system prompt<br/>与生产同一套渲染逻辑"] --> C["③ 起桩<br/>上下文桩 + 工具 fixture"] --> D["④ 进程内运行 Agent<br/>真实代码 + 真模型<br/>候选与线上配对各跑 3 次"]
-  D --> E["⑤ 采集轨迹<br/>事件序列 + tool call 原文"] --> F["⑥ 评分<br/>代码规则 → LLM 评审<br/>红线一票否决"] --> G["⑦ 写入评测平台<br/>带 prompt 版本与变体"] --> H["⑧ 对比报告<br/>红线 + 配对差值<br/>复现过的新增失败 / 通过"]
-  D -. 出错 .-> X["评测设施出错<br/>记为「未评测」，不算通过"]
+```d2
+direction: down
+a: "① 载入 task\n用例 + 历史 + 工具 fixture\n候选 prompt 版本"
+b: "② 渲染 system prompt\n与生产同一套渲染逻辑"
+c: "③ 起桩\n上下文桩 + 工具 fixture"
+d: "④ 进程内运行 Agent\n真实代码 + 真模型\n候选与线上配对各跑 3 次"
+e: "⑤ 采集轨迹\n事件序列 + tool call 原文"
+f: "⑥ 评分\n代码规则 → LLM 评审\n红线一票否决"
+g: "⑦ 写入评测平台\n带 prompt 版本与变体"
+h: "⑧ 对比报告\n红线 + 配对差值\n复现过的新增失败 / 通过"
+x: "评测设施出错\n记为「未评测」，不算通过"
+a -> b
+b -> c
+c -> d
+d -> e
+e -> f
+f -> g
+g -> h
+d -> x: 出错 {style.stroke-dash: 3}
 ```
 
 一次运行通常是 1 到 N 次模型调用（取决于一轮里有几次工具往返），所以能挂在每次 prompt 发布和相关 PR 上。

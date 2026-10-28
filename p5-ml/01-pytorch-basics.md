@@ -15,14 +15,20 @@
 7. **reshape 与 permute 是两件事**：reshape 改「每条轴多长」（元素总数不变、内存顺序不变），permute / `.T` 改「轴的排列顺序」（轴的含义换位）。
 8. **点积 vs 矩阵乘法**：点积 = 逐元素乘再求和；`@` 规则是 `[M, K] @ [K, N] → [M, N]`，**内维 K 必须相等**，它就是「一批点积」。神经网络的线性层、注意力、logits 全是 `@`。
 
-```mermaid
-flowchart LR
-    A["a: shape (2,3)"] --> B{"运算符?"}
-    B -- "*" --> C["从最后一维对齐<br/>每维相等或为 1<br/>→ 结果 (2,3)"]
-    B -- "@" --> D["检查内维<br/>(M,K)@(K,N)<br/>→ (M,N)"]
-    B -- ".sum(dim=d)" --> E["消掉第 d 条轴<br/>(2,3) --dim=1--> (2,)"]
-    C --> F["报错? 先 print shape & dtype"]
-    D --> F
+```d2
+direction: down
+a: "a: shape (2,3)"
+b: "运算符?" {shape: diamond}
+c: "从最后一维对齐\n每维相等或为 1\n→ 结果 (2,3)"
+d: "检查内维\n(M,K)@(K,N)\n→ (M,N)"
+e: "消掉第 d 条轴\n(2,3) --dim=1--> (2,)"
+f: "报错? 先 print shape & dtype"
+a -> b
+b -> c: "*"
+b -> d: "@"
+b -> e: ".sum(dim=d)"
+c -> f
+d -> f
 ```
 
 > ⚠️ 补充（本机实测，torch 2.14.1）：

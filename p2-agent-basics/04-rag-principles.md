@@ -125,17 +125,24 @@ Claude Code 团队在公开访谈里提到过，早期试过本地向量检索�
 
 说实话，我认为这件事的本质不是「grep 比向量好」，而是**谁来做检索决策**。RAG 把检索放在模型之外、一次性完成；agentic search 把检索放进循环、交给模型。模型越强，后者的优势越大。
 
-```mermaid
-flowchart LR
-    subgraph RAG
-        Q1[问题] --> R1[检索一次 top-k] --> M1[模型回答]
-    end
-    subgraph Agentic search
-        Q2[问题] --> M2[模型]
-        M2 -- grep/读文件 --> T[工具]
-        T -- 结果 --> M2
-        M2 -- 够了 --> A2[回答]
-    end
+```d2
+direction: right
+rag: RAG {
+  q1: 问题
+  r1: 检索一次 top-k
+  m1: 模型回答
+  q1 -> r1 -> m1
+}
+agentic: Agentic search {
+  q2: 问题
+  m2: 模型
+  t: 工具
+  a2: 回答
+  q2 -> m2
+  m2 -> t: grep/读文件
+  t -> m2: 结果
+  m2 -> a2: 够了
+}
 ```
 
 ## 长上下文之后，RAG 还有用吗

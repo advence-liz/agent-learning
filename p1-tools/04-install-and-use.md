@@ -18,23 +18,23 @@
 8. **启动**：选 *Hatch in Terminal*，同时拉起 Gateway；首次对话它会问你给它起名、定人设和语气——这些会被记下来成为长期设定。
 9. **飞书里找不到 bot**：新 bot 没有会话记录，要用搜索框按名字搜出来。
 
-```mermaid
-sequenceDiagram
-  participant Phone as 手机飞书
-  participant Feishu as 飞书开放平台<br/>(自建应用 bot)
-  participant GW as OpenClaw Gateway<br/>(隔离机器上常驻)
-  participant LLM as 模型 API<br/>(Custom Provider)
-  participant CC as 可选：Claude Code / Codex
-  Phone->>Feishu: 发消息「帮我把 X 跑一下」
-  Feishu->>GW: 事件推送（仅 Allowlist 会话）
-  GW->>LLM: messages + 工具定义
-  LLM-->>GW: tool_use / 文本
-  opt 复杂编程任务
-    GW->>CC: 委派子任务
-    CC-->>GW: 结果
-  end
-  GW->>Feishu: 回复
-  Feishu-->>Phone: 结果消息
+```d2
+shape: sequence_diagram
+phone: 手机飞书
+feishu: "飞书开放平台\n(自建应用 bot)"
+gw: "OpenClaw Gateway\n(隔离机器上常驻)"
+llm: "模型 API\n(Custom Provider)"
+cc: "可选：Claude Code / Codex"
+phone -> feishu: "发消息「帮我把 X 跑一下」"
+feishu -> gw: "事件推送（仅 Allowlist 会话）"
+gw -> llm: "messages + 工具定义"
+llm -> gw: "tool_use / 文本" {style.stroke-dash: 3}
+"opt：复杂编程任务": {
+  gw -> cc: 委派子任务
+  cc -> gw: 结果 {style.stroke-dash: 3}
+}
+gw -> feishu: 回复
+feishu -> phone: 结果消息 {style.stroke-dash: 3}
 ```
 
 ### 📝 作者是怎么讲的

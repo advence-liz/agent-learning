@@ -73,23 +73,23 @@ token 是模型处理文本的最小单位，大白话就是「一小段字」�
 
 把上面几件事拼起来，Agent 的骨架就出来了：
 
-```mermaid
-sequenceDiagram
-    participant U as 你
-    participant H as Agent 程序（harness）
-    participant M as LLM
-    participant T as 工具（文件/命令/MCP）
-    U->>H: 任务
-    loop 直到 stop_reason ≠ tool_use
-        H->>M: system + tools + messages（全部上下文）
-        M-->>H: assistant 消息（可能含 tool_use）
-        H->>H: 校验 · 权限检查 · PreToolUse hook
-        H->>T: 真正执行
-        T-->>H: 输出
-        H->>H: 追加 tool_result 到 messages
-    end
-    H->>H: Stop hook：检查不过就塞回一条消息，继续循环
-    H-->>U: 最终回答
+```d2
+shape: sequence_diagram
+u: 你
+h: "Agent 程序（harness）"
+m: LLM
+t: "工具（文件/命令/MCP）"
+u -> h: 任务
+"loop：直到 stop_reason ≠ tool_use": {
+  h -> m: "system + tools + messages（全部上下文）"
+  m -> h: "assistant 消息（可能含 tool_use）" {style.stroke-dash: 3}
+  h -> h: "校验 · 权限检查 · PreToolUse hook"
+  h -> t: 真正执行
+  t -> h: 输出 {style.stroke-dash: 3}
+  h -> h: "追加 tool_result 到 messages"
+}
+h -> h: "Stop hook：检查不过就塞回一条消息，继续循环"
+h -> u: 最终回答 {style.stroke-dash: 3}
 ```
 
 图注：模型只出现在一个箭头上，其余全是普通程序。所谓「Agent 自主完成任务」，就是程序根据模型每轮的输出决定要不要再转一圈。

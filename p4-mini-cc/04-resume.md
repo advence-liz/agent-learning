@@ -85,18 +85,18 @@
 
 ## 为什么是 JSONL
 
-```mermaid
-sequenceDiagram
-    participant L as Agent._append
-    participant S as Session.record
-    participant F as <session>.jsonl
-    L->>L: messages.append(msg)
-    L->>S: listener(msg, meta)
-    S->>F: 追加一行 {"type","uuid","parentUuid",…,"message"}
-    Note over F: 进程随时可能被杀<br/>已写的行都完好
-    participant R as SessionStore.load
-    R->>F: 逐行 json.loads（坏行跳过）
-    R-->>L: load_history(messages, usage)
+```d2
+shape: sequence_diagram
+l: "Agent._append"
+s: "Session.record"
+f: "<session>.jsonl"
+r: "SessionStore.load"
+l -> l: "messages.append(msg)"
+l -> s: "listener(msg, meta)"
+s -> f: "追加一行 {\"type\",\"uuid\",\"parentUuid\",…,\"message\"}"
+f."进程随时可能被杀\n已写的行都完好"
+r -> f: "逐行 json.loads（坏行跳过）"
+r -> l: "load_history(messages, usage)" {style.stroke-dash: 3}
 ```
 
 图注：写入路径和 agent 循环是同一个节拍——每条消息落地一次；读回路径就是逐行解析。

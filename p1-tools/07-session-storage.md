@@ -15,36 +15,44 @@
 7. **Codex 的「记录丢了」其实是被过滤掉了**：列表默认只显示 `model_provider` 和当前配置一致的会话。解决办法有两种：换中转站时只改 base_url，不改 provider 的名字；或者批量把旧会话文件头里的 provider 字段改成新值，原文给了一个支持 dry-run 的脚本。
 8. **备份和迁移就是复制目录**。真正的风险只有两个：改了项目路径（Claude Code 会找不到），或者手动删了文件。
 
-```mermaid
-flowchart TB
-  subgraph CC["Claude Code：按项目分"]
-    P["~/.claude/projects/-Users-me-agent-learn/"]
-    P --> S1["060a77c2-....jsonl  主会话"]
-    P --> D1["060a77c2-.../"]
-    D1 --> SA["subagents/agent-a23c....jsonl<br/>agent-a23c....meta.json"]
-    D1 --> TR["tool-results/*.txt  大块工具输出"]
-    P --> M["memory/  auto memory"]
-  end
-  subgraph CX["Codex：按日期分"]
-    C["~/.codex/sessions/2026/10/16/"]
-    C --> R1["rollout-...-01a1....jsonl<br/>source=exec"]
-    C --> R2["rollout-...-xxxx.jsonl<br/>source={subagent: review}"]
-  end
+```d2
+direction: down
+grid-columns: 1
+cc: "Claude Code：按项目分" {
+  p: "~/.claude/projects/-Users-me-agent-learn/"
+  s1: "060a77c2-....jsonl\n主会话"
+  d1: "060a77c2-.../"
+  sa: "subagents/agent-a23c....jsonl\nagent-a23c....meta.json"
+  tr: "tool-results/*.txt\n大块工具输出"
+  m: "memory/\nauto memory"
+  p -> s1
+  p -> d1
+  d1 -> sa
+  d1 -> tr
+  p -> m
+}
+cx: "Codex：按日期分" {
+  c: "~/.codex/sessions/2026/10/16/"
+  r1: "rollout-...-01a1....jsonl\nsource=exec"
+  r2: "rollout-...-xxxx.jsonl\nsource={subagent: review}"
+  c -> r1
+  c -> r2
+}
 ```
 
-```mermaid
-sequenceDiagram
-  participant U as 你
-  participant CLI as claude -r
-  participant F as session.jsonl
-  participant API as 模型 API（无状态）
-  U->>CLI: 选中某个会话
-  CLI->>F: 读全部行
-  F-->>CLI: 根据 leafUuid 沿 parentUuid 回溯出一条链
-  U->>CLI: 新 prompt
-  CLI->>API: system + 整条链 + 新 prompt（全量）
-  API-->>CLI: assistant 回复
-  CLI->>F: 追加 user/assistant 行（parentUuid 指向上一条）
+```d2
+shape: sequence_diagram
+u: 你
+cli: "claude -r"
+f: "session.jsonl"
+api: "模型 API（无状态）"
+u -> cli: 选中某个会话
+cli -> f: 读全部行
+f -> cli: "根据 leafUuid 沿 parentUuid 回溯出一条链" {style.stroke-dash: 3}
+u -> cli: "新 prompt"
+cli -> api: "system + 整条链 + 新 prompt（全量）"
+api -> cli: "assistant 回复" {style.stroke-dash: 3}
+cli -> f: "追加 user/assistant 行（parentUuid 指向上一条）"
 ```
 
 ### 📝 作者是怎么讲的

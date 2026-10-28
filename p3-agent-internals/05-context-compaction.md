@@ -50,21 +50,29 @@
 
 我按记录类型统计了本机每次压缩边界之后紧跟着的内容（只看类型，不看正文）：
 
-```mermaid
-flowchart TB
-    subgraph Before["压缩前：~97 万 token"]
-        H1[几十轮对话] --> H2[几百次 tool_use / tool_result] --> H3[读过的文件原文]
-    end
-    Before -- "模型写摘要（本机 durationMs 中位数约 2.5 分钟）" --> After
-    subgraph After["压缩后：~3-4 万 token"]
-        A0["compact_boundary（系统记录：trigger / preTokens / postTokens）"]
-        A1["一条 user 消息：结构化摘要（isCompactSummary）"]
-        A2["原样保留的最近几条消息（preservedSegment）"]
-        A3["程序重新挂回：最近读过的文件（file / compact_file_reference）"]
-        A4["程序重新挂回：CLAUDE.md、环境、skill、MCP 说明、工具清单"]
-        A5["SessionStart:compact hook 的输出（你的护栏）"]
-        A0 --> A1 --> A2 --> A3 --> A4 --> A5
-    end
+```d2
+direction: down
+before: "压缩前：~97 万 token" {
+  h1: 几十轮对话
+  h2: "几百次 tool_use / tool_result"
+  h3: 读过的文件原文
+  h1 -> h2
+  h2 -> h3
+}
+after: "压缩后：~3-4 万 token" {
+  a0: "compact_boundary（系统记录：trigger / preTokens / postTokens）"
+  a1: "一条 user 消息：结构化摘要（isCompactSummary）"
+  a2: "原样保留的最近几条消息（preservedSegment）"
+  a3: "程序重新挂回：最近读过的文件（file / compact_file_reference）"
+  a4: "程序重新挂回：CLAUDE.md、环境、skill、MCP 说明、工具清单"
+  a5: "SessionStart:compact hook 的输出（你的护栏）"
+  a0 -> a1
+  a1 -> a2
+  a2 -> a3
+  a3 -> a4
+  a4 -> a5
+}
+before -> after: "模型写摘要（本机 durationMs 中位数约 2.5 分钟）"
 ```
 
 图里每一层都对应本机 jsonl 里能看到的东西（最早统计时 95 次压缩里出现的次数）：

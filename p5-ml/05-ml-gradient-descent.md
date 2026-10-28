@@ -57,14 +57,20 @@ $$\theta \leftarrow \theta - \eta\,\nabla L(\theta)$$
 
 η（eta）叫学习率（learning rate），就是步长。
 
-```mermaid
-flowchart LR
-  A["θ 初始化"] --> B["前向：ŷ = X_b θ"]
-  B --> C["损失 L"]
-  C --> D["反向：∇L = 2/n · X_bᵀ(ŷ − y)"]
-  D --> E["θ ← θ − η∇L"]
-  E -->|"没收敛"| B
-  E -->|"损失不再下降"| F["输出 θ"]
+```d2
+direction: down
+a: "θ 初始化"
+b: "前向：ŷ = X_b θ"
+c: "损失 L"
+d: "反向：∇L = 2/n · X_bᵀ(ŷ − y)"
+e: "θ ← θ − η∇L"
+f: "输出 θ"
+a -> b
+b -> c
+c -> d
+d -> e
+e -> b: "没收敛"
+e -> f: "损失不再下降"
 ```
 
 这张图请记住它的形状：**前向算损失、反向算梯度、更新参数、再来一遍**。到了 [手写神经网络](../p6-nn-llm/01-ml-neural-network.md) 和 [反向传播](../p6-nn-llm/03-ml-backpropagation.md)，变的只是「反向」那一格怎么算。

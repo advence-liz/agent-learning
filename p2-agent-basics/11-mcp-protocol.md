@@ -171,18 +171,18 @@ MCP 没有发明新的消息格式，它用的是 JSON-RPC 2.0。这是一个很
 
 ## 握手：先互报家门
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: initialize {protocolVersion, capabilities, clientInfo}
-    S-->>C: result {protocolVersion, capabilities, serverInfo, instructions}
-    C-)S: notifications/initialized（无 id，无响应）
-    Note over C,S: 握手完成，开始正常通信
-    C->>S: tools/list
-    S-->>C: result {tools: [...]}
-    C->>S: tools/call {name, arguments}
-    S-->>C: result {content, structuredContent, isError}
+```d2
+shape: sequence_diagram
+c: Client
+s: Server
+c -> s: "initialize {protocolVersion, capabilities, clientInfo}"
+s -> c: "result {protocolVersion, capabilities, serverInfo, instructions}" {style.stroke-dash: 3}
+c -> s: "notifications/initialized（无 id，无响应）"
+c."握手完成，开始正常通信"
+c -> s: tools/list
+s -> c: "result {tools: [...]}" {style.stroke-dash: 3}
+c -> s: "tools/call {name, arguments}"
+s -> c: "result {content, structuredContent, isError}" {style.stroke-dash: 3}
 ```
 
 `initialize` 交换三样东西：

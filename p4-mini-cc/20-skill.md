@@ -124,21 +124,21 @@ Base directory for this skill: $DEMO/proj/.mini_cc/skills/pr-summary
 
 ## 原理：三层，三个时机
 
-```mermaid
-sequenceDiagram
-    participant C as ContextBuilder
-    participant M as 模型
-    participant S as Skill 工具 / SkillRuntime
-    participant L as Agent 循环
-    Note over C: 会话开始
-    C->>M: system 里的 # Skills：每个 skill 一行 name: description（第 1 层）
-    M->>S: tool_use Skill(pr-summary, "main")
-    S->>S: render_body：替换 $0 / $ARGUMENTS / ${SKILL_DIR}，执行 !`cmd`
-    S->>L: tool_result = "Launching skill: pr-summary"
-    S->>L: followup_blocks += 正文（第 2 层）
-    L->>M: user 消息 = [tool_result, 正文]
-    M->>M: 正文说「改 .tsx 时看附录」
-    M->>L: Read(references/ui-checklist.md)（第 3 层，模型自己决定）
+```d2
+shape: sequence_diagram
+c: "ContextBuilder"
+m: "模型"
+s: "Skill 工具 / SkillRuntime"
+l: "Agent 循环"
+c."会话开始"
+c -> m: "system 里的 # Skills：每个 skill 一行 name: description（第 1 层）"
+m -> s: "tool_use Skill(pr-summary, \"main\")"
+s -> s: 'render_body：替换 $0 / $ARGUMENTS / ${SKILL_DIR}，执行 !`cmd`'
+s -> l: "tool_result = \"Launching skill: pr-summary\""
+s -> l: "followup_blocks += 正文（第 2 层）"
+l -> m: "user 消息 = [tool_result, 正文]"
+m -> m: "正文说「改 .tsx 时看附录」"
+m -> l: "Read(references/ui-checklist.md)（第 3 层，模型自己决定）"
 ```
 
 图注：第 1 层在 system，会话内不变；第 2 层**追加**在调用点，之后一直留在历史里；第 3 层就是普通的工具调用。

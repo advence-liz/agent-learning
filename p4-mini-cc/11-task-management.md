@@ -135,24 +135,26 @@
 
 ## 计划要有自己的家
 
-```mermaid
-flowchart LR
-    subgraph HIST["对话历史 <session>.jsonl"]
-        direction TB
-        H1["user: 给 list_posts 加分页"]
-        H2["assistant: tool_use TaskCreate ×3"]
-        H3["… 几十轮 Read / Edit / Bash …"]
-        H4["user: tool_result + 〈任务提醒〉"]
-    end
-    subgraph STORE["任务清单 <session>.tasks.json"]
-        T1["☒ #1 读路由"]
-        T2["◼ #2 加分页参数"]
-        T3["☐ #3 跑测试"]
-    end
-    M["模型"] -- "TaskCreate / TaskUpdate" --> STORE
-    STORE -- "TasksUpdated 事件" --> UI["终端清单"]
-    STORE -- "task_reminder_provider<br/>（久未更新 / 历史里看不见）" --> H4
-    CMP["第 14 章压缩"] -. "只动历史" .-> HIST
+```d2
+direction: down
+hist: "对话历史 <session>.jsonl" {
+  label.near: top-left
+  h1: "user: 给 list_posts 加分页\nassistant: tool_use TaskCreate ×3\n… 几十轮 Read / Edit / Bash …"
+  h4: "user: tool_result + 〈任务提醒〉"
+}
+store: "任务清单 <session>.tasks.json" {
+  grid-columns: 1
+  t1: "☒ #1 读路由"
+  t2: "◼ #2 加分页参数"
+  t3: "☐ #3 跑测试"
+}
+m: "模型"
+ui: "终端清单"
+cmp: "第 14 章压缩"
+m -> store: "TaskCreate / TaskUpdate"
+store -> ui: "TasksUpdated 事件"
+store -> hist.h4: "task_reminder_provider\n（久未更新 / 历史里看不见）"
+cmp -> hist: "只动历史" {style.stroke-dash: 3}
 ```
 
 图注：清单是一份**独立于历史的状态**。模型通过工具写它；UI 通过事件读它；提供者在需要时把它的**当前快照**重新放回上下文末尾。压缩只动历史，动不了清单。

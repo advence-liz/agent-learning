@@ -28,20 +28,20 @@
 
 这个比方在一个地方不成立：图书馆的卡片柜放不下时，管理员会告诉你；Claude Code 的目录超出预算时，是**悄悄地**把一部分卡片上的描述擦掉，只留下书名。后面讲常见坑时会再说到这一点。
 
-```mermaid
-sequenceDiagram
-    participant H as Claude Code
-    participant C as 上下文（messages）
-    participant M as 模型
-    H->>C: 会话开始：注入 skill listing（每个 skill 一行 name + description）
-    Note over C: L1 常驻，所有轮次都在
-    M->>H: tool_use Skill(name="pr-summary", args="develop")
-    H->>H: 读 SKILL.md → 替换 $ARGUMENTS → 先执行 !`cmd`
-    H->>C: 追加一条消息："Base directory for this skill: …" + 渲染后的正文
-    Note over C: L2 从这一刻起留在对话里
-    M->>H: tool_use Read(references/ui-checklist.md)
-    H->>C: tool_result：附录内容
-    Note over C: L3 只在模型决定要看时进来
+```d2
+shape: sequence_diagram
+h: Claude Code
+c: "上下文（messages）"
+m: 模型
+h -> c: "会话开始：注入 skill listing（每个 skill 一行 name + description）"
+c."L1 常驻，所有轮次都在"
+m -> h: "tool_use Skill(name=\"pr-summary\", args=\"develop\")"
+h -> h: '读 SKILL.md → 替换 $ARGUMENTS → 先执行 !`cmd`'
+h -> c: "追加一条消息：\"Base directory for this skill: …\" + 渲染后的正文"
+c."L2 从这一刻起留在对话里"
+m -> h: "tool_use Read(references/ui-checklist.md)"
+h -> c: "tool_result：附录内容"
+c."L3 只在模型决定要看时进来"
 ```
 
 官方 skills 文档（<https://code.claude.com/docs/en/skills>）里，每一层的规则都写得很具体。

@@ -22,27 +22,26 @@ hook 根本不进这场概率游戏。到了指定节点，执行它的是 Claud
 
 先看 hook 挂在循环的哪些位置。下图只画了日常最常用的几个事件。官方 hooks 文档（Claude Code 2.1.306）一共列了 33 个事件，你的 `settings.json` 配了其中 10 个。
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as 用户
-    participant H as Claude Code (harness)
-    participant K as hook 子进程
-    participant M as 模型 API
-    H->>K: SessionStart（stdout 纯文本 → 进上下文）
-    U->>H: 输入 prompt
-    H->>K: UserPromptSubmit（exit 2 → 这条 prompt 被拦下）
-    loop 每一次工具调用
-        H->>M: messages + tools
-        M-->>H: tool_use
-        H->>K: PreToolUse（deny / ask / allow / 改写参数）
-        H->>H: 权限检查（必要时弹 PermissionRequest）
-        H->>H: 执行工具
-        H->>K: PostToolUse（工具已经跑完，只能补充反馈）
-    end
-    M-->>H: end_turn（模型想停）
-    H->>K: Stop（decision:block → 把 reason 喂回去，接着干）
-    H->>K: SessionEnd
+```d2
+shape: sequence_diagram
+u: 用户
+h: "Claude Code (harness)"
+k: "hook 子进程"
+m: "模型 API"
+h -> k: "SessionStart（stdout 纯文本 → 进上下文）"
+u -> h: "输入 prompt"
+h -> k: "UserPromptSubmit（exit 2 → 这条 prompt 被拦下）"
+"loop：每一次工具调用": {
+  h -> m: "messages + tools"
+  m -> h: tool_use {style.stroke-dash: 3}
+  h -> k: "PreToolUse（deny / ask / allow / 改写参数）"
+  h -> h: "权限检查（必要时弹 PermissionRequest）"
+  h -> h: 执行工具
+  h -> k: "PostToolUse（工具已经跑完，只能补充反馈）"
+}
+m -> h: "end_turn（模型想停）" {style.stroke-dash: 3}
+h -> k: "Stop（decision:block → 把 reason 喂回去，接着干）"
+h -> k: SessionEnd
 ```
 
 图里最该记住的是第 5 步和第 8 步的区别。PreToolUse 发生在工具执行**之前**，它能拦、能改参数。PostToolUse 发生在**之后**，木已成舟，最多只能告诉模型「刚才那一步有问题」。

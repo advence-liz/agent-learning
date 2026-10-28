@@ -15,31 +15,37 @@
 7. **精度和量化**：FP32 每个数 4 字节；FP16 和 BF16 都是 2 字节，但 BF16 的数值范围接近 FP32。量化是把权重近似成 8 bit 或 4 bit，好处是文件小、加载快；代价是有误差，可能「降智」；速度不一定更快。实际体积会比理论值大一些，因为要存缩放系数，而且有些张量会保留高精度。
 8. **两种文件格式**：Safetensors 只存张量和清单，加载时不执行任何代码，用来替代旧的 pickle `.bin` 格式（pickle 可能夹带代码）；GGUF 把张量、架构、tokenizer 等元数据打包成一个文件，并且原生支持量化，是 llama.cpp、Ollama、LM Studio 使用的格式。
 
-```mermaid
-flowchart TB
-  REPO["HF 仓库 Qwen/Qwen3-0.6B"]
-  REPO --> H["给人看：README.md（Model Card）/ LICENSE"]
-  REPO --> W["权重：model.safetensors<br/>311 个张量 · BF16 · 1.50GB"]
-  REPO --> C["配置：config.json（结构）<br/>generation_config.json（采样默认值）"]
-  REPO --> T["tokenizer：tokenizer.json / vocab.json / merges.txt<br/>tokenizer_config.json（含对话模板）"]
-  W -->|转换 + 量化 Q4_K_M| G["GGUF 单文件 ~523MB<br/>张量 + 架构 + tokenizer + 模板"]
-  C --> G
-  T --> G
-  G -->|ollama / llama.cpp 加载| RUN["推理"]
-  W -->|transformers 加载| RUN
-  C --> RUN
-  T --> RUN
+```d2
+direction: down
+repo: "HF 仓库 Qwen/Qwen3-0.6B"
+h: "给人看：\nREADME.md\n（Model Card）\n/ LICENSE"
+w: "权重：\nmodel.safetensors\n311 个张量 · BF16\n· 1.50GB"
+c: "配置：\nconfig.json（结构）\ngeneration_config.json\n（采样默认值）"
+t: "tokenizer：\ntokenizer.json\n/ vocab.json\n/ merges.txt\ntokenizer_config.json\n（含对话模板）"
+g: "GGUF 单文件 ~523MB\n张量 + 架构\n+ tokenizer + 模板"
+run: 推理
+repo -> h
+repo -> w
+repo -> c
+repo -> t
+w -> g: "转换 + 量化 Q4_K_M"
+c -> g
+t -> g
+g -> run: "ollama / llama.cpp 加载"
+w -> run: transformers 加载
+c -> run
+t -> run
 ```
 
-```mermaid
-sequenceDiagram
-  participant API as /v1/chat/completions
-  participant TK as tokenizer + 对话模板
-  participant M as 模型（只会续写）
-  API->>TK: messages=[{user: "1+1 等于几？"}]
-  TK->>M: "<|im_start|>user\n1+1 等于几？<|im_end|>\n<|im_start|>assistant\n"
-  M-->>TK: "<think>…</think>\n\n1加上1等于2。…<|im_end|>"
-  TK-->>API: reasoning = think 段, content = 之后部分, finish_reason = stop
+```d2
+shape: sequence_diagram
+api: "/v1/chat/completions"
+tk: "tokenizer + 对话模板"
+m: "模型（只会续写）"
+api -> tk: "messages=[{user: \"1+1 等于几？\"}]"
+tk -> m: "\"<|im_start|>user\\n1+1 等于几？<|im_end|>\\n<|im_start|>assistant\\n\""
+m -> tk: "\"<think>…</think>\\n\\n1加上1等于2。…<|im_end|>\"" {style.stroke-dash: 3}
+tk -> api: "reasoning = think 段, content = 之后部分, finish_reason = stop" {style.stroke-dash: 3}
 ```
 
 ### 📝 作者是怎么讲的

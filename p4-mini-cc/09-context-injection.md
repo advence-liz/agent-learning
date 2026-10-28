@@ -165,19 +165,20 @@ mini-cc 现在对项目一无所知：你在根目录放了 `AGENTS.md` 写着�
 
 ## 三类上下文，三个位置
 
-```mermaid
-flowchart LR
-    subgraph REQ["一次 API 请求"]
-        direction TB
-        T["tools（工具定义）"]
-        S["system<br/>① 静态：身份 + 规则 + 环境<br/>🔒 cache_control"]
-        M1["messages[0] user<br/>② 会话级：AGENTS.md + git 快照 + 日期<br/>+ 用户第一句话"]
-        MID["… 历史（只追加）…"]
-        MN["messages[-1] user<br/>③ 动态：tool_result + 文件变化 / 通知 / 日期变化"]
-        T --> S --> M1 --> MID --> MN
-    end
-    P["ContextBuilder.providers<br/>（每次追加 user 消息时运行）"] -.->|"inject()"| M1
-    P -.->|"inject()"| MN
+```d2
+direction: down
+req: "一次 API 请求" {
+  label.near: top-left
+  t: "tools（工具定义）"
+  s: "system\n① 静态：身份 + 规则 + 环境\n🔒 cache_control"
+  m1: "messages[0] user\n② 会话级：AGENTS.md + git 快照 + 日期\n+ 用户第一句话"
+  mid: "… 历史（只追加）…"
+  mn: "messages[-1] user\n③ 动态：tool_result + 文件变化 / 通知 / 日期变化"
+  t -> s -> m1 -> mid -> mn
+}
+p: "ContextBuilder.providers\n（每次追加 user 消息时运行）"
+p -> req.m1: "inject()" {style.stroke-dash: 3}
+p -> req.mn: "inject()" {style.stroke-dash: 3}
 ```
 
 图注：请求的渲染顺序是 tools → system → messages。越靠前越稳定、越能命中缓存；越靠后越新鲜、离模型「当前注意力」越近。

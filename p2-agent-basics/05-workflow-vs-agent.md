@@ -122,19 +122,31 @@ Workflow 版的分类器只能输出一个标签，于是走了 bug 分支，咨
 
 一行。所有的「先做什么、后做什么、做几次」都交给模型了。
 
-```mermaid
-flowchart LR
-    subgraph Workflow["Workflow：路径在代码里"]
-        A1[分类] -->|bug| B1[写工单] --> G1{闸门} -->|不合格| B1
-        A1 -->|question| C1[检索] --> D1[回答]
-    end
-    subgraph Agent["Agent：路径在模型里"]
-        M[模型] -->|search_docs| T1[工具]
-        M -->|create_ticket| T2[工具]
-        T1 --> M
-        T2 --> M
-        M -->|完成| E[回答]
-    end
+```d2
+direction: right
+workflow: "Workflow：路径在代码里" {
+  classify: 分类
+  ticket: 写工单
+  gate: 闸门 {shape: diamond}
+  search: 检索
+  answer: 回答
+  classify -> ticket: bug
+  ticket -> gate
+  gate -> ticket: 不合格
+  classify -> search: question
+  search -> answer
+}
+agent: "Agent：路径在模型里" {
+  model: 模型
+  t1: 工具
+  t2: 工具
+  done: 回答
+  model -> t1: search_docs
+  model -> t2: create_ticket
+  t1 -> model
+  t2 -> model
+  model -> done: 完成
+}
 ```
 
 一个类比：Workflow 像流水线，每个工位只做一件事，工位顺序是车间主任排好的；Agent 像请了一位全能师傅，你只告诉他「把车修好」。流水线出错容易定位（第三工位次品率高），师傅出错你得翻他的工作日志。

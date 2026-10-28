@@ -66,16 +66,26 @@
 
 ## 四步流水线
 
-```mermaid
-flowchart LR
-    subgraph 离线建索引
-        D[文档] --> C[切块 chunk] --> V[向量化 embed] --> I[(向量矩阵)]
-    end
-    subgraph 在线问答
-        Q[问题] --> QV[向量化] --> S[余弦相似度 top-k]
-        I --> S
-        S --> P[拼 prompt：资料 + 问题] --> M[模型回答 + 引用]
-    end
+```d2
+direction: down
+offline: 离线建索引 {
+  d: 文档
+  c: 切块 chunk
+  v: 向量化 embed
+  i: 向量矩阵 {shape: cylinder}
+  d -> c -> v -> i
+}
+online: 在线问答 {
+  label.near: top-left
+  q: 问题
+  qv: 向量化
+  s: 余弦相似度 top-k
+  p: "拼 prompt：资料 + 问题"
+  m: 模型回答 + 引用
+  q -> qv -> s
+  s -> p -> m
+}
+offline.i -> online.s
 ```
 
 左边只在文档更新时跑一次，右边每个问题跑一次。下面一步步拆。

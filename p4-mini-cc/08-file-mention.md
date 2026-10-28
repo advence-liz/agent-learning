@@ -80,27 +80,25 @@
 
 ## 省掉的是一整轮
 
-```mermaid
-sequenceDiagram
-    participant U as 用户
-    participant C as 客户端
-    participant M as 模型
-    rect rgb(255, 240, 240)
-    note over U,M: 不用 @：两次请求
-    U->>C: 看看 config.py
-    C->>M: 请求 1（历史 + 这句话）
-    M-->>C: tool_use Read(config.py)
-    C->>C: 读文件
-    C->>M: 请求 2（历史 + 这句话 + tool_use + tool_result）
-    M-->>C: 回答
-    end
-    rect rgb(240, 255, 240)
-    note over U,M: 用 @：一次请求
-    U->>C: 看看 @config.py
-    C->>C: 读文件，包成附件
-    C->>M: 请求 1（历史 + [附件, 这句话]）
-    M-->>C: 回答
-    end
+```d2
+shape: sequence_diagram
+u: "用户"
+c: "客户端"
+m: "模型"
+"不用 @：两次请求": {
+  u -> c: "看看 config.py"
+  c -> m: "请求 1（历史 + 这句话）"
+  m -> c: "tool_use Read(config.py)" {style.stroke-dash: 3}
+  c -> c: "读文件"
+  c -> m: "请求 2（历史 + 这句话 + tool_use + tool_result）"
+  m -> c: "回答" {style.stroke-dash: 3}
+}
+"用 @：一次请求": {
+  u -> c: "看看 @config.py"
+  c -> c: "读文件，包成附件"
+  c -> m: "请求 1（历史 + [附件, 这句话]）"
+  m -> c: "回答" {style.stroke-dash: 3}
+}
 ```
 
 图注：红框里请求 2 要把整个历史再发一遍；绿框里客户端在发请求前就把文件读好了。

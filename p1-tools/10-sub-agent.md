@@ -31,20 +31,20 @@
 
 ## 两个数组，一次交接
 
-```mermaid
-sequenceDiagram
-    participant P as 父 messages（主会话）
-    participant H as Claude Code
-    participant C as 子 messages（全新数组）
-    P->>H: assistant: tool_use Agent(prompt="在 *_demo 里找 exit 2 的处理位置")
-    H->>C: 新建 [system=agent 定义正文, user=prompt]
-    loop 子 agent 自己的工具循环
-        C->>H: tool_use grep / read_file
-        H-->>C: tool_result（几千字的文件内容）
-    end
-    C-->>H: 最后一条 assistant 文本：5 行结论
-    H-->>P: tool_result = 这 5 行结论
-    Note over C: 子数组落盘到 subagents/agent-*.jsonl，不并入父会话
+```d2
+shape: sequence_diagram
+p: "父 messages（主会话）"
+h: Claude Code
+c: "子 messages（全新数组）"
+p -> h: "assistant: tool_use Agent(prompt=\"在 *_demo 里找 exit 2 的处理位置\")"
+h -> c: "新建 [system=agent 定义正文, user=prompt]"
+"loop：子 agent 自己的工具循环": {
+  c -> h: "tool_use grep / read_file"
+  h -> c: "tool_result（几千字的文件内容）" {style.stroke-dash: 3}
+}
+c -> h: "最后一条 assistant 文本：5 行结论" {style.stroke-dash: 3}
+h -> p: "tool_result = 这 5 行结论" {style.stroke-dash: 3}
+c."子数组落盘到 subagents/agent-*.jsonl，不并入父会话"
 ```
 
 官方 sub-agents 文档（<https://code.claude.com/docs/en/sub-agents>）对「子 agent 一开始能看到什么」写得很具体。非 fork 的子 agent 启动时只有下面这些：

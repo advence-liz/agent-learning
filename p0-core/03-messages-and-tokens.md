@@ -27,21 +27,21 @@ LLM 的推理也是这样。参数只读，两次请求之间没有任何共享�
 
 所以一次多轮对话在线上长这样：
 
-```mermaid
-sequenceDiagram
-    participant C as 客户端（维护 messages）
-    participant S as API（无状态模型 + 前缀缓存）
-    C->>S: [system, tools, u1]
-    S-->>C: a1 （前缀第一次出现：写入缓存）
-    Note over C: messages.push(a1, u2)
-    C->>S: [system, tools, u1, a1, u2]
-    Note over S: 前缀 system..u1 命中，只新算 a1、u2
-    S-->>C: a2
-    Note over C: messages.push(a2, tool_result)
-    C->>S: [system, tools, u1, a1, u2, a2, tool_result]
-    Note over S: 前缀 system..u2 命中，只新算 a2、tool_result
-    S-->>C: a3
-    Note over C,S: 如果中途改了 system 里一个字 → 从那个字往后全部重算
+```d2
+shape: sequence_diagram
+c: "客户端（维护 messages）"
+s: "API（无状态模型 + 前缀缓存）"
+c -> s: "[system, tools, u1]"
+s -> c: "a1 （前缀第一次出现：写入缓存）" {style.stroke-dash: 3}
+c."messages.push(a1, u2)"
+c -> s: "[system, tools, u1, a1, u2]"
+s."前缀 system..u1 命中，只新算 a1、u2"
+s -> c: a2 {style.stroke-dash: 3}
+c."messages.push(a2, tool_result)"
+c -> s: "[system, tools, u1, a1, u2, a2, tool_result]"
+s."前缀 system..u2 命中，只新算 a2、tool_result"
+s -> c: a3 {style.stroke-dash: 3}
+c."如果中途改了 system 里一个字 → 从那个字往后全部重算"
 ```
 
 图注：每一次请求都是完整的历史，客户端只往末尾 push。消息有四种身份：`system`（规则）、`user`（你说的话和工具结果）、`assistant`（模型说的话和工具调用），以及工具定义 `tools`。
@@ -54,12 +54,16 @@ API 按 token 收费。输入和输出分开定价，输出贵得多：`claude-o
 
 每次响应都带着一个 `usage` 字段，告诉你这次用了多少。Anthropic 把输入拆成了三份：
 
-```mermaid
-flowchart LR
-    P["这次请求的全部输入"] --> R["cache_read_input_tokens<br/>命中缓存的旧前缀<br/>Opus 5.5：0.05× 输入价"]
-    P --> W["cache_creation_input_tokens<br/>本次新写入缓存的部分<br/>5 分钟 TTL 1.25× · 1 小时 TTL 2×"]
-    P --> N["input_tokens<br/>最后一个缓存断点之后的尾巴<br/>1×"]
-    O["output_tokens<br/>模型生成的（含思考）<br/>Opus 5.5：5× 输入价"]
+```d2
+direction: right
+p: 这次请求的全部输入
+r: "cache_read_input_tokens\n命中缓存的旧前缀\nOpus 5.5：0.05× 输入价"
+w: "cache_creation_input_tokens\n本次新写入缓存的部分\n5 分钟 TTL 1.25× · 1 小时 TTL 2×"
+n: "input_tokens\n最后一个缓存断点之后的尾巴\n1×"
+o: "output_tokens\n模型生成的（含思考）\nOpus 5.5：5× 输入价"
+p -> r
+p -> w
+p -> n
 ```
 
 注意：`input_tokens` **不是**「输入总量」，只是没走缓存的那一小截。模型实际读到的输入总量，是三项相加。OpenAI 和 DeepSeek 的 `prompt_tokens` 是总量口径，两家的数字不能直接比。

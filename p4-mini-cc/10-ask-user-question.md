@@ -84,23 +84,23 @@ Your questions have been answered: "博客用什么技术栈？"="Astro (Recomme
 
 ## 提问就是一次工具调用
 
-```mermaid
-sequenceDiagram
-    participant M as 模型
-    participant L as Agent._run_tools
-    participant T as AskUserQuestionTool.run
-    participant UI as UI.ask_questions
-    participant U as 用户
-    M->>L: tool_use AskUserQuestion(questions=[…])
-    L->>L: check_input（1–4 题、每题 2–4 项）
-    L->>L: 权限：read_only → allow
-    L->>T: run(args, ctx)
-    T->>UI: ctx.extras["ask_user"](questions)
-    UI->>U: 逐题显示选项
-    U-->>UI: 1 / 2,3 / 公司内网的 Nginx
-    UI-->>T: [Answer, Answer, Answer]
-    T-->>L: tool_result「Your questions have been answered: …」
-    L->>M: 下一次请求（同一轮里继续）
+```d2
+shape: sequence_diagram
+m: "模型"
+l: "Agent._run_tools"
+t: "AskUserQuestionTool.run"
+ui: "UI.ask_questions"
+u: "用户"
+m -> l: "tool_use AskUserQuestion(questions=[…])"
+l -> l: "check_input（1–4 题、每题 2–4 项）"
+l -> l: "权限：read_only → allow"
+l -> t: "run(args, ctx)"
+t -> ui: "ctx.extras[\"ask_user\"](questions)"
+ui -> u: "逐题显示选项"
+u -> ui: "1 / 2,3 / 公司内网的 Nginx" {style.stroke-dash: 3}
+ui -> t: "[Answer, Answer, Answer]" {style.stroke-dash: 3}
+t -> l: "tool_result「Your questions have been answered: …」" {style.stroke-dash: 3}
+l -> m: "下一次请求（同一轮里继续）"
 ```
 
 图注：和第 5 章的权限弹窗一模一样——生成器停在一次同步调用上，等用户。区别只在于这次是**模型**主动发起的。

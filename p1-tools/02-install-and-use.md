@@ -15,13 +15,21 @@
 5. **进会话后核对**：`/status` 看当前 base URL 与账号，`/model` 切模型。
 6. **IDE 里用**：作者首推「在编辑器内置终端里跑 `claude`」，它能感知打开的文件；VS Code / JetBrains 插件是更集成的选项，插件改配置后要**完全重启编辑器**。
 
-```mermaid
-flowchart LR
-  U[你在终端输入] --> CC[Claude Code<br/>Harness]
-  S[(~/.claude/settings.json<br/>env 字段)] -->|启动时注入| CC
-  CC -->|ANTHROPIC_BASE_URL 未设| A[Anthropic 官方 API<br/>需登录 / API key]
-  CC -->|ANTHROPIC_BASE_URL=中转站| P[中转站代理] --> A2[Claude 或兼容格式的其它模型]
-  CC -->|CLAUDE_CODE_USE_VERTEX=1| V[Google Cloud Vertex 上的 Claude]
+```d2
+direction: down
+u: 你在终端输入
+cc: "Claude Code\nHarness"
+s: "~/.claude/settings.json\nenv 字段" {shape: cylinder}
+a: "Anthropic 官方 API\n需登录 / API key"
+p: 中转站代理
+a2: Claude 或兼容格式的其它模型
+v: Google Cloud Vertex 上的 Claude
+u -> cc
+s -> cc: 启动时注入
+cc -> a: "ANTHROPIC_BASE_URL 未设"
+cc -> p: "ANTHROPIC_BASE_URL=中转站"
+p -> a2
+cc -> v: "CLAUDE_CODE_USE_VERTEX=1"
 ```
 
 ### 📝 作者是怎么讲的

@@ -43,17 +43,26 @@ cwd、环境信息、记忆路径、git 状态，被它称为 per-machine sectio
 
 你可能会问：为什么要冻结？因为片段是「按当前环境」拼出来的。如果中途你切了 git 分支，git 状态片段就变了，system 一变缓存就全断。冻结住，就算环境变了，前缀也不变。代价是模型看到的环境信息可能有点过时。
 
-```mermaid
-flowchart LR
-    A[片段注册表] --> B{稳定吗？}
-    B -- 人人相同 --> C[身份 / 行为总纲 / 编码规范]
-    B -- 因机器而异 --> D[cwd / git / 平台 / 记忆路径]
-    C --> E[system 前部<br/>cache_control 断点]
-    D --> F{exclude-dynamic?}
-    F -- 否 --> G[system 尾部]
-    F -- 是 --> H[第一条 user 消息]
-    E --> I[首个请求时渲染一次<br/>snapshot 冻结，压缩后才重建]
-    G --> I
+```d2
+direction: down
+a: 片段注册表
+b: 稳定吗？ {shape: diamond}
+c: 身份 / 行为总纲 / 编码规范
+d: cwd / git / 平台 / 记忆路径
+e: "system 前部\ncache_control 断点"
+f: "exclude-dynamic?" {shape: diamond}
+g: system 尾部
+h: 第一条 user 消息
+i: "首个请求时渲染一次\nsnapshot 冻结，压缩后才重建"
+a -> b
+b -> c: 人人相同
+b -> d: 因机器而异
+c -> e
+d -> f
+f -> g: 否
+f -> h: 是
+e -> i
+g -> i
 ```
 
 图里「片段注册表」那一层是我按现象推出来的结构，Claude Code 闭源，具体代码怎么组织不得而知。（推测，依据是上面三条 CLI 行为和本机记录里的分块。）

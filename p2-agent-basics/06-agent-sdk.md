@@ -194,22 +194,22 @@
     CLI→SDK  result success
     ```
 
-```mermaid
-sequenceDiagram
-    participant P as 你的程序（SDK）
-    participant C as Claude Code CLI 子进程
-    participant M as 模型 API
-    P->>C: control_request initialize（hooks: hook_0 ↔ Bash）
-    P->>C: user: 修好测试
-    C->>M: messages + tools
-    M-->>C: tool_use Bash rm -rf ...
-    C->>P: control_request hook_callback(hook_0)
-    P-->>C: deny
-    C->>M: tool_result(is_error) ...
-    M-->>C: tool_use mcp__proj__count_todos
-    C->>P: control_request mcp_message tools/call
-    P-->>C: mcp_response
-    C-->>P: result
+```d2
+shape: sequence_diagram
+p: 你的程序（SDK）
+c: Claude Code CLI 子进程
+m: 模型 API
+p -> c: "control_request initialize（hooks: hook_0 ↔ Bash）"
+p -> c: "user: 修好测试"
+c -> m: messages + tools
+m -> c: "tool_use Bash rm -rf ..." {style.stroke-dash: 3}
+c -> p: "control_request hook_callback(hook_0)"
+p -> c: deny {style.stroke-dash: 3}
+c -> m: "tool_result(is_error) ..."
+m -> c: tool_use mcp__proj__count_todos {style.stroke-dash: 3}
+c -> p: control_request mcp_message tools/call
+p -> c: mcp_response {style.stroke-dash: 3}
+c -> p: result {style.stroke-dash: 3}
 ```
 
 真相很朴素：

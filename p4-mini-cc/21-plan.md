@@ -183,22 +183,29 @@ plan 模式把这三个漏洞分别交给程序去堵：拦截交给权限层，
 
 ## 原理：四个零件
 
-```mermaid
-flowchart TB
-    subgraph 进入["进入 plan"]
-        A1["Shift+Tab / /plan / --permission-mode plan"]
-        A2["模型调 EnterPlanMode"]
-    end
-    进入 --> P["PermissionManager.mode = plan<br/>（on_mode_change → 写进会话）"]
-    P --> R["① 提醒 provider<br/>完整规则 → 每 5 步精简提醒"]
-    P --> G["② 权限关卡 extra_checks（排在 bypass 之前）<br/>只读放行 · 计划文件可写 · 改状态的命令要问 · 其余编辑拒绝"]
-    P --> S["④ sub agent 一律只读<br/>Explore 探索 · Plan 设计"]
-    R --> M["模型：探索 → 提问 → 写计划文件"]
-    G --> M
-    S --> M
-    M --> X["③ ExitPlanMode：读计划文件 → 审批"]
-    X -->|继续规划 + 反馈| M
-    X -->|批准| E["mode = acceptEdits 或 default<br/>provider 发「已退出 plan」提醒"]
+```d2
+direction: down
+enter: "进入 plan" {
+  a1: "Shift+Tab / /plan /\n--permission-mode plan"
+  a2: "模型调 EnterPlanMode"
+}
+p: "PermissionManager.mode = plan\n（on_mode_change → 写进会话）"
+r: "① 提醒 provider\n完整规则 →\n每 5 步精简提醒"
+g: "② 权限关卡 extra_checks\n（排在 bypass 之前）\n只读放行 · 计划文件可写 ·\n改状态的命令要问 · 其余编辑拒绝"
+s: "④ sub agent 一律只读\nExplore 探索 · Plan 设计"
+m: "模型：探索 → 提问 → 写计划文件"
+x: "③ ExitPlanMode：读计划文件 → 审批"
+e: "mode = acceptEdits 或 default\nprovider 发「已退出 plan」提醒"
+enter -> p
+p -> r
+p -> g
+p -> s
+r -> m
+g -> m
+s -> m
+m -> x
+x -> m: "继续规划 + 反馈"
+x -> e: "批准"
 ```
 
 图注：四个零件挂在三个不同的地方。①在上下文里（模型「知道」规矩），②在执行层（模型「做不到」违规），③是一个工具（模型「交得出」结果），④是工具集的裁剪（子 agent「拿不到」写的能力）。

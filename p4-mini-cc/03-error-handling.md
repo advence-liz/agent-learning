@@ -87,23 +87,34 @@
 
 ## 三层防线
 
-```mermaid
-flowchart TB
-    subgraph L3["第三层：主循环安全网 run_turn"]
-        direction TB
-        subgraph L1["第一层：API 重试 _call_model"]
-            M["client.stream()"] -->|"ModelError retryable"| R["退避 sleep → 重试"]
-            R --> M
-            M -->|"不可重试 / 次数用完"| UP["向上抛"]
-        end
-        subgraph L2["第二层：工具防线 ToolRegistry.execute"]
-            V["① 参数校验"] -->|"不合法"| E1["is_error 结果"]
-            V --> X["② tool.run()"] -->|"异常"| E2["is_error 结果"]
-        end
-        UP --> N["Notice(error) + TurnEnd(error)"]
-        F["finally: repair_history()"]
-    end
-    E1 & E2 --> MODEL["作为 tool_result 交还模型"]
+```d2
+direction: down
+l3: "第三层：主循环安全网 run_turn" {
+  direction: down
+  l1: "第一层：API 重试 _call_model" {
+    m: "client.stream()"
+    r: "退避 sleep → 重试"
+    up: "向上抛"
+    m -> r: "ModelError retryable"
+    r -> m
+    m -> up: "不可重试 / 次数用完"
+  }
+  l2: "第二层：工具防线\nToolRegistry.execute" {
+    v: "① 参数校验"
+    e1: "is_error 结果"
+    x: "② tool.run()"
+    e2: "is_error 结果"
+    v -> e1: "不合法"
+    v -> x
+    x -> e2: "异常"
+  }
+  n: "Notice(error) + TurnEnd(error)"
+  f: "finally: repair_history()"
+  l1.up -> n
+}
+model: "作为 tool_result 交还模型"
+l3.l2.e1 -> model
+l3.l2.e2 -> model
 ```
 
 图注：三层各管一类错误，**谁也不往上漏**。第一层处理「请求没送达」，第二层处理「工具干砸了」，第三层兜住所有意外，并且在 `finally` 里修好历史。

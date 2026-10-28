@@ -59,14 +59,20 @@
 
 ## Agent：给 LLM 套上循环
 
-```mermaid
-flowchart TD
-    A[messages = 用户任务] --> B[调用模型<br/>带 tools 定义]
-    B --> C{返回里有 tool_use?}
-    C -- 没有 --> D[返回文本，结束]
-    C -- 有 --> E[逐个执行工具]
-    E --> F[把所有 tool_result<br/>放进一条 user 消息]
-    F --> B
+```d2
+direction: down
+a: "messages = 用户任务"
+b: "调用模型\n带 tools 定义"
+c: "返回里有 tool_use?" {shape: diamond}
+d: 返回文本，结束
+e: 逐个执行工具
+f: "把所有 tool_result\n放进一条 user 消息"
+a -> b
+b -> c
+c -> d: 没有
+c -> e: 有
+e -> f
+f -> b
 ```
 
 对应的代码几乎一行对一个方框：

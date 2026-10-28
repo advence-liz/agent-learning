@@ -179,21 +179,21 @@ for _ in range(max_new_tokens):
 
 能存的就是 KV cache。Transformer 每一层的注意力，要为每个 token 算出 key 和 value 两个向量；一个 token 的 K、V 只取决于它自己和它前面的 token，**后面来了新 token 也不会变**。所以算过一次就可以存起来，下一步新 token 只需要用自己的 query 去和所有历史的 K、V 做注意力。
 
-```mermaid
-sequenceDiagram
-    participant U as 调用方
-    participant M as 模型（30 层）
-    participant C as KV cache
-    U->>M: prefill：一次喂入 prompt 的 37 个 token
-    M->>C: 写入 37 个位置的 K、V（每层一份）
-    M-->>U: 最后位置的 logits → 采样得 token₁
-    loop decode：每步只喂 1 个 token
-        U->>M: token_t
-        C-->>M: 读出历史 K、V
-        M->>C: 追加 token_t 的 K、V
-        M-->>U: logits → 采样得 token_{t+1}
-    end
-    Note over U,C: 遇到 <|im_end|>（eos）或达到 max_new_tokens 时停止
+```d2
+shape: sequence_diagram
+u: 调用方
+m: 模型（30 层）
+c: KV cache
+u -> m: "prefill：一次喂入 prompt 的 37 个 token"
+m -> c: 写入 37 个位置的 K、V（每层一份）
+m -> u: "最后位置的 logits → 采样得 token₁" {style.stroke-dash: 3}
+"loop：decode：每步只喂 1 个 token": {
+  u -> m: token_t
+  c -> m: 读出历史 K、V {style.stroke-dash: 3}
+  m -> c: 追加 token_t 的 K、V
+  m -> u: "logits → 采样得 token_{t+1}" {style.stroke-dash: 3}
+}
+u."遇到 <|im_end|>（eos）或达到 max_new_tokens 时停止"
 ```
 
 图注：推理分两个阶段。prefill 一次性并行处理整个 prompt，算力密集；decode 每步只处理一个新 token，但要读取全部历史 K、V，访存密集。这也是 API 计费里「输入 token 便宜、输出 token 贵」的直觉来源之一：输出的每个 token 都要单独走一遍 30 层。

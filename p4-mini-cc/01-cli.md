@@ -109,15 +109,22 @@
 
 ## 入口分流：一个 if 决定花不花钱
 
-```mermaid
-flowchart LR
-    IN["用户输入一行"] --> Q{"以 / 开头？"}
-    Q -- 是 --> CR["CommandRegistry.dispatch"]
-    CR --> H["handler(app, arg)<br/>本地读/改 Agent 状态"]
-    H --> UI["UI 输出"]
-    Q -- 否 --> AG["Agent.run(prompt)"]
-    AG --> LOOP["模型 ⇄ 工具 循环"]
-    LOOP --> UI
+```d2
+direction: down
+in: "用户输入一行"
+q: "以 / 开头？" {shape: diamond}
+cr: "CommandRegistry.dispatch"
+h: "handler(app, arg)\n本地读/改 Agent 状态"
+ui: "UI 输出"
+ag: "Agent.run(prompt)"
+lp: "模型 ⇄ 工具 循环"
+in -> q
+q -> cr: 是
+cr -> h
+h -> ui
+q -> ag: 否
+ag -> lp
+lp -> ui
 ```
 
 图注：左边那条路 0 token、0 延迟；右边那条才是 agent 循环。

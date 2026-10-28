@@ -68,16 +68,16 @@
 
 它还能把自己画出来（`app.get_graph().draw_mermaid()` 的真实输出，略去样式行；Node 版是 `(await app.getGraphAsync()).drawMermaid()`，只有边的书写顺序不同）：
 
-```mermaid
-graph TD;
-	__start__([__start__])
-	llm(llm)
-	tools(tools)
-	__end__([__end__])
-	__start__ --> llm;
-	llm -.-> __end__;
-	llm -.-> tools;
-	tools --> llm;
+```d2
+direction: down
+start: __start__ {shape: oval}
+llm: llm
+tools: tools
+end: __end__ {shape: oval}
+start -> llm
+llm -> end {style.stroke-dash: 3}
+llm -> tools {style.stroke-dash: 3}
+tools -> llm
 ```
 
 把这张图和第 2 章的流程图放一起看，你会发现它们**是同一张图**。

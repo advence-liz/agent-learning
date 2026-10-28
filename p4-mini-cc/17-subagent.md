@@ -102,27 +102,28 @@
 
 ## 原理：同一个循环，另一个数组
 
-```mermaid
-sequenceDiagram
-    participant P as 父 Agent（messages A）
-    participant T as AgentTool.run
-    participant C as 子 Agent（messages B，全新）
-    participant J as JobManager
-    P->>T: tool_use Agent(subagent_type, prompt)
-    T->>C: Agent(同一个 client, 工具子集, 自己的 ContextBuilder / ToolContext / PermissionManager)
-    alt 前台
-        T->>C: run_turn(prompt)
-        loop 子循环
-            C->>C: 模型 ⇄ 工具（进度 → UI）
-        end
-        C-->>T: TurnEnd.text（最终结论）
-        T-->>P: tool_result = 结论 + 一行统计
-    else 后台（run_in_background）
-        T->>J: start_thread(work)
-        T-->>P: tool_result = 「Async agent launched…」（立即返回）
-        C-->>J: 结论
-        J->>P: notify(<task-notification> … <result>结论</result>)
-    end
+```d2
+shape: sequence_diagram
+p: "父 Agent（messages A）"
+t: "AgentTool.run"
+c: "子 Agent（messages B，全新）"
+j: "JobManager"
+p -> t: "tool_use Agent(subagent_type, prompt)"
+t -> c: "Agent(同一个 client, 工具子集, 自己的 ContextBuilder / ToolContext / PermissionManager)"
+"alt：前台": {
+  t -> c: "run_turn(prompt)"
+  "loop：子循环": {
+    c -> c: "模型 ⇄ 工具（进度 → UI）"
+  }
+  c -> t: "TurnEnd.text（最终结论）" {style.stroke-dash: 3}
+  t -> p: "tool_result = 结论 + 一行统计" {style.stroke-dash: 3}
+}
+"else：后台（run_in_background）": {
+  t -> j: "start_thread(work)"
+  t -> p: "tool_result = 「Async agent launched…」（立即返回）" {style.stroke-dash: 3}
+  c -> j: "结论" {style.stroke-dash: 3}
+  j -> p: "notify(<task-notification> … <result>结论</result>)"
+}
 ```
 
 图注：子 agent 和父 agent 跑的是**同一份** `Agent.run_turn` 代码，区别只在于构造时传进去的东西。

@@ -15,32 +15,44 @@
 7. **学习顺序：先用工具，再学原理。** 工具用熟了，自然会好奇底层怎么做的，那时再看实现，会发现「竟是这么朴实无华」。
 8. **三大部分里，后两部分互相独立。** 第一部分是概念加工具技巧（必读）；第二部分自己手写一个简化版 Claude Code（偏工程）；第三部分讲训练、微调和数学基础（偏算法）。只关心 Agent 开发就读到第二部分；只关心算法可以跳过第二部分。
 
-```mermaid
-flowchart TB
-    LLM["LLM = 下一个 token 的概率模型<br/>约束:上下文窗口有限"]
-    LLM --> A["省上下文<br/>Skills · Compaction · 渐进式披露 · Sub Agent"]
-    LLM --> B["借外力<br/>Function Calling · MCP · 工具"]
-    LLM --> C["可验证<br/>测试 · 反馈 · 修复 = Harness"]
-    A --> G["目标:在有限上下文里<br/>准确且高效地完成任务"]
-    B --> G
-    C --> G
+```d2
+direction: down
+llm: "LLM = 下一个 token 的概率模型\n约束:上下文窗口有限"
+a: "省上下文\nSkills · Compaction\n渐进式披露 · Sub Agent"
+b: "借外力\nFunction Calling\nMCP · 工具"
+c: "可验证\n测试 · 反馈 · 修复 = Harness"
+g: "目标:在有限上下文里\n准确且高效地完成任务"
+llm -> a
+llm -> b
+llm -> c
+a -> g
+b -> g
+c -> g
 ```
 
 原文的三部分和本知识库目录的对应关系：
 
-```mermaid
-flowchart LR
-    subgraph P1["第一部分:概念 + 工具 + 拆 Agent(必读)"]
-        p0["p0 核心概念串讲"] --> p1["p1 AI 工具使用技巧"] --> p2["p2 Agent 基础"] --> p3["p3 拆解工业级 Agent"]
-    end
-    subgraph P2["第二部分:手写 Claude Code(偏工程)"]
-        p4["p4 实现 Claude Code"]
-    end
-    subgraph P3["第三部分:训练与算法(偏算法)"]
-        p5["p5 ML 基础 + 经典算法"] --> p6["p6 神经网络 + LLM 开发"]
-    end
-    P1 --> P2
-    P1 --> P3
+```d2
+direction: down
+part1: "第一部分:\n概念 + 工具 + 拆 Agent(必读)" {
+  p0: "p0 核心概念串讲"
+  p1: "p1 AI 工具使用技巧"
+  p2: "p2 Agent 基础"
+  p3: "p3 拆解工业级 Agent"
+  p0 -> p1
+  p1 -> p2
+  p2 -> p3
+}
+part2: "第二部分:手写\nClaude Code(偏工程)" {
+  p4: "p4 实现 Claude Code"
+}
+part3: "第三部分:\n训练与算法(偏算法)" {
+  p5: "p5 ML 基础 + 经典算法"
+  p6: "p6 神经网络 + LLM 开发"
+  p5 -> p6
+}
+part1 -> part2
+part1 -> part3
 ```
 
 ### 📝 作者是怎么讲的

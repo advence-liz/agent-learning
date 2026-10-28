@@ -145,24 +145,24 @@
 
 ## 原理：MCP 工具就是一个转发器
 
-```mermaid
-sequenceDiagram
-    participant App as App.start_mcp
-    participant Mgr as McpManager（后台线程 + asyncio 循环）
-    participant S as server 子进程
-    participant A as Agent 循环（同步）
-    App->>App: load_config：~/.mini_cc/mcp.json + 项目 .mcp.json
-    App->>App: 项目级 server 没批准过 → 问用户
-    App->>Mgr: start(configs)（并行，最多等 15s）
-    Mgr->>S: 启动子进程，initialize（拿到 instructions）
-    Mgr->>S: tools/list
-    Mgr-->>App: ServerState(connected, tools)
-    App->>A: tools.register(McpTool…)；system_sections 加 server instructions
-    A->>A: 模型调 mcp__tracker__list_issues
-    A->>Mgr: McpTool.run → run_coroutine_threadsafe(call_tool)
-    Mgr->>S: tools/call
-    S-->>Mgr: CallToolResult
-    Mgr-->>A: ToolResult（content 块）
+```d2
+shape: sequence_diagram
+app: "App.start_mcp"
+mgr: "McpManager（后台线程 + asyncio 循环）"
+s: "server 子进程"
+a: "Agent 循环（同步）"
+app -> app: "load_config：~/.mini_cc/mcp.json + 项目 .mcp.json"
+app -> app: "项目级 server 没批准过 → 问用户"
+app -> mgr: "start(configs)（并行，最多等 15s）"
+mgr -> s: "启动子进程，initialize（拿到 instructions）"
+mgr -> s: "tools/list"
+mgr -> app: "ServerState(connected, tools)" {style.stroke-dash: 3}
+app -> a: "tools.register(McpTool…)；system_sections 加 server instructions"
+a -> a: "模型调 mcp__tracker__list_issues"
+a -> mgr: "McpTool.run → run_coroutine_threadsafe(call_tool)"
+mgr -> s: "tools/call"
+s -> mgr: "CallToolResult" {style.stroke-dash: 3}
+mgr -> a: "ToolResult（content 块）" {style.stroke-dash: 3}
 ```
 
 图注：`McpTool` 对循环来说和 `ReadTool` 一模一样，都是 `name + description + input_schema + run()`。不同的只是 `run()` 里面把调用转发给另一个进程。（图里的「后台线程 + asyncio 循环」是 Python 版的做法；Node 版的 `McpManager` 和 agent 循环在同一个事件循环里，`McpTool.run` 直接 `await`。）

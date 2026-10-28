@@ -115,17 +115,23 @@
 
 ## 三条规矩，各防一种事故
 
-```mermaid
-stateDiagram-v2
-    [*] --> 未读: 文件存在
-    未读 --> 已读: Read（登记 mtime + sha256）
-    未读 --> 拒绝: Edit / Write<br/>「File has not been read yet」
-    已读 --> 已读: Edit / Write 成功<br/>（用新内容重新登记）
-    已读 --> 过期: 外部修改<br/>（你、formatter、另一个进程）
-    过期 --> 拒绝2: Edit / Write<br/>「modified since read」
-    过期 --> 已读: Read
-    拒绝 --> 未读
-    拒绝2 --> 过期
+```d2
+direction: down
+start: "" {shape: circle; width: 16; height: 16; style.fill: "#333"}
+unread: "未读"
+read: "已读" {height: 120}
+rej: "拒绝"
+stale: "过期"
+rej2: "拒绝2"
+start -> unread: "文件存在"
+unread -> read: "Read（登记 mtime + sha256）"
+unread -> rej: "Edit / Write\n「File has not been read yet」"
+read -> read: "Edit / Write 成功\n（用新内容重新登记）"
+read -> stale: "外部修改\n（你、formatter、另一个进程）"
+stale -> rej2: "Edit / Write\n「modified since read」"
+stale -> read: "Read"
+rej -> unread
+rej2 -> stale
 ```
 
 图注：这是 `mini_cc/tools/file_state.py:FileStateCache` 里每个文件的状态机。只有在「已读」状态下才能写；写成功后自己的新内容就是最新状态，可以接着改，不用再读。

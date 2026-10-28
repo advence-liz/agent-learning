@@ -16,34 +16,47 @@
 8. **权限模式决定的是「每一步要不要人确认」**：Shift+Tab 循环切换，plan 模式只读，先出方案再动手。`--dangerously-skip-permissions` 和 `--permission-mode auto` 是两种不同程度的放权。
 9. **几个提效小招**：`@文件` 直接把文件内容塞进上下文，省掉一轮搜索；Ctrl+G 用外部编辑器写长 prompt；/simplify 做改后自审；/insights 生成会话使用报告。
 
-```mermaid
-flowchart LR
-  subgraph 预装["启动时预装（每轮都付费）"]
-    A1["~/.claude/CLAUDE.md"] --> CTX
-    A2["./CLAUDE.md / CLAUDE.local.md"] --> CTX
-    A3["memory/MEMORY.md 索引"] --> CTX
-  end
-  subgraph 按需["按需加载"]
-    B1["子目录 CLAUDE.md"] -.读到该目录时.-> CTX
-    B2["memory/*.md topic"] -.Claude 判断需要时.-> CTX
-    B3["@file"] -.用户显式.-> CTX
-  end
-  CTX(("上下文窗口"))
-  CTX -->|/compact 有损压缩| CTX
-  CTX -->|/clear 清空| E["新会话"]
-  CTX -->|每条 prompt 自动存| CP[("checkpoint<br/>~/.claude/file-history")]
-  CP -->|Esc Esc / rewind| CTX
+```d2
+direction: down
+pre: "启动时预装\n（每轮都付费）" {
+  a1: "~/.claude/\nCLAUDE.md"
+  a2: "./CLAUDE.md /\nCLAUDE.local.md"
+  a3: "memory/MEMORY.md\n索引"
+}
+lazy: 按需加载 {
+  b1: "子目录\nCLAUDE.md"
+  b2: "memory/*.md\ntopic"
+  b3: "@file"
+}
+ctx: 上下文窗口 {shape: circle}
+e: 新会话
+cp: "checkpoint\n~/.claude/file-history" {shape: cylinder}
+pre.a1 -> ctx
+pre.a2 -> ctx
+pre.a3 -> ctx
+lazy.b1 -> ctx: 读到该目录时 {style.stroke-dash: 3}
+lazy.b2 -> ctx: "Claude 判断需要时" {style.stroke-dash: 3}
+lazy.b3 -> ctx: 用户显式 {style.stroke-dash: 3}
+ctx -> ctx: "/compact 有损压缩"
+ctx -> e: "/clear 清空"
+ctx -> cp: "每条 prompt 自动存"
+cp -> ctx: "Esc Esc / rewind"
 ```
 
-```mermaid
-stateDiagram-v2
-  direction LR
-  [*] --> manual: 启动默认
-  manual --> acceptEdits: Shift+Tab
-  acceptEdits --> plan: Shift+Tab
-  plan --> manual: Shift+Tab
-  note right of plan: 只读，先出计划\n确认后才执行
-  note left of manual: 每次写文件或跑命令都问
+```d2
+direction: down
+start: "" {shape: circle; width: 16; height: 16; style.fill: "#333"}
+manual: manual
+acceptEdits: acceptEdits
+plan: plan
+note_plan: "只读，先出计划\n确认后才执行" {shape: page}
+note_manual: 每次写文件或跑命令都问 {shape: page}
+start -> manual: 启动默认
+manual -> acceptEdits: "Shift+Tab"
+acceptEdits -> plan: "Shift+Tab"
+plan -> manual: "Shift+Tab"
+plan -- note_plan {style.stroke-dash: 3}
+note_manual -- manual {style.stroke-dash: 3}
 ```
 
 （这张图只画了原文提到的三种模式。启用了 auto 或 bypassPermissions 之后，Shift+Tab 的循环里也会出现它们，具体顺序以你本机状态栏的显示为准。）

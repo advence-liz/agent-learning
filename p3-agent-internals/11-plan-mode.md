@@ -18,26 +18,26 @@
 
 ## 三种手段
 
-```mermaid
-sequenceDiagram
-    participant U as 你
-    participant H as Harness
-    participant M as 主模型
-    participant S as Explore / Plan 子 agent
-    U->>H: Shift+Tab 切到 plan，或 /plan 前缀
-    H->>M: 手段 1：指令「只调研、写计划，不改源码」
-    M->>S: 派子 agent 去探索
-    Note over S: 手段 3：工具集里根本没有 Edit / Write
-    S-->>M: 调研结论
-    M->>H: Edit(src/Login.tsx)
-    H-->>M: 手段 2：权限层拦截（计划文件除外）
-    M->>H: Write(~/.claude/plans/xxx.md)
-    H-->>M: 放行
-    M->>H: ExitPlanMode(计划)
-    H->>U: 展示计划：用 auto / 手动审批编辑 / 继续规划
-    U->>H: 批准
-    H->>H: 退出 plan，切到你选的权限模式
-    H-->>M: 可以动手了
+```d2
+shape: sequence_diagram
+u: 你
+h: Harness
+m: 主模型
+s: "Explore / Plan 子 agent"
+u -> h: "Shift+Tab 切到 plan，或 /plan 前缀"
+h -> m: "手段 1：指令「只调研、写计划，不改源码」"
+m -> s: "派子 agent 去探索"
+s."手段 3：工具集里根本没有 Edit / Write"
+s -> m: "调研结论" {style.stroke-dash: 3}
+m -> h: "Edit(src/Login.tsx)"
+h -> m: "手段 2：权限层拦截（计划文件除外）" {style.stroke-dash: 3}
+m -> h: "Write(~/.claude/plans/xxx.md)"
+h -> m: "放行" {style.stroke-dash: 3}
+m -> h: "ExitPlanMode(计划)"
+h -> u: "展示计划：用 auto / 手动审批编辑 / 继续规划"
+u -> h: "批准"
+h -> h: "退出 plan，切到你选的权限模式"
+h -> m: "可以动手了" {style.stroke-dash: 3}
 ```
 
 ### 手段 1：指令

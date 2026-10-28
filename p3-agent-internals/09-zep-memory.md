@@ -51,23 +51,36 @@ Graphiti 的图里有三类主要节点（`graphiti_core/nodes.py`）：
 
 ## 写路径：一次 add_episode 发生了什么
 
-```mermaid
-flowchart TB
-    A[add_episode: 一条新消息] --> B[取最近 10 个情节当上下文]
-    B --> C[LLM 抽实体]
-    C --> D{实体去重}
-    D -->|精确名匹配 / MinHash 模糊匹配| E[合并到已有实体]
-    D -->|拿不准| F[LLM 判断是否同一实体]
-    E --> G[LLM 抽关系边 + 时间]
-    F --> G
-    G --> H[混合检索候选：同一对实体的旧边 / 所有相关旧边]
-    H --> I[LLM 判断：重复？矛盾？]
-    I -->|重复| J[复用旧边，episodes 里加上这条情节]
-    I -->|矛盾| K[按时间给旧边或新边打 invalid_at / expired_at]
-    I -->|都不是| L[新增边]
-    J --> M[写入图：节点、边、MENTIONS]
-    K --> M
-    L --> M
+```d2
+direction: down
+a: "add_episode: 一条新消息"
+b: 取最近 10 个情节当上下文
+c: LLM 抽实体
+d: 实体去重 {shape: diamond}
+e: 合并到已有实体
+f: LLM 判断是否同一实体
+g: "LLM 抽关系边 + 时间"
+h: "混合检索候选：\n同一对实体的旧边 / 所有相关旧边"
+i: "LLM 判断：重复？矛盾？"
+j: "复用旧边，\nepisodes 里加上这条情节"
+k: "按时间给旧边或新边打\ninvalid_at / expired_at"
+l: 新增边
+m: "写入图：节点、边、MENTIONS"
+a -> b
+b -> c
+c -> d
+d -> e: "精确名匹配 / MinHash 模糊匹配"
+d -> f: 拿不准
+e -> g
+f -> g
+g -> h
+h -> i
+i -> j: 重复
+i -> k: 矛盾
+i -> l: 都不是
+j -> m
+k -> m
+l -> m
 ```
 
 逐步说（入口是 `graphiti_core/graphiti.py` 的 `Graphiti.add_episode()`）：

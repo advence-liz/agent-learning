@@ -88,16 +88,24 @@ LoRA（Low-Rank Adaptation）的假设是：**学一个新任务需要的权重�
 
 $$y = W x + \frac{\alpha}{r} \cdot B(Ax),\qquad W \in \mathbb{R}^{d_{out}\times d_{in}}\ \text{冻结},\quad A \in \mathbb{R}^{r\times d_{in}},\ B \in \mathbb{R}^{d_{out}\times r}$$
 
-```mermaid
-flowchart LR
-    x["输入 x<br/>(576 维)"] --> W["W（冻结）<br/>576 × 576<br/>331,776 参数"]
-    x --> A["A（训练）<br/>8 × 576"]
-    A --> h["8 维"]
-    h --> B["B（训练）<br/>576 × 8<br/>初始化为 0"]
-    W --> plus(("+"))
-    B --> s["× α/r"]
-    s --> plus
-    plus --> y["输出 y"]
+```d2
+direction: down
+x: "输入 x\n(576 维)"
+w: "W（冻结）\n576 × 576\n331,776 参数"
+a: "A（训练）\n8 × 576"
+h: "8 维"
+b: "B（训练）\n576 × 8\n初始化为 0"
+plus: "+" {shape: circle; style.font-size: 28}
+s: "× α/r"
+y: "输出 y"
+x -> w
+x -> a
+a -> h
+h -> b
+w -> plus
+b -> s
+s -> plus
+plus -> y
 ```
 
 图注：原来的路径原封不动；旁边多了一条「先压到 8 维、再放回 576 维」的小路。两条路的结果相加。一个 `q_proj` 的 LoRA 只有 $8 \times (576+576) = 9216$ 个参数，是原矩阵的 2.8%。

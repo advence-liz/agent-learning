@@ -46,18 +46,29 @@ $$L = \text{relu}(a \cdot b + c)^2,\quad a=2,\ b=-3,\ c=10$$
 
 PyTorch（和我们的引擎）在算 $L$ 的时候，会把它拆成一个个最简单的运算，并且**记下每个中间结果是怎么来的**。这就是计算图（computational graph）：
 
-```mermaid
-flowchart LR
-    a["a = 2<br/>grad = -24"] --> mul(("×"))
-    b["b = -3<br/>grad = 16"] --> mul
-    mul --> d["d = a·b = -6<br/>grad = 8"]
-    d --> add(("+"))
-    c["c = 10<br/>grad = 8"] --> add
-    add --> e["e = d+c = 4<br/>grad = 8"]
-    e --> relu(("relu"))
-    relu --> f["f = 4<br/>grad = 8"]
-    f --> sq(("²"))
-    sq --> L["L = 16<br/>grad = 1"]
+```d2
+direction: down
+a: "a = 2\ngrad = -24"
+mul: "×" {shape: circle; style.font-size: 28}
+b: "b = -3\ngrad = 16"
+d: "d = a·b = -6\ngrad = 8"
+add: "+" {shape: circle; style.font-size: 28}
+c: "c = 10\ngrad = 8"
+e: "e = d+c = 4\ngrad = 8"
+relu: relu {shape: circle}
+f: "f = 4\ngrad = 8"
+sq: "²" {shape: circle}
+l: "L = 16\ngrad = 1"
+a -> mul
+b -> mul
+mul -> d
+d -> add
+c -> add
+add -> e
+e -> relu
+relu -> f
+f -> sq
+sq -> l
 ```
 
 图注：箭头方向是前向计算。每个方框里的 `grad` 是反向传播之后填进去的「L 对它的偏导」，要从右往左读。

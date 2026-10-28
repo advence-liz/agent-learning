@@ -131,21 +131,32 @@
 
 ## 原理：对话是一棵树，文件有一叠备份
 
-```mermaid
-flowchart LR
-    subgraph 会话文件["会话 jsonl（只追加）"]
-        m1["#1 user 提示 1"] --> m6["… #6 assistant"]
-        m6 --> m7["#7 user 提示 2"] --> m12["… #12（废弃分支）"]
-        m6 --> m13["#13 user 新提示"] --> m16["… #16（当前分支）"]
-    end
-    subgraph 文件备份["file-history/<session>/"]
-        b1["config.py@v1<br/>检查点 1 开始前"]
-        b2["config.py@v2<br/>检查点 2 开始前"]
-        n2["utils.py: None<br/>检查点 2 之前不存在"]
-    end
-    m7 -. 检查点 2 .- b2
-    m7 -. 检查点 2 .- n2
-    m1 -. 检查点 1 .- b1
+```d2
+direction: down
+sess: "会话 jsonl（只追加）" {
+  m1: "#1 user 提示 1"
+  m6: "… #6 assistant"
+  m7: "#7 user 提示 2"
+  m12: "… #12（废弃分支）"
+  m13: "#13 user 新提示"
+  m16: "… #16（当前分支）"
+  m1 -> m6
+  m6 -> m7
+  m7 -> m12
+  m6 -> m13
+  m13 -> m16
+}
+bak: "file-history/<session>/" {
+  label.near: bottom-left
+  b1: "config.py@v1\n检查点 1 开始前"
+  b2: "config.py@v2\n检查点 2 开始前"
+  n2: "utils.py: None\n检查点 2 之前不存在"
+  # 不可见连线，只用来固定上下顺序
+  b1 -> b2 -> n2 {style.opacity: 0}
+}
+sess.m7 -- bak.b2: "检查点 2" {style.stroke-dash: 3}
+sess.m7 -- bak.n2: "检查点 2" {style.stroke-dash: 3}
+sess.m1 -- bak.b1: "检查点 1" {style.stroke-dash: 3}
 ```
 
 图注：每条用户亲手发的消息是一个**检查点**。对话回退 = 把「当前叶子」挪回检查点前一条消息；代码回退 = 用那个检查点及之后**第一次**写每个文件之前的备份覆盖回去。

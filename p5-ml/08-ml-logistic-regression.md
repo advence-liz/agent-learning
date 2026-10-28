@@ -35,14 +35,21 @@ sklearn: w=0.2383 b=-18.2734
 
 ## 三步：打分、压缩、判断
 
-```mermaid
-flowchart LR
-  X["温度 t"] --> Z["线性打分<br/>z = w·t + b"]
-  Z --> S["sigmoid<br/>p = 1/(1+e^(−z))"]
-  S --> P["P(故障) ∈ (0,1)"]
-  P --> D{"p ≥ 阈值?"}
-  D -->|是| Y1["预测 1"]
-  D -->|否| Y0["预测 0"]
+```d2
+direction: down
+x: "温度 t"
+z: "线性打分\nz = w·t + b"
+s: "sigmoid\np = 1/(1+e^(−z))"
+p: "P(故障) ∈ (0,1)"
+d: "p ≥ 阈值?" {shape: diamond}
+y1: "预测 1"
+y0: "预测 0"
+x -> z
+z -> s
+s -> p
+p -> d
+d -> y1: 是
+d -> y0: 否
 ```
 
 **第一步和线性回归完全一样**：算一个分数 $z = wx + b$。z 可以是任何实数，叫 logit。

@@ -41,6 +41,15 @@ jobs:
           enable-cache: true
           cache-dependency-glob: .site/uv.lock
 
+      # 正文里的 ```d2 图在构建时由 mkdocs-d2-plugin 调 d2 渲染成 SVG
+      - name: Install d2
+        env:
+          D2_VERSION: v0.9.0
+        run: |
+          curl -fsSL "https://github.com/terrastruct/d2/releases/download/${D2_VERSION}/d2-${D2_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/d2-${D2_VERSION}/bin" >> "$GITHUB_PATH"
+
       - id: pages
         uses: actions/configure-pages@v5
 

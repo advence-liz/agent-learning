@@ -71,11 +71,15 @@ $$R = \frac{TP}{TP + FN}$$
 
 左图：阈值越高，精确率越高、召回率越低。右图把它们画在一起，就是 PR 曲线（Precision-Recall curve）。
 
-```mermaid
-flowchart LR
-  A["模型输出概率 p"] --> B{"p ≥ 阈值?"}
-  B --> C["阈值低<br/>R↑ P↓<br/>宁可错报，不可漏报"]
-  B --> D["阈值高<br/>P↑ R↓<br/>宁可漏报，不要打扰"]
+```d2
+direction: right
+a: "模型输出概率 p"
+b: "p ≥ 阈值?" {shape: diamond}
+c: "阈值低\nR↑ P↓\n宁可错报，不可漏报"
+d: "阈值高\nP↑ R↓\n宁可漏报，不要打扰"
+a -> b
+b -> c
+b -> d
 ```
 
 你可能会问：那最好的阈值是多少？

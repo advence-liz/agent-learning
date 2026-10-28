@@ -128,14 +128,21 @@ class Adam:
 
 说实话，Adam 不是在所有问题上都赢。山谷图里 60 步后 Momentum 的 $f$ 比 Adam 低（0.057 vs 0.172），Rosenbrock 上前 1000 步 Momentum 也领先。Adam 的优势是**省心**：你不用为每个问题精调学习率，换个网络结构它通常也能直接工作。对于要训练几百个不同实验的人来说，这个省心比峰值性能更值钱。
 
-```mermaid
-flowchart TD
-    G["梯度 g"] --> S["SGD<br/>p -= lr·g"]
-    G --> M["Momentum<br/>v = βv + g<br/>p -= lr·v"]
-    G --> A["Adam<br/>m = β₁m + (1-β₁)g<br/>v = β₂v + (1-β₂)g²<br/>p -= lr·m̂/√v̂"]
-    S --> S1["一个全局步长<br/>迁就最陡方向"]
-    M --> M1["加惯性<br/>抵消振荡、累积一致方向"]
-    A --> A1["+ 每参数自适应步长<br/>步长≈lr，与梯度尺度无关"]
+```d2
+direction: down
+g: "梯度 g"
+s: "SGD\np -= lr·g"
+m: "Momentum\nv = βv + g\np -= lr·v"
+a: "Adam\nm = β₁m + (1-β₁)g\nv = β₂v + (1-β₂)g²\np -= lr·m̂/√v̂"
+s1: "一个全局步长\n迁就最陡方向"
+m1: "加惯性\n抵消振荡、累积一致方向"
+a1: "+ 每参数自适应步长\n步长≈lr，与梯度尺度无关"
+g -> s
+g -> m
+g -> a
+s -> s1
+m -> m1
+a -> a1
 ```
 
 图注：三个优化器的输入都是同一个梯度，区别只在「梯度怎么变成位移」。每往下一层，优化器要为每个参数多记一份状态：SGD 零份，Momentum 一份（`v`），Adam 两份（`m` 和 `v`）。

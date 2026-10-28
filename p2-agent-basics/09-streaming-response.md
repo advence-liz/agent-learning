@@ -169,21 +169,27 @@ data: {"type": "ping"}
 
 ## 事件序列：一个状态机
 
-```mermaid
-stateDiagram-v2
-    [*] --> message_start
-    message_start --> content_block_start
-    content_block_start --> content_block_delta
-    content_block_delta --> content_block_delta
-    content_block_delta --> content_block_stop
-    content_block_stop --> content_block_start: 下一个块
-    content_block_stop --> message_delta
-    message_delta --> message_stop
-    message_stop --> [*]
-    note right of content_block_delta
-      text_delta / input_json_delta /
-      thinking_delta / signature_delta
-    end note
+```d2
+direction: down
+start: "" {shape: circle; width: 16; height: 16; style.fill: "#333"}
+end: "" {shape: circle; width: 16; height: 16; style.fill: "#333"; style.double-border: true}
+message_start: message_start
+content_block_start: content_block_start
+content_block_delta: content_block_delta
+content_block_stop: content_block_stop
+message_delta: message_delta
+message_stop: message_stop
+note: "text_delta / input_json_delta /\nthinking_delta / signature_delta" {shape: page}
+start -> message_start
+message_start -> content_block_start
+content_block_start -> content_block_delta
+content_block_delta -> content_block_delta
+content_block_delta -> content_block_stop
+content_block_stop -> content_block_start: 下一个块
+content_block_stop -> message_delta
+message_delta -> message_stop
+message_stop -> end
+content_block_delta -- note {style.stroke-dash: 3}
 ```
 
 把它想成在前端维护一个数组 `content`：

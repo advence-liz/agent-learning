@@ -24,13 +24,19 @@ mem0 要解决的就是这两件事：**把对话提炼成短事实**，以及**
 
 v1 的 `Memory.add()`（`mem0/memory/main.py` 的 `_add_to_vector_store`）是一个很工整的四步流水线：
 
-```mermaid
-flowchart LR
-    A[对话 messages] -->|LLM 调用 1：事实抽取| B["{'facts': ['叫小李', '喜欢用 Vim']}"]
-    B -->|每条事实单独 embed| C[向量库检索：每条事实取 top 5 旧记忆]
-    C --> D[UUID 换成 0,1,2... 临时编号]
-    D -->|LLM 调用 2：对比新旧| E["[{id, text, event: ADD/UPDATE/DELETE/NONE}]"]
-    E --> F[按 event 写向量库 + 写 SQLite history 表]
+```d2
+direction: down
+a: 对话 messages
+b: "{'facts': ['叫小李', '喜欢用 Vim']}"
+c: "向量库检索：每条事实取 top 5 旧记忆"
+d: "UUID 换成 0,1,2... 临时编号"
+e: "[{id, text, event: ADD/UPDATE/DELETE/NONE}]"
+f: "按 event 写向量库 + 写 SQLite history 表"
+a -> b: "LLM 调用 1：事实抽取"
+b -> c: "每条事实单独 embed"
+c -> d
+d -> e: "LLM 调用 2：对比新旧"
+e -> f
 ```
 
 **第一步，抽事实。** 提示词让模型输出 `{"facts": [...]}`，few-shot 例子大概长这样：`{"facts" : ["Name is John", "Is a Software engineer"]}`。用户侧和 Agent 侧各有一套提示词（`USER_MEMORY_EXTRACTION_PROMPT` / `AGENT_MEMORY_EXTRACTION_PROMPT`），在 `mem0/configs/prompts.py`。

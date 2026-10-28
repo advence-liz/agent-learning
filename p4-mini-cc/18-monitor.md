@@ -82,20 +82,30 @@
 
 ## 原理：把一条流切成一个个事件
 
-```mermaid
-flowchart LR
-    P["子进程 stdout<br/>（tail -F | grep）"] -->|逐行| R["读线程<br/>写输出文件 + 放进 pending"]
-    R --> T{"tick 线程<br/>每 50ms 看一眼"}
-    T -->|"第一行已等 ≥ 200ms"| F["flush：合并成一个事件"]
-    F --> L{"60s 内事件 ≥ 30？"}
-    L -->|否| N["notify(Monitor event)"]
-    L -->|是| K["kill：too many events"]
-    T -->|"到期"| X["kill：expired"]
-    P -->|"进程退出"| E["notify(stream ended, exit code)"]
-    N --> Q["agent.notifications"]
-    K --> Q
-    X --> Q
-    E --> Q
+```d2
+direction: down
+p: "子进程 stdout\n（tail -F | grep）"
+r: "读线程\n写输出文件 + 放进 pending"
+t: "tick 线程\n每 50ms 看一眼" {shape: diamond}
+f: "flush：合并成一个事件"
+l: "60s 内事件 ≥ 30？" {shape: diamond}
+n: "notify(Monitor event)"
+k: "kill：too many events"
+x: "kill：expired"
+e: "notify(stream ended, exit code)"
+q: "agent.notifications"
+p -> r: "逐行"
+r -> t
+t -> f: "第一行已等 ≥ 200ms"
+f -> l
+l -> n: 否
+l -> k: 是
+t -> x: "到期"
+p -> e: "进程退出"
+n -> q
+k -> q
+x -> q
+e -> q
 ```
 
 图注：事件进的是第 9 章预留、第 16 章第一次用上的同一个通知队列；空闲时 `App.wake_if_idle()` 照样会唤醒模型。（图里的读线程、tick 线程是 Python 版的做法；Node 版是 `node:readline` 的 `line` 事件加两个定时器：一批的第一行到达时定 200ms 的合并定时器，启动时定一个到期定时器。）

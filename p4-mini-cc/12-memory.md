@@ -138,23 +138,23 @@ commit message 第一行必须以 feat: / fix: / docs: / refactor: / test: 开�
 
 ## 原理：写一次，读很多次
 
-```mermaid
-sequenceDiagram
-    participant U as 你
-    participant M as 模型
-    participant T as Memory 工具
-    participant D as memory/ 目录
-    participant C as ContextBuilder
-    Note over U,D: 会话 A
-    U->>M: 「commit 都要带 feat/fix 前缀」
-    M->>T: Memory(save, type=feedback, name, description, body)
-    T->>D: 写 <slug>.md + 在 MEMORY.md 加/改一行
-    T-->>M: Saved（下个会话生效）
-    Note over U,D: 会话 B（新进程）
-    C->>D: load_index()：前 200 行 / 25KB
-    C->>M: system = 静态提示 + 环境 + # Memory（索引）
-    U->>M: 「写个 commit message」
-    M->>M: 索引里有一行相关 → 需要细节就 Read 主题文件
+```d2
+shape: sequence_diagram
+u: "你"
+m: "模型"
+t: "Memory 工具"
+d: "memory/ 目录"
+c: "ContextBuilder"
+u."会话 A"
+u -> m: "「commit 都要带 feat/fix 前缀」"
+m -> t: "Memory(save, type=feedback, name, description, body)"
+t -> d: "写 <slug>.md + 在 MEMORY.md 加/改一行"
+t -> m: "Saved（下个会话生效）" {style.stroke-dash: 3}
+u."会话 B（新进程）"
+c -> d: "load_index()：前 200 行 / 25KB"
+c -> m: "system = 静态提示 + 环境 + # Memory（索引）"
+u -> m: "「写个 commit message」"
+m -> m: "索引里有一行相关 → 需要细节就 Read 主题文件"
 ```
 
 图注：写路径走工具，读路径走 system。**正文不预加载**，模型看到相关的那一行再自己 Read。

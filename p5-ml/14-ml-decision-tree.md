@@ -63,18 +63,27 @@ $$G_{\text{split}} = \frac{n_L}{n}G_L + \frac{n_R}{n}G_R$$
 
 「问题」的形式是：「特征 j ≤ 阈值 t 吗？」。j 有 d 种选择，t 只需要试相邻两个不同取值的中点（再细也不会改变划分结果）。所以候选问题是有限的，大约 d × n 个。
 
-```mermaid
-flowchart TD
-  A["当前节点的样本"] --> B{"纯了？到最大深度？<br/>样本太少？"}
-  B -->|是| L["变成叶子<br/>记下各类数量"]
-  B -->|否| C["对每个特征 j：<br/>排序，试每个中点 t"]
-  C --> D["选 G_split 最小的 (j, t)"]
-  D --> E{"G_split < G_当前?"}
-  E -->|否| L
-  E -->|是| F["左：x_j ≤ t"]
-  E -->|是| G["右：x_j > t"]
-  F --> A
-  G --> A
+```d2
+direction: down
+a: "当前节点的样本"
+b: "纯了？到最大深度？\n样本太少？" {shape: diamond}
+l: "变成叶子\n记下各类数量"
+c: "对每个特征 j：\n排序，试每个中点 t"
+d: "选 G_split 最小的 (j, t)"
+e: "G_split < G_当前?" {shape: diamond}
+f: "左：x_j ≤ t"
+g: "右：x_j > t"
+a -> b
+b -> l: 是
+b -> c: 否
+c -> d
+d -> e
+e -> l: 否
+e -> f: 是
+e -> g: 是
+# 回边写成 a <- f，让 ELK 把 a 当起点排在最上面
+a <- f
+a <- g
 ```
 
 ![根节点处两个特征所有候选阈值的加权基尼](img/14-split-search.png)

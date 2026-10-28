@@ -87,17 +87,27 @@
 
 ## 原理：两条入口，一道关卡
 
-```mermaid
-flowchart LR
-    A["@shot.png"] --> M["mentions.resolve_mentions"]
-    B["拖进来的路径<br/>/…/Screen\ Shot.png"] --> M
-    C["模型调 Read(ui.png)"] --> R["ReadTool.run"]
-    M --> L["images.load_image<br/>文件头判格式 · 尺寸 ≤ 8000 · base64 ≤ 10MB · 估 token"]
-    R --> L
-    L -->|通过| I["image 块"]
-    L -->|不通过| E["一句原因（给模型看）"]
-    I --> U["user 消息：说明 → 图片 → 原话"]
-    I --> T["tool_result.content = [说明, 图片]"]
+```d2
+direction: down
+a: "@shot.png"
+m: "mentions.resolve_mentions"
+b: "拖进来的路径\n/…/Screen\\ Shot.png"
+c: "模型调 Read(ui.png)"
+r: "ReadTool.run"
+l: "images.load_image\n文件头判格式 · 尺寸 ≤ 8000 · base64 ≤ 10MB · 估 token"
+i: "image 块"
+e: "一句原因（给模型看）"
+u: "user 消息：说明 → 图片 → 原话"
+t: "tool_result.content = [说明, 图片]"
+a -> m
+b -> m
+c -> r
+m -> l
+r -> l
+l -> i: 通过
+l -> e: 不通过
+i -> u
+i -> t
 ```
 
 图注：两条入口共用一道关卡 `load_image`。数字（10MB、8000px、28×28 一个 token、长边 2576）全部来自 Claude 官方 vision 文档。

@@ -16,35 +16,53 @@
 
 先看全貌。五层从上往下是一次请求经过的层次；单独的那一组「治理线」不属于某一层，而是横跨所有层。
 
-```mermaid
-flowchart TB
-  subgraph IO["交互层"]
-    direction LR
-    io1["帧协议与能力协商"] ~~~ io2["流式输出与权威全文"] ~~~ io3["断线续传与多端同步"]
-  end
-  subgraph ORCH["编排层"]
-    direction LR
-    o1["Agent 循环（内核）"] ~~~ o2["多 Agent 编排"] ~~~ o3["执行模型：串行 · 中途输入 · 取消"]
-  end
-  subgraph CTX["上下文层"]
-    direction LR
-    c1["提示词装配与缓存"] ~~~ c2["历史压缩"] ~~~ c3["记忆与检索"]
-  end
-  subgraph CAP["能力层"]
-    direction LR
-    k1["工具与代码闸门"] ~~~ k2["技能打包"] ~~~ k3["沙箱与出网代理"]
-  end
-  subgraph ST["状态层"]
-    direction LR
-    s1["会话与对话记录"] ~~~ s2["任务实体与事件流"] ~~~ s3["冷热分层与单写者"]
-  end
-  subgraph GOV["治理线（横跨各层）"]
-    direction LR
-    g1["安全与权限"] ~~~ g2["人工确认"] ~~~ g3["可观测与 trace"] ~~~ g4["评测与回放"] ~~~ g5["配置与灰度发布"]
-  end
-  IO --> ORCH --> CTX --> CAP --> ST
-  classDef core stroke-width:3px
-  class o1 core
+```d2
+direction: down
+io: 交互层 {
+  grid-rows: 1
+  io1: 帧协议与能力协商
+  io2: 流式输出与权威全文
+  io3: 断线续传与多端同步
+}
+orch: 编排层 {
+  grid-rows: 1
+  o1: "Agent 循环（内核）" {style.stroke-width: 3}
+  o2: "多 Agent 编排"
+  o3: "执行模型：\n串行 · 中途输入 · 取消"
+}
+ctx: 上下文层 {
+  grid-rows: 1
+  c1: 提示词装配与缓存
+  c2: 历史压缩
+  c3: 记忆与检索
+}
+cap: 能力层 {
+  grid-rows: 1
+  k1: 工具与代码闸门
+  k2: 技能打包
+  k3: 沙箱与出网代理
+}
+st: 状态层 {
+  grid-rows: 1
+  s1: 会话与对话记录
+  s2: 任务实体与事件流
+  s3: 冷热分层与单写者
+}
+gov: 治理线（横跨各层） {
+  grid-rows: 2
+  grid-columns: 3
+  g1: 安全与权限
+  g2: 人工确认
+  g3: "可观测与 trace"
+  g4: 评测与回放
+  g5: 配置与灰度发布
+}
+io -> orch
+orch -> ctx
+ctx -> cap
+cap -> st
+# 不可见连线：只为把治理线排在各层下方
+st -> gov {style.opacity: 0}
 ```
 
 加粗的「Agent 循环」是唯一一个所有 Agent 都必须有的模块，其余模块按风险逐步补。哪些现在就要、哪些可以晚做：
@@ -70,13 +88,24 @@ flowchart TB
 
 [第 3 部分的 Coding Agent](../p2-agent-basics/02-coding-agent.md) 已经写过循环本身，十几行代码。生产问题几乎都出在**终止和中断**上。
 
-```mermaid
-flowchart LR
-  IN["输入"] --> CX["组装上下文"] --> LLM["流式调用模型"] --> Q{"有工具请求？"}
-  Q -- 否 --> DONE["完成：先落盘，再发最终全文"]
-  Q -- 是 --> TOOL["执行工具（可并行，失败也回结果）"] --> BACK["结果回填历史"]
-  BACK -- 下一圈 --> LLM
-  G["护栏：迭代上限 → 收口总结<br/>软预算 → 不再开新一圈<br/>硬超时 / 用户打断 → 取消并补齐半截工具调用"] -. 每圈检查 .-> LLM
+```d2
+direction: down
+in: 输入
+cx: 组装上下文
+llm: 流式调用模型
+q: 有工具请求？ {shape: diamond}
+done: "完成：\n先落盘，再发最终全文"
+tool: "执行工具\n（可并行，失败也回结果）"
+back: 结果回填历史
+g: "护栏：迭代上限 → 收口总结\n软预算 → 不再开新一圈\n硬超时 / 用户打断 → 取消并补齐半截工具调用"
+in -> cx
+cx -> llm
+llm -> q
+q -> done: 否
+q -> tool: 是
+tool -> back
+back -> llm: 下一圈
+g -> llm: 每圈检查 {style.stroke-dash: 3}
 ```
 
 几条做法：
@@ -108,12 +137,21 @@ flowchart LR
 
 进程会重启，请求会落到别的实例上。能跨轮延续的只有持久化的记录。所以每一轮都要重新拼一次上下文，顺序按「越稳定越靠前」：
 
-```mermaid
-flowchart TB
-  A["系统提示词（分槽：身份 · 规则 · 输出格式 · 安全）"] --> B["工具定义（每轮不变）"]
-  B --> C["历史：压缩摘要（偶尔重写）"] --> D["历史：近期原文（工具调用对完整，派发记录成对保留）"]
-  D --> X{{"缓存边界：之后的内容每轮都变"}}
-  X --> E["本轮用户消息"] --> F["运行时注入：当前任务名单、提醒（每轮现取，不写回历史）"]
+```d2
+direction: down
+a: "系统提示词（分槽：身份 · 规则 · 输出格式 · 安全）"
+b: "工具定义（每轮不变）"
+c: "历史：压缩摘要（偶尔重写）"
+d: "历史：近期原文（工具调用对完整，派发记录成对保留）"
+x: "缓存边界：之后的内容每轮都变" {shape: hexagon}
+e: 本轮用户消息
+f: "运行时注入：当前任务名单、提醒（每轮现取，不写回历史）"
+a -> b
+b -> c
+c -> d
+d -> x
+x -> e
+e -> f
 ```
 
 运行时注入放在本轮用户消息**之后**、不写进历史：跨轮的公共前缀不受它影响，同一轮后续几圈还能缓存到它后面。这和 [System Prompt 那一章](03-system-prompt.md)里「稳定段在前」是同一个道理。
@@ -145,21 +183,21 @@ flowchart TB
 
 拆了之后，派发和结果回流通常是异步的：
 
-```mermaid
-sequenceDiagram
-  participant U as 客户端
-  participant A as 编排者 Agent
-  participant W as 执行者（沙箱内）
-  U->>A: 「把三份材料整理成报告」
-  A-->>U: 一句交代（和派发同一条消息）
-  A->>W: 创建子任务：结构化指令，受理即返回
-  A-->>U: 任务卡 + 本轮结束
-  W-->>A: 进度与结果事件（异步回流）
-  A-->>U: 任务卡更新 / 产物
-  A-->>U: 另开一轮：用自己的话汇报
-  U->>A: 「只要第二份就行」
-  A->>W: 追加指令：按 ID 发给同一个执行者
-  Note over W: 补充排队，或在步边界注入
+```d2
+shape: sequence_diagram
+u: 客户端
+a: "编排者 Agent"
+w: 执行者（沙箱内）
+u -> a: "「把三份材料整理成报告」"
+a -> u: "一句交代（和派发同一条消息）" {style.stroke-dash: 3}
+a -> w: "创建子任务：结构化指令，受理即返回"
+a -> u: "任务卡 + 本轮结束" {style.stroke-dash: 3}
+w -> a: "进度与结果事件（异步回流）" {style.stroke-dash: 3}
+a -> u: "任务卡更新 / 产物" {style.stroke-dash: 3}
+a -> u: "另开一轮：用自己的话汇报" {style.stroke-dash: 3}
+u -> a: "「只要第二份就行」"
+a -> w: "追加指令：按 ID 发给同一个执行者"
+w."补充排队，或在步边界注入"
 ```
 
 几条做法：
@@ -207,16 +245,21 @@ sequenceDiagram
 
 提示词注入无法根除，能限制的是 Agent 被骗之后能做到什么。[权限检查](10-permission-check.md)管的是「这个动作要不要放行」，沙箱管的是「就算放行了，最坏能坏到哪」。
 
-```mermaid
-flowchart LR
-  subgraph SB["沙箱"]
-    CODE["执行者代码<br/>环境变量里只有占位值 / 短期令牌"]
-  end
-  CODE -- 所有出站请求 --> P["出网代理<br/>① 校验令牌 ② 白名单，默认拒绝<br/>③ 按目的地注入真凭据 ④ 限流与审计"]
-  V[("凭据库")] -. 取真凭据 .-> P
-  P --> M["模型服务"]
-  P --> API["白名单内的第三方接口"]
-  P -- 拒绝 --x X["其他目的地"]
+```d2
+direction: down
+sb: 沙箱 {
+  code: "执行者代码\n环境变量里只有占位值 / 短期令牌"
+}
+p: "出网代理\n① 校验令牌 ② 白名单，默认拒绝\n③ 按目的地注入真凭据 ④ 限流与审计"
+v: 凭据库 {shape: cylinder}
+m: 模型服务
+api: 白名单内的第三方接口
+x: 其他目的地
+sb.code -> p: 所有出站请求
+v -> p: 取真凭据 {style.stroke-dash: 3}
+p -> m
+p -> api
+p -> x: 拒绝 {target-arrowhead.shape: cross}
 ```
 
 沙箱里的代码即使被注入攻击完全控制，也拿不到真凭据、发不到白名单以外的地方。两种主流做法：

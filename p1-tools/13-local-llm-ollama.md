@@ -14,25 +14,30 @@
 6. **磁盘上的 522MB 运行起来会占 4.4GB**。多出来的主要是 KV cache，32K 上下文约占 3.7GB，再加上权重和临时张量。`ollama show` 显示的 context length 是模型支持的上限，`ollama ps` 显示的 CONTEXT 是这次运行实际分配的长度。
 7. **接入 Coding Agent 只需要协议兼容**：Ollama 实现了 Anthropic Messages 接口，把 Claude Code 的请求地址指过去就能用（App 里有 `ollama launch` 一键生成命令）。但这只是换了「大脑」，Claude 模型并没有被下载到本地。Ollama 文档建议上下文至少 64K，0.6B 这种小模型连门槛都达不到。
 
-```mermaid
-flowchart LR
-  subgraph 客户端
-    CLI["ollama run（TUI）"]
-    APP["桌面 App"]
-    CURL["curl / OpenAI SDK"]
-    CC["Claude Code<br/>（Anthropic Messages 格式）"]
-  end
-  subgraph Ollama["ollama serve :11434"]
-    API1["/v1/chat/completions<br/>OpenAI 兼容"]
-    API2["Anthropic 兼容端点"]
-    ENG["llama.cpp 推理<br/>tokenize → 前向 → 采样 → KV cache"]
-    API1 --> ENG
-    API2 --> ENG
-  end
-  CLI & APP & CURL --> API1
-  CC -->|ANTHROPIC_BASE_URL 指向本机| API2
-  ENG --> W[("~/.ollama/models<br/>manifest + blobs (GGUF)")]
-  REG["ollama.com 模型库 / hf.co/..."] -->|ollama pull| W
+```d2
+direction: down
+client: 客户端 {
+  cli: "ollama run\n（TUI）"
+  app: 桌面 App
+  curl: "curl /\nOpenAI SDK"
+  cc: "Claude Code\n（Anthropic\nMessages 格式）"
+}
+ollama: "ollama serve :11434" {
+  label.near: bottom-left
+  api1: "/v1/chat/completions\nOpenAI 兼容"
+  api2: Anthropic 兼容端点
+  eng: "llama.cpp 推理\ntokenize → 前向 → 采样 → KV cache"
+  api1 -> eng
+  api2 -> eng
+}
+w: "~/.ollama/models\nmanifest + blobs (GGUF)" {shape: cylinder}
+reg: "ollama.com 模型库\n/ hf.co/..."
+client.cli -> ollama.api1
+client.app -> ollama.api1
+client.curl -> ollama.api1
+client.cc -> ollama.api2: "ANTHROPIC_BASE_URL\n指向本机"
+ollama.eng -> w
+reg -> w: ollama pull
 ```
 
 **运行内存怎么估算**。以 qwen3-0.6B 为例，它有 28 层、8 个 KV 头、head_dim 128，按 fp16 存储：

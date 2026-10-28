@@ -88,27 +88,28 @@ mini-cc 的 `Bash` 从第 1 章起就是 `subprocess.run(..., timeout=30)`（Nod
 
 ## 原理：一个队列，两种送达时机
 
-```mermaid
-sequenceDiagram
-    participant M as 模型
-    participant B as Bash 工具
-    participant J as JobManager
-    participant P as 子进程
-    participant Q as agent.notifications（队列）
-    participant App as App / REPL
-    M->>B: Bash(run_in_background=true)
-    B->>J: start_bash → Popen（输出写文件）
-    J-->>B: Job b1
-    B-->>M: 「running in background with ID: b1 …」（立即返回）
-    M->>M: 接着干别的（Read README…）
-    P-->>J: 进程退出（等待线程）
-    J->>Q: notify(<task-notification>)
-    alt agent 正在跑（有下一条 tool_result）
-        Q-->>M: 并进下一条 tool_result 消息
-    else agent 空闲（在等你输入）
-        App->>App: wake_if_idle()：开一轮，内容只有这条通知
-        Q-->>M: 作为一条只含 <system-reminder> 的 user 消息
-    end
+```d2
+shape: sequence_diagram
+m: "模型"
+b: "Bash 工具"
+j: "JobManager"
+p: "子进程"
+q: "agent.notifications（队列）"
+app: "App / REPL"
+m -> b: "Bash(run_in_background=true)"
+b -> j: "start_bash → Popen（输出写文件）"
+j -> b: "Job b1" {style.stroke-dash: 3}
+b -> m: "「running in background with ID: b1 …」（立即返回）" {style.stroke-dash: 3}
+m -> m: "接着干别的（Read README…）"
+p -> j: "进程退出（等待线程）" {style.stroke-dash: 3}
+j -> q: "notify(<task-notification>)"
+"alt：agent 正在跑（有下一条 tool_result）": {
+  q -> m: "并进下一条 tool_result 消息" {style.stroke-dash: 3}
+}
+"else：agent 空闲（在等你输入）": {
+  app -> app: "wake_if_idle()：开一轮，内容只有这条通知"
+  q -> m: "作为一条只含 <system-reminder> 的 user 消息" {style.stroke-dash: 3}
+}
 ```
 
 图注：通知是第 9 章就预留好的通道，`Agent.notify()` 线程安全（Node 版是单线程事件循环，子进程的 `close` 事件和 agent 循环交替执行，一个数组就够；图里的「等待线程」对应 `close` 回调），`notifications_provider` 在下一次追加 user 消息时把队列清空送进去。本章只是第一次往里放东西。

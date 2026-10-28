@@ -19,26 +19,41 @@
 
 ## 三道关
 
-```mermaid
-flowchart TB
-    A[模型发出 tool_use] --> B[PreToolUse hooks]
-    B -->|退出码 2| X1[拒绝：stderr 回灌给模型]
-    B -->|返回 allow / ask / deny 或无输出| C{deny 规则命中？}
-    C -->|是| X2[拒绝]
-    C -->|否| D{ask 规则命中？}
-    D -->|是| P[弹窗问你<br/>PermissionRequest hook 可代答]
-    D -->|否| E{hook 说 deny？}
-    E -->|是| X3[拒绝]
-    E -->|否| F{allow 规则命中<br/>或 hook 说 allow？}
-    F -->|是| OK[执行]
-    F -->|否| G{权限模式兜底}
-    G -->|bypassPermissions| OK
-    G -->|acceptEdits 且是工作区内的文件编辑| OK
-    G -->|plan 且不是只读操作| X4[拒绝 / 询问]
-    G -->|dontAsk| X5[拒绝]
-    G -->|default| P
-    P -->|同意| OK
-    P -->|拒绝| X6[拒绝 + 你的反馈]
+```d2
+direction: down
+a: 模型发出 tool_use
+b: PreToolUse hooks
+x1: "拒绝：\nstderr 回灌给模型"
+c: deny 规则命中？ {shape: diamond}
+x2: 拒绝
+d: ask 规则命中？ {shape: diamond}
+p: "弹窗问你\nPermissionRequest\nhook 可代答"
+e: hook 说 deny？ {shape: diamond}
+x3: 拒绝
+f: "allow 规则命中\n或 hook 说 allow？" {shape: diamond}
+ok: 执行
+g: 权限模式兜底 {shape: diamond}
+x4: "拒绝 / 询问"
+x5: 拒绝
+x6: "拒绝 + 你的反馈"
+a -> b
+b -> x1: 退出码 2
+b -> c: "返回 allow / ask / deny\n或无输出"
+c -> x2: 是
+c -> d: 否
+d -> p: 是
+d -> e: 否
+e -> x3: 是
+e -> f: 否
+f -> ok: 是
+f -> g: 否
+g -> ok: bypassPermissions
+g -> ok: "acceptEdits 且是\n工作区内的文件编辑"
+g -> x4: "plan 且不是\n只读操作"
+g -> x5: dontAsk
+g -> p: default
+p -> ok: 同意
+p -> x6: 拒绝
 ```
 
 这张图是我按官方 permissions 和 hooks 文档的描述画的，几条关键规则都有原文依据：

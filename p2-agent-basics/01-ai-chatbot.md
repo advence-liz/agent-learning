@@ -105,19 +105,19 @@
 
 这个类比不成立的地方在于：真人读长记录会累，模型读长记录是**按 token 收钱**的。每轮都重发全部历史，意味着第 N 轮的输入成本大致和 N 成正比，整段对话的总成本接近 N²。这就是为什么长会话需要压缩（compaction），见 [如何实现上下文压缩](../p3-agent-internals/05-context-compaction.md)。
 
-```mermaid
-sequenceDiagram
-    participant U as 你
-    participant B as Chatbot（持有 messages）
-    participant M as 模型 API（无状态）
-    U->>B: 我叫小林
-    B->>M: system + [user]
-    M-->>B: 你好小林
-    Note over B: messages = [user, assistant]
-    U->>B: 我叫什么？
-    B->>M: system + [user, assistant, user]
-    M-->>B: 你叫小林
-    Note over B: messages = [user, assistant, user, assistant]
+```d2
+shape: sequence_diagram
+u: 你
+b: Chatbot（持有 messages）
+m: 模型 API（无状态）
+u -> b: 我叫小林
+b -> m: "system + [user]"
+m -> b: 你好小林 {style.stroke-dash: 3}
+b."messages = [user, assistant]"
+u -> b: 我叫什么？
+b -> m: "system + [user, assistant, user]"
+m -> b: 你叫小林 {style.stroke-dash: 3}
+b."messages = [user, assistant, user, assistant]"
 ```
 
 图里有一件事值得盯着看：模型那一列从头到尾没有任何状态。所有箭头上的数据都是 `Chatbot` 这一侧现拼的。

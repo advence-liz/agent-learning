@@ -127,21 +127,21 @@
 
 ## 原理：一次额外请求，换一个新起点
 
-```mermaid
-sequenceDiagram
-    participant L as Agent 循环
-    participant H as before_request 钩子
-    participant M as 模型
-    participant C as ContextBuilder
-    L->>H: 每次请求前
-    H->>H: last_input ≥ 窗口 - buffer？
-    H->>M: 同一 system + 同一 tools + 全部历史 + 「请写摘要，别调工具」
-    M-->>H: <summary>…</summary>
-    H->>L: load_history([])
-    H->>C: inject([摘要, 最近读过的文件], "user")
-    C-->>H: + 项目说明 + 日期 + 任务清单（历史里看不见了，自动重新注入）
-    H->>L: _append(一条 user 消息, compact=…) → 会话文件写 compact_boundary
-    L->>M: 正常请求（只带这一条消息）
+```d2
+shape: sequence_diagram
+l: "Agent 循环"
+h: "before_request 钩子"
+m: "模型"
+c: "ContextBuilder"
+l -> h: "每次请求前"
+h -> h: "last_input ≥ 窗口 - buffer？"
+h -> m: "同一 system + 同一 tools + 全部历史 + 「请写摘要，别调工具」"
+m -> h: "<summary>…</summary>" {style.stroke-dash: 3}
+h -> l: "load_history([])"
+h -> c: "inject([摘要, 最近读过的文件], \"user\")"
+c -> h: "+ 项目说明 + 日期 + 任务清单（历史里看不见了，自动重新注入）" {style.stroke-dash: 3}
+h -> l: "_append(一条 user 消息, compact=…) → 会话文件写 compact_boundary"
+l -> m: "正常请求（只带这一条消息）"
 ```
 
 图注：压缩用的是第 11 章末尾预留的 `Agent.before_request` 钩子；新起点的组装复用了第 9 章的 providers。

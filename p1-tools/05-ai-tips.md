@@ -16,31 +16,45 @@
 6. **首条消息贵，后面便宜**：Coding Agent 的 system prompt + 工具定义可能上万 token。第一次请求这段前缀没有缓存，全价计费；之后命中前缀缓存，只有新增部分按原价算。缓存有时效，原文以 Anthropic 默认的 5 分钟为例。
 7. **断网 / 打断 / 换模型都不会失忆**：数组保存在客户端（Codex、Claude Code 存在本机），每次请求都完整重发。唯一的代价是换模型或隔久了再回来，缓存失效，首条请求贵一些。
 
-```mermaid
-flowchart LR
-  subgraph Client["客户端（Claude Code / Codex）"]
-    MEM[(用户记忆 / CLAUDE.md)] --> ARR
-    SP[System prompt + 工具定义<br/>上万 token，稳定前缀] --> ARR[messages 数组]
-    HIST[(本地会话文件 .jsonl)] <--> ARR
-  end
-  ARR -->|每轮完整发送| API[模型 API<br/>无状态]
-  API -->|前缀命中缓存？| C{缓存}
-  C -->|命中：便宜| R[响应追加回数组]
-  C -->|未命中：首条/超时/换模型| R
-  ARR -->|接近上限| CMP[/compact 摘要<br/>早期细节丢失/]
-  CMP --> ARR
+```d2
+direction: down
+client: "客户端\n（Claude Code / Codex）" {
+  mem: "用户记忆\n/ CLAUDE.md" {shape: cylinder}
+  sp: "System prompt\n+ 工具定义\n上万 token，稳定前缀"
+  arr: messages 数组
+  hist: "本地会话文件 .jsonl" {shape: cylinder}
+  mem -> arr
+  sp -> arr
+  hist <-> arr
+}
+api: "模型 API\n无状态"
+c: 缓存 {shape: diamond}
+r: 响应追加回数组
+cmp: "/compact 摘要\n早期细节丢失" {shape: parallelogram}
+client.arr -> api: 每轮完整发送
+api -> c: 前缀命中缓存？
+c -> r: "命中：便宜"
+c -> r: "未命中：首条/超时/换模型"
+client.arr -> cmp: 接近上限
+cmp -> client.arr
 ```
 
-```mermaid
-stateDiagram-v2
-  [*] --> 新会话: 空数组 + 注入记忆
-  新会话 --> 聚焦对话: 单一主题
-  聚焦对话 --> 上下文膨胀: 跑题 / 冗长试错
-  上下文膨胀 --> 主动压缩: /compact（推荐，趁早）
-  上下文膨胀 --> 自动压缩: 撑到上限（细节损失更大）
-  主动压缩 --> 聚焦对话
-  自动压缩 --> 聚焦对话
-  聚焦对话 --> 新会话: 换主题就开新会话
+```d2
+direction: down
+start: "" {shape: circle; width: 16; height: 16; style.fill: "#333"}
+s1: 新会话
+s2: 聚焦对话
+s3: 上下文膨胀
+s4: 主动压缩
+s5: 自动压缩
+start -> s1: "空数组 +\n注入记忆"
+s1 -> s2: 单一主题
+s2 -> s3: "跑题 /\n冗长试错"
+s3 -> s4: "/compact\n（推荐，趁早）"
+s3 -> s5: "撑到上限\n（细节损失更大）"
+s4 -> s2
+s5 -> s2
+s2 -> s1: "换主题就\n开新会话"
 ```
 
 > ⚠️ 勘误/补充

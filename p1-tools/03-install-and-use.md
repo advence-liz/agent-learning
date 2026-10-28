@@ -14,18 +14,25 @@
 4. **验证闭环**：发一句 Hello 看能否回复，再去中转站用量页确认有请求记录；没记录说明 `config.toml` 没生效。
 5. **常用斜杠命令**：`/compact` 手动压缩上下文；`/plan` 进入规划模式（不写文件，先探索、出计划、问澄清问题）；`/model` 切模型并调推理强度；`@` 引用文件。
 
-```mermaid
-flowchart TB
-  subgraph Entrances["三个入口"]
-    D[Codex Desktop]
-    C[Codex CLI]
-    V[VS Code 插件 openai.chatgpt]
-  end
-  D & C & V --> H[(~/.codex/)]
-  H --> T[config.toml<br/>model_provider → model_providers.X<br/>base_url / wire_api / 凭证方式]
-  H --> J[auth.json<br/>登录态或 API key]
-  H --> SS[sessions/YYYY/MM/DD/rollout-*.jsonl<br/>会话记录]
-  T --> API[Responses 接口<br/>官方或中转站]
+```d2
+direction: down
+ent: 三个入口 {
+  d: Codex Desktop
+  c: Codex CLI
+  v: "VS Code 插件 openai.chatgpt"
+}
+h: "~/.codex/" {shape: cylinder}
+t: "config.toml\nmodel_provider → model_providers.X\nbase_url / wire_api / 凭证方式"
+j: "auth.json\n登录态或 API key"
+ss: "sessions/YYYY/MM/DD/rollout-*.jsonl\n会话记录"
+api: "Responses 接口\n官方或中转站"
+ent.d -> h
+ent.c -> h
+ent.v -> h
+h -> t
+h -> j
+h -> ss
+t -> api
 ```
 
 ### 📝 作者是怎么讲的

@@ -60,24 +60,24 @@
 
 这里其实有两层「流」，别混在一起：
 
-```mermaid
-sequenceDiagram
-    participant UI as ConsoleUI
-    participant L as Agent.run_turn（生成器）
-    participant M as ModelClient.stream
-    participant T as Tool.run
-    UI->>L: for ev in run_turn(prompt)
-    L->>M: stream(request)
-    M-->>L: ThinkingDelta / TextDelta …（token 级）
-    L-->>UI: 原样 yield，UI 立刻打印
-    M-->>L: MessageDone(content, stop_reason)
-    L-->>UI: ToolStart
-    L->>T: run(args)
-    T-->>L: ToolResult
-    L-->>UI: ToolEnd
-    L->>M: 下一次 stream(...)
-    M-->>L: … MessageDone(end_turn)
-    L-->>UI: TurnEnd
+```d2
+shape: sequence_diagram
+ui: "ConsoleUI"
+l: "Agent.run_turn（生成器）"
+m: "ModelClient.stream"
+t: "Tool.run"
+ui -> l: "for ev in run_turn(prompt)"
+l -> m: "stream(request)"
+m -> l: "ThinkingDelta / TextDelta …（token 级）" {style.stroke-dash: 3}
+l -> ui: "原样 yield，UI 立刻打印" {style.stroke-dash: 3}
+m -> l: "MessageDone(content, stop_reason)" {style.stroke-dash: 3}
+l -> ui: "ToolStart" {style.stroke-dash: 3}
+l -> t: "run(args)"
+t -> l: "ToolResult" {style.stroke-dash: 3}
+l -> ui: "ToolEnd" {style.stroke-dash: 3}
+l -> m: "下一次 stream(...)"
+m -> l: "… MessageDone(end_turn)" {style.stroke-dash: 3}
+l -> ui: "TurnEnd" {style.stroke-dash: 3}
 ```
 
 图注：内层是**模型的 token 流**（SSE 事件 → `TextDelta`），外层是**循环的步骤流**（工具开始/结束、一轮结束）。`run_turn` 把两层合并成一条事件序列交给 UI。

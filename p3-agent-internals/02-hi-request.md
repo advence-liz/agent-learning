@@ -28,22 +28,26 @@ Claude Code 所有的「聪明」，都得塞进这三个字段里。说白了�
 
 我用上一章的 `session_stats.py` 读了本机 Claude Code 2.1.306 记录下来的请求骨架（只看长度，不看正文），一次主线程请求大致长这样：
 
-```mermaid
-flowchart TB
-    subgraph T["tools（约 20 个）"]
-        T1["内置：Bash / Read / Edit / Write / Agent / Skill / ToolSearch ..."]
-        T2["MCP：mcp__*（大部分 defer_loading，只占个名字）"]
-    end
-    subgraph S["system（3 块）"]
-        S0["[0] 57 字符：身份声明"]
-        S1["[1] 约 2.7K 字符：行为总纲 ⟵ cache 断点 1h, scope=global"]
-        S2["[2] 约 5.3K 字符：写代码的规范 ⟵ cache 断点 1h"]
-    end
-    subgraph M["messages"]
-        M0["[0] user：<br/>① system-reminder 包着的 CLAUDE.md<br/>② 账号上下文（如 userEmail）<br/>③ 提交署名提醒<br/>④ 你真正敲的 hi"]
-        M1["[1] 环境块：cwd / git / 平台、MCP server instructions、skill 列表... ⟵ cache 断点"]
-    end
-    T --> S --> M
+```d2
+direction: down
+t: "tools（约 20 个）" {
+  grid-columns: 1
+  t1: "内置：Bash / Read / Edit / Write /\nAgent / Skill / ToolSearch ..."
+  t2: "MCP：mcp__*\n（大部分 defer_loading，只占个名字）"
+}
+s: "system（3 块）" {
+  grid-columns: 1
+  s0: "[0] 57 字符：身份声明"
+  s1: "[1] 约 2.7K 字符：行为总纲\n⟵ cache 断点 1h, scope=global"
+  s2: "[2] 约 5.3K 字符：写代码的规范\n⟵ cache 断点 1h"
+}
+m: messages {
+  grid-columns: 1
+  m0: "[0] user：\n① system-reminder 包着的 CLAUDE.md\n② 账号上下文（如 userEmail）\n③ 提交署名提醒\n④ 你真正敲的 hi"
+  m1: "[1] 环境块：cwd / git / 平台、\nMCP server instructions、skill 列表...\n⟵ cache 断点"
+}
+t -> s
+s -> m
 ```
 
 上面每一块的位置和长度，都是本机记录里能直接数出来的。下面挨个说。

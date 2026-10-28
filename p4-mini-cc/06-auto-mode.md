@@ -79,30 +79,33 @@
 
 ## 审查员插在哪
 
-```mermaid
-sequenceDiagram
-    participant L as Agent._authorize
-    participant P as PermissionManager.decide
-    participant R as AutoReviewer
-    participant M2 as 审查员 LLM（独立请求）
-    participant U as 用户
-    L->>P: decide(tool, args)
-    P->>P: deny 规则 / 高危 / 只读 / 会话规则 / 项目内编辑
-    alt 快速通道命中
-        P-->>L: allow（不调审查员）
-    else mode == auto
-        P->>R: classifier(tool, args)
-        R->>M2: system=审查规则<br/>user=用户原话 + 待执行动作<br/>output_config.format=json_schema
-        M2-->>R: {"decision":"block","reason":"…"}
-        alt allow
-            R-->>L: allow
-        else block（连续 < 3 次）
-            R-->>L: deny（理由回填给主模型）
-        else 出错 / 连续 block ≥ 3
-            R-->>L: ask
-            L->>U: 弹窗
-        end
-    end
+```d2
+shape: sequence_diagram
+l: "Agent._authorize"
+p: "PermissionManager.decide"
+r: "AutoReviewer"
+m2: "审查员 LLM（独立请求）"
+u: "用户"
+l -> p: "decide(tool, args)"
+p -> p: "deny 规则 / 高危 / 只读 / 会话规则 / 项目内编辑"
+"alt：快速通道命中": {
+  p -> l: "allow（不调审查员）" {style.stroke-dash: 3}
+}
+"else：mode == auto": {
+  p -> r: "classifier(tool, args)"
+  r -> m2: "system=审查规则\nuser=用户原话 + 待执行动作\noutput_config.format=json_schema"
+  m2 -> r: "{\"decision\":\"block\",\"reason\":\"…\"}" {style.stroke-dash: 3}
+  "alt：allow": {
+    r -> l: "allow" {style.stroke-dash: 3}
+  }
+  "else：block（连续 < 3 次）": {
+    r -> l: "deny（理由回填给主模型）" {style.stroke-dash: 3}
+  }
+  "else：出错 / 连续 block ≥ 3": {
+    r -> l: "ask" {style.stroke-dash: 3}
+    l -> u: "弹窗"
+  }
+}
 ```
 
 图注：审查员只处理「本该问人」的那部分调用；它自己靠不住时，结论退回成 `ask`，交还给人。

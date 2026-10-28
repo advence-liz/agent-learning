@@ -16,15 +16,21 @@
 8. **隐藏层权重必须随机初始化**：全 0 时所有神经元梯度相同、更新后仍相同，3 个神经元等于 1 个（对称性问题）。输出层可以从 0 开始。
 9. **用 `nn.Sequential` 搭结构**：`Linear(2, 64) → ReLU → Linear(64, 64) → ReLU → Linear(64, 1)`，共 4417 个参数；`Linear` 就是全连接层，由它叠起来的网络就是多层感知机（MLP）。人只决定结构（多少层、每层多少神经元），每个神经元学成什么交给训练。
 
-```mermaid
-flowchart LR
-    subgraph LR1["逻辑回归 + 人工特征"]
-        X1["x₁, x₂"] --> H1["人写的公式<br/>x₁² + x₂²<br/>（无参数）"] --> O1["加权求和 + sigmoid<br/>（参数 w, b）"]
-    end
-    subgraph NN["两层神经网络（MLP）"]
-        X2["x₁, x₂"] --> H2["隐藏层<br/>ReLU(X·W₁ + b₁)<br/>（参数 W₁, b₁）"] --> O2["输出层 = 逻辑回归<br/>（参数 w₂, b₂）"]
-    end
-    O2 -. "loss.backward()<br/>梯度同时流回两层" .-> H2
+```d2
+direction: down
+lr1: 逻辑回归 + 人工特征 {
+  x1: "x₁, x₂"
+  h1: "人写的公式\nx₁² + x₂²\n（无参数）"
+  o1: "加权求和 + sigmoid\n（参数 w, b）"
+  x1 -> h1 -> o1
+}
+nn: 两层神经网络（MLP） {
+  x2: "x₁, x₂"
+  h2: "隐藏层\nReLU(X·W₁ + b₁)\n（参数 W₁, b₁）"
+  o2: "输出层 = 逻辑回归\n（参数 w₂, b₂）"
+  x2 -> h2 -> o2
+  h2 <- o2: "loss.backward()\n梯度同时流回两层" {style.stroke-dash: 3}
+}
 ```
 
 ### 📝 作者是怎么讲的

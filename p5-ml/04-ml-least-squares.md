@@ -70,12 +70,17 @@ $$X_b^\top X_b\,\theta = X_b^\top y$$
 
 这是一个 (d+1)×(d+1) 的线性方程组。下图是 `fit` 做的全部事情：
 
-```mermaid
-flowchart LR
-  A["X (n×d)"] --> B["拼一列 1<br/>X_b (n×(d+1))"]
-  B --> C["XᵀX θ = Xᵀy"]
-  C --> D["np.linalg.solve<br/>或 lstsq(SVD)"]
-  D --> E["θ = [w..., b]"]
+```d2
+direction: down
+a: "X (n×d)"
+b: "拼一列 1\nX_b (n×(d+1))"
+c: "XᵀX θ = Xᵀy"
+d: "np.linalg.solve\n或 lstsq(SVD)"
+e: "θ = [w..., b]"
+a -> b
+b -> c
+c -> d
+d -> e
 ```
 
 回到主线：这一章的模型还不是 LLM，但「定一个损失、找让损失最小的参数」这个骨架，就是后面所有模型训练的骨架。LLM 也是在最小化一个损失（下一个 token 的交叉熵）；区别在于它的碗不是碗，没有公式解，只能一步步往下走——这就是下一章的梯度下降。

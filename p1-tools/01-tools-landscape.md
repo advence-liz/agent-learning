@@ -16,37 +16,43 @@
 8. **桌面端把 CLI 藏起来**，目标用户从开发者扩展到所有人（Cowork、computer use），但底层仍是同一套 Coding Agent + 模型。
 9. **教学选型和使用选型可以不同**：作者日常用 Codex，但后续拆源码用 Claude Code，因为它是纯 CLI、工程结构清晰，适合当案例。
 
-```mermaid
-flowchart LR
-  subgraph Model["模型层（贵、少数厂商）"]
-    GPT[GPT 系列]
-    Claude[Claude 系列]
-    Gemini[Gemini 系列]
-  end
-  subgraph Harness["Agent 工程层（软件工程、门槛低）"]
-    Codex[Codex CLI / 桌面端]
-    CC[Claude Code / Desktop]
-    GCLI[Gemini CLI / Antigravity]
-    Cursor[Cursor / Copilot<br/>无自研前沿模型]
-  end
-  GPT -->|自家·成本价| Codex
-  Claude -->|自家·成本价| CC
-  Gemini -->|自家·成本价| GCLI
-  GPT -.->|买 API| Cursor
-  Claude -.->|买 API| Cursor
-  Gemini -.->|买 API| Cursor
+```d2
+direction: right
+model: "模型层\n（贵、少数厂商）" {
+  gpt: GPT 系列
+  claude: Claude 系列
+  gemini: Gemini 系列
+}
+harness: "Agent 工程层\n（软件工程、门槛低）" {
+  codex: "Codex CLI\n/ 桌面端"
+  cc: "Claude Code\n/ Desktop"
+  gcli: "Gemini CLI\n/ Antigravity"
+  cursor: "Cursor / Copilot\n无自研前沿模型"
+}
+model.gpt -> harness.codex: 自家·成本价
+model.claude -> harness.cc: 自家·成本价
+model.gemini -> harness.gcli: 自家·成本价
+model.gpt -> harness.cursor: 买 API {style.stroke-dash: 3}
+model.claude -> harness.cursor: 买 API {style.stroke-dash: 3}
+model.gemini -> harness.cursor: 买 API {style.stroke-dash: 3}
 ```
 
-```mermaid
-timeline
-  title AI 编程工具演进（原文时间线）
-  2021-06 : GitHub Copilot 预览（Tab 补全）
-  2023-03 : Cursor（IDE 内 Agent，AI 写人审）
-  2025-02 : Claude Code（回到终端）
-  2025-04 : Codex CLI 开源
-  2025-06 : Gemini CLI 开源
-  2025-11 : Antigravity（Google AI IDE）
-  2026 : 桌面端 + computer use，面向非开发者
+```d2
+direction: down
+title: "AI 编程工具演进（原文时间线）" {shape: text; near: top-center}
+t1: "2021-06\nGitHub Copilot 预览（Tab 补全）"
+t2: "2023-03\nCursor（IDE 内 Agent，AI 写人审）"
+t3: "2025-02\nClaude Code（回到终端）"
+t4: "2025-04\nCodex CLI 开源"
+t5: "2025-06\nGemini CLI 开源"
+t6: "2025-11\nAntigravity（Google AI IDE）"
+t7: "2026\n桌面端 + computer use，面向非开发者"
+t1 -> t2
+t2 -> t3
+t3 -> t4
+t4 -> t5
+t5 -> t6
+t6 -> t7
 ```
 
 > ⚠️ 勘误/补充：原文写「Claude 最新是 Sonnet 4.6 和 Opus 4.7」「Opus 4.7 (1M context)」。截至本笔记（2026-10），本机 Claude Code 2.1.306 的 `~/.claude/settings.json` 的 `modelSettings` 里配置的是 `claude-sonnet-5-5` / `claude-haiku-5-5`，当前会话运行在 `claude-opus-5-5`。模型版本号是本文最容易过时的部分，读的时候只需记住「Sonnet = 标准、Opus = 旗舰、Haiku = 轻量」这个分层。

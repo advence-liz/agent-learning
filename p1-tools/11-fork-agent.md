@@ -32,19 +32,35 @@
 
 这个比方在合并时不成立。git 分支可以把全部提交 merge 回来，fork 只能交回**一段最终结果**，相当于把整个分支 squash 成一行再带回 main。
 
-```mermaid
-flowchart LR
-    subgraph Parent["父会话请求（已缓存）"]
-        T[tools] --> S[system] --> M1[msg 1 … msg N]
-    end
-    subgraph Fork["Fork 第 1 次请求"]
-        T2[tools 同一份] --> S2[system 同一份] --> M2[msg 1 … msg N 同一份] --> F["+ 任务指令"]
-    end
-    subgraph Sub["全新 Sub Agent 第 1 次请求"]
-        T3[自己的 tools] --> S3[自己的 system] --> U3[任务描述]
-    end
-    M1 -. 前缀完全一致 → cache read .-> M2
-    T -. 第一个 block 就不同 → 全部重算 .-> T3
+```d2
+direction: down
+parent: "父会话请求（已缓存）" {
+  t: tools
+  s: system
+  m1: "msg 1 … msg N"
+  t -> s
+  s -> m1
+}
+fork: "Fork 第 1 次请求" {
+  label.near: top-left
+  t2: "tools 同一份"
+  s2: "system 同一份"
+  m2: "msg 1 … msg N 同一份"
+  f: "+ 任务指令"
+  t2 -> s2
+  s2 -> m2
+  m2 -> f
+}
+sub: "全新 Sub Agent 第 1 次请求" {
+  label.near: bottom-center
+  t3: "自己的 tools"
+  s3: "自己的 system"
+  u3: 任务描述
+  t3 -> s3
+  s3 -> u3
+}
+parent.m1 -> fork.m2: "前缀完全一致 → cache read" {style.stroke-dash: 3}
+parent.t -> sub.t3: "第一个 block 就不同 → 全部重算" {style.stroke-dash: 3}
 ```
 
 官方 sub-agents 文档对 fork 的描述是：继承「the entire conversation so far」，和主会话用同一份 system prompt、同一套工具、同一个模型、同一段消息历史。它自己的工具调用不会写回主会话，回来的只有最终结果。

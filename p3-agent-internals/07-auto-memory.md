@@ -45,26 +45,27 @@ memories = true
 
 ## 写路径：两个阶段，都在后台
 
-```mermaid
-sequenceDiagram
-    participant S as 新会话启动
-    participant DB as memories_1.sqlite
-    participant P1 as Phase 1（每个旧会话一次模型调用）
-    participant P2 as Phase 2（内部合并 agent）
-    participant FS as ~/.codex/memories/
-    S->>S: 记忆功能开着？是顶层会话？不是 ephemeral？
-    S->>DB: 认领旧会话：闲置 ≥ 6h、≤ 10 天、不是当前会话，最多 2 个
-    DB-->>P1: 租约（lease）防止多个进程重复处理
-    P1->>P1: 低 effort 模型读整段会话，输出严格 JSON
-    P1->>DB: stage1_outputs: raw_memory / rollout_summary / rollout_slug
-    S->>P2: 抢全局锁
-    P2->>FS: 同步 raw_memories.md、rollout_summaries/，算 git diff
-    alt 没变化
-        P2-->>S: 结束
-    else 有变化
-        P2->>FS: 起一个只能写 memories 目录、不联网、不弹审批的 agent 合并
-        P2->>FS: 产出 memory_summary.md / MEMORY.md / skills/ ...
-    end
+```d2
+shape: sequence_diagram
+s: 新会话启动
+db: memories_1.sqlite
+p1: "Phase 1（每个旧会话一次模型调用）"
+p2: "Phase 2（内部合并 agent）"
+fs: "~/.codex/memories/"
+s -> s: "记忆功能开着？是顶层会话？不是 ephemeral？"
+s -> db: "认领旧会话：闲置 ≥ 6h、≤ 10 天、不是当前会话，最多 2 个"
+db -> p1: "租约（lease）防止多个进程重复处理" {style.stroke-dash: 3}
+p1 -> p1: "低 effort 模型读整段会话，输出严格 JSON"
+p1 -> db: "stage1_outputs: raw_memory / rollout_summary / rollout_slug"
+s -> p2: "抢全局锁"
+p2 -> fs: "同步 raw_memories.md、rollout_summaries/，算 git diff"
+"alt：没变化": {
+  p2 -> s: "结束" {style.stroke-dash: 3}
+}
+"else：有变化": {
+  p2 -> fs: "起一个只能写 memories 目录、不联网、不弹审批的 agent 合并"
+  p2 -> fs: "产出 memory_summary.md / MEMORY.md / skills/ ..."
+}
 ```
 
 几个关键点，都能在源码里找到：

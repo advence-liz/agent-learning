@@ -156,19 +156,19 @@ MCP 值得的场景：
 2. **想让模型看到错误原因，抛 `ToolError`**（这一条是 Python SDK 的行为；Node 版 `McpServer` 不区分，任何异常的 `message` 都会原样包成 `isError` 结果，所以上面直接 `throw new Error(...)`，也更要注意别把内部细节写进错误消息）。我第一版用的是 `ValueError`，结果客户端只收到 `Error executing tool read_note`，原因被藏了起来。看 SDK 源码（`mcpserver/tools/base.py`）才知道：普通异常被当作「崩溃」，细节留在服务端日志；`ToolError` 被当作「工具主动报错」，消息原样回给模型。这是个合理的安全默认（防止堆栈泄露内部信息），但不知道的话会以为模型「看不懂错误」。
 3. **工具错误不是协议错误**。越界读取返回的是一个正常的结果，只是 `isError: true`。模型能读到它、换个路径重试。第 11 章会看到原始报文。
 
-```mermaid
-sequenceDiagram
-    participant CC as Claude Code（MCP client）
-    participant S as notes_server.py（子进程）
-    CC->>S: 启动进程：uv run ... notes_server.py
-    CC->>S: stdin: initialize
-    S-->>CC: stdout: 服务端能力 + instructions
-    CC->>S: stdin: tools/list
-    S-->>CC: stdout: search_notes / read_note 的 schema
-    Note over CC: 工具描述被放进模型上下文<br/>名字变成 mcp__notes__search_notes
-    CC->>S: stdin: tools/call search_notes
-    S-->>CC: stdout: 结果
-    S--)CC: stderr: 日志（不参与协议）
+```d2
+shape: sequence_diagram
+cc: Claude Code（MCP client）
+s: notes_server.py（子进程）
+cc -> s: "启动进程：uv run ... notes_server.py"
+cc -> s: "stdin: initialize"
+s -> cc: "stdout: 服务端能力 + instructions" {style.stroke-dash: 3}
+cc -> s: "stdin: tools/list"
+s -> cc: "stdout: search_notes / read_note 的 schema" {style.stroke-dash: 3}
+cc."工具描述被放进模型上下文\n名字变成 mcp__notes__search_notes"
+cc -> s: "stdin: tools/call search_notes"
+s -> cc: "stdout: 结果" {style.stroke-dash: 3}
+s -> cc: "stderr: 日志（不参与协议）" {style.stroke-dash: 3}
 ```
 
 一个类比：MCP server 像一个 USB 设备，MCP 协议是 USB 标准。插上之后，电脑先问「你是什么设备、支持什么功能」（initialize + tools/list），再按标准格式收发数据。鼠标厂商不用关心你用的是 Mac 还是 Windows。

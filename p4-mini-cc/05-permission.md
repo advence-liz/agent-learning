@@ -166,31 +166,50 @@
 
 ## 一个函数，三种结论
 
-```mermaid
-flowchart TB
-    S["模型发来 tool_use"] --> V{"参数合法？<br/>check_input"}
-    V -- 否 --> ERR["InputValidationError<br/>（不进权限判定）"]
-    V -- 是 --> D1{"命中 deny 规则？"}
-    D1 -- 是 --> DENY["deny"]
-    D1 -- 否 --> X{"extra_checks<br/>（扩展钩子）"}
-    X -- 有结论 --> OUT["按钩子结论"]
-    X -- 无 --> B{"bypass 模式？"}
-    B -- 是 --> ALLOW["allow"]
-    B -- 否 --> H{"工具自检：高危？"}
-    H -- 是 --> ASK["ask"]
-    H -- 否 --> R{"只读 / 自检安全？"}
-    R -- 是 --> ALLOW
-    R -- 否 --> RU{"会话 allow 规则？"}
-    RU -- 是 --> ALLOW
-    RU -- 否 --> AE{"acceptEdits 且<br/>项目内编辑？"}
-    AE -- 是 --> ALLOW
-    AE -- 否 --> AU{"auto 模式？"}
-    AU -- 是 --> CL["审查员判定（下一章）"]
-    AU -- 否 --> ASK
-    ASK --> U{"用户选择"}
-    U -- "1 允许" --> ALLOW
-    U -- "2 不再询问" --> REM["记住规则"] --> ALLOW
-    U -- "3 拒绝" --> DENY
+```d2
+direction: down
+s: "模型发来 tool_use"
+v: "参数合法？\ncheck_input" {shape: diamond}
+err: "InputValidationError\n（不进权限判定）"
+d1: "命中 deny 规则？" {shape: diamond}
+deny: "deny"
+x: "extra_checks\n（扩展钩子）" {shape: diamond}
+out: "按钩子结论"
+b: "bypass 模式？" {shape: diamond}
+allow: "allow"
+h: "工具自检：高危？" {shape: diamond}
+ask: "ask"
+r: "只读 / 自检安全？" {shape: diamond}
+ru: "会话 allow 规则？" {shape: diamond}
+ae: "acceptEdits 且\n项目内编辑？" {shape: diamond}
+au: "auto 模式？" {shape: diamond}
+cl: "审查员判定\n（下一章）"
+u: "用户选择" {shape: diamond}
+rem: "记住规则"
+s -> v
+v -> err: 否
+v -> d1: 是
+d1 -> deny: 是
+d1 -> x: 否
+x -> out: 有结论
+x -> b: 无
+b -> allow: 是
+b -> h: 否
+h -> ask: 是
+h -> r: 否
+r -> allow: 是
+r -> ru: 否
+ru -> allow: 是
+ru -> ae: 否
+ae -> allow: 是
+ae -> au: 否
+au -> cl: 是
+au -> ask: 否
+ask -> u
+u -> allow: "1 允许"
+u -> rem: "2 不再询问"
+rem -> allow
+u -> deny: "3 拒绝"
 ```
 
 图注：这就是 `mini_cc/permissions.py:PermissionManager.decide` 的全部逻辑，自上而下、先命中先返回。

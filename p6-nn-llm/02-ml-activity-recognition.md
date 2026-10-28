@@ -129,13 +129,19 @@ nn.Sequential(
 
 这个比方不成立的地方是：卷积核不是人画的，是训练出来的；而且一层有很多个核（第一层 16 个），各自学一种局部形状，后面的层再把局部形状组合成更大的形状。
 
-```mermaid
-flowchart LR
-    A["输入<br/>3 × 128<br/>(x,y,z 三条波形)"] --> B["Conv1d k=7<br/>16 个核<br/>+ReLU+MaxPool<br/>16 × 64"]
-    B --> C["Conv1d k=5<br/>32 个核<br/>+ReLU+MaxPool<br/>32 × 32"]
-    C --> D["Conv1d k=5<br/>32 个核+ReLU<br/>32 × 32"]
-    D --> E["全局平均池化<br/>32"]
-    E --> F["Linear<br/>4 类"]
+```d2
+direction: down
+a: "输入\n3 × 128\n(x,y,z 三条波形)"
+b: "Conv1d k=7\n16 个核\n+ReLU+MaxPool\n16 × 64"
+c: "Conv1d k=5\n32 个核\n+ReLU+MaxPool\n32 × 32"
+d: "Conv1d k=5\n32 个核+ReLU\n32 × 32"
+e: "全局平均池化\n32"
+f: "Linear\n4 类"
+a -> b
+b -> c
+c -> d
+d -> e
+e -> f
 ```
 
 图注：每一层的核都在时间轴上滑动，**同一组权重在所有位置共享**。第三层每个输出点能「看到」原始信号里大约 34 个采样点（0.68 秒，差不多一步多一点）。最后的全局平均池化（global average pooling）把时间维度直接平均掉——「这个形状出现在第几秒」的信息被主动丢弃了。

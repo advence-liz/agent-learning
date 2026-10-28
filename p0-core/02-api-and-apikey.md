@@ -40,13 +40,19 @@ LLM 接口也是这样。主流格式有三种：
 
 三家要表达的东西完全一样：一段系统提示、一串对话、一份工具清单，外加「最多生成多少 token」。差别只在 JSON 怎么排。
 
-```mermaid
-flowchart LR
-    S["中性的对话状态<br/>system · user · 工具调用 · 工具结果 · tools"]
-    S -->|"system 顶层<br/>tool_use / tool_result 是 content block"| A["Anthropic Messages<br/>x-api-key + anthropic-version"]
-    S -->|"system 是一条消息<br/>工具结果是 role: tool"| C["Chat Completions<br/>Authorization: Bearer"]
-    S -->|"instructions 顶层<br/>一切都是 input item"| R["Responses<br/>Authorization: Bearer"]
-    A & C & R -->|"响应解析"| U["统一结构<br/>text · stop · in/out tokens"]
+```d2
+direction: down
+s: "中性的对话状态\nsystem · user · 工具调用 · 工具结果 · tools"
+a: "Anthropic Messages\nx-api-key +\nanthropic-version"
+c: "Chat Completions\nAuthorization: Bearer"
+r: "Responses\nAuthorization: Bearer"
+u: "统一结构\ntext · stop · in/out tokens"
+s -> a: "system 顶层\ntool_use / tool_result\n是 content block"
+s -> c: "system 是一条消息\n工具结果是 role: tool"
+s -> r: "instructions 顶层\n一切都是 input item"
+a -> u: 响应解析
+c -> u: 响应解析
+r -> u: 响应解析
 ```
 
 图注：左边那一份状态是「业务」，中间三条箭头是「序列化」，右边又汇成一份结构。adapter 能做的，就是这两头的转换。

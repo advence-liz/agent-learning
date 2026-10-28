@@ -51,19 +51,19 @@
 
 ## 写路径：就是普通的 Write 和 Edit
 
-```mermaid
-sequenceDiagram
-    participant U as 你
-    participant M as 模型
-    participant T as Write / Edit 工具
-    participant D as memory/ 目录
-    U->>M: 「worktree 一律用 EnterWorktree，别 cd 进去」
-    M->>M: 这条将来还用得上吗？是 feedback 类
-    M->>T: Write(feedback_worktree.md, frontmatter + 正文)
-    T->>D: 写入主题文件
-    M->>T: Edit(MEMORY.md, 追加一行索引)
-    T->>D: 更新索引
-    T-->>M: 成功；若索引接近 200 行 / 25KB，附带「请精简」提醒
+```d2
+shape: sequence_diagram
+u: 你
+m: 模型
+t: "Write / Edit 工具"
+d: "memory/ 目录"
+u -> m: "「worktree 一律用 EnterWorktree，别 cd 进去」"
+m -> m: "这条将来还用得上吗？是 feedback 类"
+m -> t: "Write(feedback_worktree.md, frontmatter + 正文)"
+t -> d: "写入主题文件"
+m -> t: "Edit(MEMORY.md, 追加一行索引)"
+t -> d: "更新索引"
+t -> m: "成功；若索引接近 200 行 / 25KB，附带「请精简」提醒" {style.stroke-dash: 3}
 ```
 
 你可能会问：有没有一个专门的「记忆工具」？

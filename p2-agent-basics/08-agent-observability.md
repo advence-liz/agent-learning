@@ -104,13 +104,19 @@
 
 ## 两层包装
 
-```mermaid
-flowchart TD
-    R[invoke_agent span<br/>任务级：总轮数、总 token] --> C1[chat span<br/>耗时 / in / out / stop_reason]
-    R --> T1[execute_tool span<br/>耗时 / 参数 / 成败]
-    R --> C2[chat span]
-    R --> T2[execute_tool span]
-    R --> C3[...]
+```d2
+direction: down
+r: "invoke_agent span\n任务级：总轮数、总 token"
+c1: "chat span\n耗时 / in /\nout / stop_reason"
+t1: "execute_tool span\n耗时 / 参数 / 成败"
+c2: chat span
+t2: execute_tool span
+c3: "..."
+r -> c1
+r -> t1
+r -> c2
+r -> t2
+r -> c3
 ```
 
 关键是**不改 agent 代码**。第 2 章的 `runAgent` 接受一个 `client` 和一个 `tools` 字典，我们就各包一层：

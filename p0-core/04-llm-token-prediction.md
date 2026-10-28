@@ -47,15 +47,24 @@
 2. 再经过几十层 **因果注意力**（causal attention）。每个位置算出三个向量：Q（我在找什么）、K（我有什么特征）、V（我能提供什么内容）。用自己的 Q 去和自己及前文所有位置的 K 比对，按匹配程度加权汇总它们的 V。「因果」的意思是只能看前面，不能看后面。
 3. 最后一个位置的向量和整个词表逐一算匹配分，得到 logits。
 
-```mermaid
-flowchart LR
-    T["文本"] --> TK["tokenizer<br/>按合并规则切片"] --> ID["token ids"]
-    ID --> E["embedding 查表<br/>id → 向量"]
-    E --> L["N 层因果注意力 + FFN<br/>每个位置吸收前文"]
-    KV[("KV cache<br/>前文每个位置的 K、V")] <--> L
-    L --> LG["最后位置 · 全词表<br/>→ logits"]
-    LG --> SM["÷ temperature → top-k / top-p<br/>→ softmax → 抽签"]
-    SM -->|"新 token 拼回末尾"| ID
+```d2
+direction: down
+t: 文本
+tk: "tokenizer\n按合并规则切片"
+ids: "token ids"
+e: "embedding 查表\nid → 向量"
+l: "N 层因果注意力 + FFN\n每个位置吸收前文"
+kv: "KV cache\n前文每个位置的 K、V" {shape: cylinder}
+lg: "最后位置 · 全词表\n→ logits"
+sm: "÷ temperature → top-k / top-p\n→ softmax → 抽签"
+t -> tk
+tk -> ids
+ids -> e
+e -> l
+kv <-> l
+l -> lg
+lg -> sm
+sm -> ids: 新 token 拼回末尾
 ```
 
 图注：右下那条回边就是**自回归**（autoregressive），生成一个，拼回去，再预测下一个。KV cache 挂在注意力层旁边，下面会讲它为什么能挂在那里。

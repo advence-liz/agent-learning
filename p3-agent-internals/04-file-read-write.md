@@ -30,24 +30,25 @@
 
 ## 三个工具，一份记录
 
-```mermaid
-sequenceDiagram
-    participant M as 模型
-    participant H as Harness（文件状态表）
-    participant FS as 磁盘
-    M->>H: Read(app.py)
-    H->>FS: 读内容 + 记下 mtime / 哈希
-    H-->>M: 带行号的内容（cat -n 格式）
-    Note over FS: 用户在编辑器里改了 app.py
-    M->>H: Edit(app.py, old, new)
-    H->>FS: 现在的 mtime / 哈希还和记录一样吗？
-    alt 不一样且 old_string 对不上
-        H-->>M: 报错：读完后文件被改过，请重读
-    else 一样（或 old_string 仍唯一匹配）
-        H->>FS: 精确替换唯一的 old_string
-        H->>H: 更新记录（自己写的不算「被别人改」）
-        H-->>M: 成功
-    end
+```d2
+shape: sequence_diagram
+m: 模型
+h: Harness（文件状态表）
+fs: 磁盘
+m -> h: "Read(app.py)"
+h -> fs: "读内容 + 记下 mtime / 哈希"
+h -> m: "带行号的内容（cat -n 格式）" {style.stroke-dash: 3}
+fs."用户在编辑器里改了 app.py"
+m -> h: "Edit(app.py, old, new)"
+h -> fs: "现在的 mtime / 哈希还和记录一样吗？"
+"alt：不一样且 old_string 对不上": {
+  h -> m: "报错：读完后文件被改过，请重读" {style.stroke-dash: 3}
+}
+"else：一样（或 old_string 仍唯一匹配）": {
+  h -> fs: "精确替换唯一的 old_string"
+  h -> h: "更新记录（自己写的不算「被别人改」）"
+  h -> m: "成功" {style.stroke-dash: 3}
+}
 ```
 
 ### 证据一：工具描述直接写明了规则

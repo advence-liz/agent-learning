@@ -20,6 +20,9 @@ if [[ "${1:-}" != "--skip-check" ]]; then
   python3 tools/check_publish.py
 fi
 
+echo "== 图检查（d2 能编译、不再有 mermaid）"
+python3 tools/check_diagrams.py
+
 echo "== 生成站点配置"
 python3 tools/build_site.py
 

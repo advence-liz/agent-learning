@@ -56,6 +56,11 @@ theme:
 plugins:
   - search:
       lang: [zh, en]
+  - d2:   # ```d2 代码块在构建时渲染成内联 SVG；亮/暗主题各出一份，跟随站点配色切换
+      layout: elk
+      theme: 0
+      dark_theme: 200
+      pad: 20
 hooks:
   - hooks.py   # on_config 里按 curriculum.json 动态生成 nav
 markdown_extensions:
@@ -70,11 +75,7 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.tasklist: {{custom_checkbox: true}}
   - pymdownx.arithmatex: {{generic: true}}
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences   # ```d2 围栏由 d2 插件自己注册
   - pymdownx.tabbed: {{alternate_style: true}}   # 代码的 Node / Python 两个版本，第一个标签页（Node）默认展开
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js

@@ -20,19 +20,28 @@
 
 官方文档（<https://code.claude.com/docs/en/goal>）原话说 `/goal` 是「a wrapper around a session-scoped prompt-based Stop hook」。把它拆开画出来：
 
-```mermaid
-stateDiagram-v2
-    [*] --> Working: /goal 条件（条件本身就是第一轮指令）
-    Working --> Check: 本轮结束（Stop 时机）
-    Check --> Working: 有子 agent / 后台命令还在跑 → 本轮跳过评审
-    Check --> Judge: 发送 条件 + 对话 给 small fast model
-    Judge --> Working: not yet met（reason 作为下一轮指引）
-    Judge --> Achieved: met → 清除目标，记录 achieved
-    Judge --> Failed: impossible → 清除目标，记录 failed
-    Working --> Stalled: 连续几轮无工具调用 → 停循环、警告，目标保留
-    Working --> Cleared: 不可恢复错误（鉴权 / 额度 / 上下文溢出 / 模型不可用）
-    Achieved --> [*]
-    Failed --> [*]
+```d2
+direction: down
+start: "" {shape: circle; width: 16; height: 16; style.fill: "#333"}
+end: "" {shape: circle; width: 16; height: 16; style.fill: "#333"; style.double-border: true}
+working: Working
+check: Check
+judge: Judge
+achieved: Achieved
+failed: Failed
+stalled: Stalled
+cleared: Cleared
+start -> working: "/goal 条件\n（条件本身就是第一轮指令）"
+working -> check: "本轮结束\n（Stop 时机）"
+check -> working: "有子 agent / 后台命令还在跑\n→ 本轮跳过评审"
+check -> judge: "发送 条件 + 对话\n给 small fast model"
+judge -> working: "not yet met\n（reason 作为下一轮指引）"
+judge -> achieved: "met →\n清除目标，记录 achieved"
+judge -> failed: "impossible →\n清除目标，记录 failed"
+working -> stalled: "连续几轮无工具调用 →\n停循环、警告，目标保留"
+working -> cleared: "不可恢复错误（鉴权 / 额度\n/ 上下文溢出 / 模型不可用）"
+achieved -> end
+failed -> end
 ```
 
 图里有两个角色：
