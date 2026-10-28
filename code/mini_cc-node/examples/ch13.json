@@ -1,0 +1,10 @@
+[
+  {"call": "Read", "input": {"file_path": "config.py"}},
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "DEBUG = True", "new_string": "DEBUG = True\nTIMEOUT = 30"}},
+  {"say": "加好了：TIMEOUT = 30。"},
+  {"call": "Edit", "input": {"file_path": "config.py", "old_string": "DEBUG = True\n", "new_string": ""}, "text": "去掉 DEBUG，再新建 utils.py。"},
+  {"call": "Write", "input": {"file_path": "utils.py", "content": "from config import TIMEOUT\n\n\ndef timeout_ms():\n    return TIMEOUT * 1000\n"}},
+  {"say": "DEBUG 已删除，utils.py 已创建。"},
+  {"call": "Write", "input": {"file_path": "utils.py", "content": "from config import TIMEOUT\n\n\ndef timeout_ms():\n    return TIMEOUT * 1000\n"}, "text": "这次只建 utils.py，DEBUG 保留。"},
+  {"say": "utils.py 已创建，config.py 没动。"}
+]

@@ -1,0 +1,800 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "mini-coding-agent"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "agentlab.tracer",
+            "version": "0.1"
+          },
+          "spans": [
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "a5ce87bbd8c78e69",
+              "name": "invoke_agent coding_agent",
+              "kind": 1,
+              "startTimeUnixNano": "1792661481217933875",
+              "endTimeUnixNano": "1792661481907609500",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "invoke_agent"
+                  }
+                },
+                {
+                  "key": "agent.task",
+                  "value": {
+                    "stringValue": "修好测试"
+                  }
+                },
+                {
+                  "key": "agent.turns",
+                  "value": {
+                    "intValue": "6"
+                  }
+                },
+                {
+                  "key": "agent.usage.input_tokens",
+                  "value": {
+                    "intValue": "6660"
+                  }
+                },
+                {
+                  "key": "agent.usage.output_tokens",
+                  "value": {
+                    "intValue": "238"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              }
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "af79c57d9ab76f4e",
+              "name": "chat claude-opus-5-5",
+              "kind": 3,
+              "startTimeUnixNano": "1792661481218355625",
+              "endTimeUnixNano": "1792661481302660667",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "anthropic"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.max_tokens",
+                  "value": {
+                    "intValue": "16000"
+                  }
+                },
+                {
+                  "key": "agent.turn",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "agent.request.messages",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "msg_fake_001"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "tool_use"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "820"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "45"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "0092bae9874fe52d",
+              "name": "execute_tool run_command",
+              "kind": 1,
+              "startTimeUnixNano": "1792661481302912958",
+              "endTimeUnixNano": "1792661481414775333",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "run_command"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "toolu_0001"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"command\":\"node test_calc.mjs\"}"
+                  }
+                },
+                {
+                  "key": "tool.result.chars",
+                  "value": {
+                    "intValue": "26"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "965699cf885d5a99",
+              "name": "chat claude-opus-5-5",
+              "kind": 3,
+              "startTimeUnixNano": "1792661481414929208",
+              "endTimeUnixNano": "1792661481497543000",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "anthropic"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.max_tokens",
+                  "value": {
+                    "intValue": "16000"
+                  }
+                },
+                {
+                  "key": "agent.turn",
+                  "value": {
+                    "intValue": "2"
+                  }
+                },
+                {
+                  "key": "agent.request.messages",
+                  "value": {
+                    "intValue": "3"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "msg_fake_002"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "tool_use"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1010"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "30"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "0ddfbe04d695ee43",
+              "name": "execute_tool read_file",
+              "kind": 1,
+              "startTimeUnixNano": "1792661481498022625",
+              "endTimeUnixNano": "1792661481502304667",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "read_file"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "toolu_0002"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"path\":\"calc.mjs\"}"
+                  }
+                },
+                {
+                  "key": "tool.result.chars",
+                  "value": {
+                    "intValue": "36"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "7f37bf12fafc8051",
+              "name": "chat claude-opus-5-5",
+              "kind": 3,
+              "startTimeUnixNano": "1792661481502442500",
+              "endTimeUnixNano": "1792661481584056208",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "anthropic"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.max_tokens",
+                  "value": {
+                    "intValue": "16000"
+                  }
+                },
+                {
+                  "key": "agent.turn",
+                  "value": {
+                    "intValue": "3"
+                  }
+                },
+                {
+                  "key": "agent.request.messages",
+                  "value": {
+                    "intValue": "5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "msg_fake_003"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "tool_use"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1090"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "28"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "770b12791b1eafe4",
+              "name": "execute_tool read_file",
+              "kind": 1,
+              "startTimeUnixNano": "1792661481585020625",
+              "endTimeUnixNano": "1792661481585177458",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "read_file"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "toolu_0003"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"path\":\"missing.mjs\"}"
+                  }
+                }
+              ],
+              "status": {
+                "code": 2,
+                "message": "Error: ENOENT: no such file or directory, open '/var/folders/kg/wp3059mx6ng0bhk5hglh33wr0000gn/T/tracer-4xwIKP/missing.mjs'"
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "5554692f65b93f35",
+              "name": "chat claude-opus-5-5",
+              "kind": 3,
+              "startTimeUnixNano": "1792661481585218542",
+              "endTimeUnixNano": "1792661481666650042",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "anthropic"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.max_tokens",
+                  "value": {
+                    "intValue": "16000"
+                  }
+                },
+                {
+                  "key": "agent.turn",
+                  "value": {
+                    "intValue": "4"
+                  }
+                },
+                {
+                  "key": "agent.request.messages",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "msg_fake_004"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "tool_use"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1160"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "60"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "52f0db65792c8025",
+              "name": "execute_tool write_file",
+              "kind": 1,
+              "startTimeUnixNano": "1792661481666823917",
+              "endTimeUnixNano": "1792661481667718333",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "write_file"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "toolu_0004"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"path\":\"calc.mjs\",\"content\":\"export const add = (a, b) => a + b;\\n\"}"
+                  }
+                },
+                {
+                  "key": "tool.result.chars",
+                  "value": {
+                    "intValue": "19"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "e61baa1b1e3ab5b9",
+              "name": "chat claude-opus-5-5",
+              "kind": 3,
+              "startTimeUnixNano": "1792661481668389417",
+              "endTimeUnixNano": "1792661481749996625",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "anthropic"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.max_tokens",
+                  "value": {
+                    "intValue": "16000"
+                  }
+                },
+                {
+                  "key": "agent.turn",
+                  "value": {
+                    "intValue": "5"
+                  }
+                },
+                {
+                  "key": "agent.request.messages",
+                  "value": {
+                    "intValue": "9"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "msg_fake_005"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "tool_use"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1250"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "40"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "1ea466706c10d9af",
+              "name": "execute_tool run_command",
+              "kind": 1,
+              "startTimeUnixNano": "1792661481750153125",
+              "endTimeUnixNano": "1792661481825819792",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "run_command"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "toolu_0005"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"command\":\"node test_calc.mjs\"}"
+                  }
+                },
+                {
+                  "key": "tool.result.chars",
+                  "value": {
+                    "intValue": "10"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            },
+            {
+              "traceId": "0cd4be33d261ebc9412aafa133637b40",
+              "spanId": "f8bfa650951fbccd",
+              "name": "chat claude-opus-5-5",
+              "kind": 3,
+              "startTimeUnixNano": "1792661481825979250",
+              "endTimeUnixNano": "1792661481907428458",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "anthropic"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.max_tokens",
+                  "value": {
+                    "intValue": "16000"
+                  }
+                },
+                {
+                  "key": "agent.turn",
+                  "value": {
+                    "intValue": "6"
+                  }
+                },
+                {
+                  "key": "agent.request.messages",
+                  "value": {
+                    "intValue": "11"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "msg_fake_006"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "claude-opus-5-5"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "end_turn"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1330"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "35"
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              },
+              "parentSpanId": "a5ce87bbd8c78e69"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

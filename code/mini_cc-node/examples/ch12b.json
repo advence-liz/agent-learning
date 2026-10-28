@@ -1,0 +1,4 @@
+[
+  {"call": "Bash", "input": {"command": "git diff --cached --stat"}, "text": "先看看暂存区改了什么。"},
+  {"say": "按记忆里的约定加前缀：\n\nfeat: list_posts 支持 page / page_size 分页参数"}
+]

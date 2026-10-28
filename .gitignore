@@ -1,0 +1,33 @@
+# 依赖环境：uv sync 可重建
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+node_modules/
+
+# 网页版：build 是构建产物，docs/ 是 tools/build_site.py 生成的软链接（绝对路径，换机器就失效）
+.site/build/
+.site/docs/
+
+# 原站抓取内容（作者的免费文章全文），只供本地参考，不进仓库
+.crawl/
+
+# 运行时产物
+# 抓包代理的输出（默认写到运行目录下的 captures/），已脱敏也不进仓库
+captures/
+*.log
+.DS_Store
+
+# 模型权重与数据缓存（体积大，脚本会重新下载 / 生成）
+# HuggingFace 缓存把权重存成无扩展名的哈希 blob，只按扩展名排除会漏，必须排除整个缓存目录
+.hf-cache/
+.cache/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.ckpt
+
+# 发布检查的私有规则（公司名、内部服务名本身就不该进公开仓库）
+publish/private-terms.txt

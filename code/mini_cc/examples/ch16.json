@@ -1,0 +1,7 @@
+[
+  {"call": "Bash", "input": {"command": "./slow_tests.sh", "description": "完整测试套件", "run_in_background": true}, "text": "测试要跑一阵，放后台。"},
+  {"call": "Read", "input": {"file_path": "README.md"}, "text": "趁这段时间看 README。"},
+  {"say": "README 里只有项目简介，没有安装步骤，建议补一节「pnpm install && pnpm dev」。测试还在后台跑，结束了我再告诉你。"},
+  {"call": "Bash", "input": {"command": "tail -n 2 \"$MINI_CC_HOME\"/tasks/*/b1.output"}, "text": "后台测试结束了，看一眼结果。"},
+  {"say": "测试全部通过：12 passed。"}
+]

@@ -1,0 +1,8 @@
+[
+  {"call": "Bash", "input": {"command": "ls"}, "text": "先看看目录。"},
+  {"call": "Write", "input": {"file_path": "hello.py", "content": "print('hello')\n"}, "text": "写一个 hello.py。"},
+  {"call": "Bash", "input": {"command": "python3 hello.py"}, "text": "跑一下。"},
+  {"call": "Bash", "input": {"command": "python3 hello.py"}, "text": "再跑一次确认。"},
+  {"call": "Bash", "input": {"command": "rm -rf build"}, "text": "顺手清理 build 目录。"},
+  {"say": "明白，build 目录保留不动。hello.py 已创建并运行通过。"}
+]

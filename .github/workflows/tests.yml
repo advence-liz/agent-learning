@@ -1,0 +1,84 @@
+# 跑配套代码的离线测试（全部用 fake 模型，不需要 API key）。
+# code/ml 依赖 torch，在 Linux 上会拉 CUDA 版（数 GB），默认不跑；需要时手动触发并勾选 run_ml。
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_ml:
+        description: '也跑 code/ml（下载 torch，较慢）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 防止模型权重、缓存之类的大文件被误提交（HuggingFace 缓存的 blob 没有扩展名，.gitignore 容易漏）
+  large-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: No tracked file over 5MB
+        run: |
+          big=$(git ls-files -z | xargs -0 du -k 2>/dev/null | awk '$1 > 5120 {print $1 "KB\t" $2}')
+          if [ -n "$big" ]; then echo "超过 5MB 的跟踪文件：" && echo "$big" && exit 1; fi
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [agent, mini_cc, ml]
+    steps:
+      - uses: actions/checkout@v4
+        if: matrix.project != 'ml' || inputs.run_ml
+
+      - uses: astral-sh/setup-uv@v6
+        if: matrix.project != 'ml' || inputs.run_ml
+        with:
+          enable-cache: true
+          cache-dependency-glob: code/${{ matrix.project }}/uv.lock
+
+      - name: pytest
+        if: matrix.project != 'ml' || inputs.run_ml
+        working-directory: code/${{ matrix.project }}
+        run: |
+          uv sync --frozen
+          uv run --frozen pytest -q
+
+      - name: unittest (http_analyzer)
+        if: matrix.project == 'agent'
+        working-directory: code/agent
+        run: uv run --frozen python -m unittest discover -s http_analyzer/tests
+
+  # Node 版（TypeScript）：Node 24 直接跑 .ts，tsc 只做类型检查
+  test-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [agent-node, mini_cc-node]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: code/${{ matrix.project }}/package-lock.json
+      - name: typecheck + test
+        working-directory: code/${{ matrix.project }}
+        run: |
+          npm ci
+          npm run typecheck
+          npm test

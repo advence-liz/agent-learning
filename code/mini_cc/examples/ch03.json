@@ -1,0 +1,8 @@
+[
+  {"error": "overloaded", "message": "529 Overloaded"},
+  {"call": "Read", "input": {"path": "README.md"}, "text": "先读一下 README。"},
+  {"call": "Read", "input": {"file_path": "README.md"}, "text": "参数名写错了，改成 file_path。"},
+  {"call": "Bash", "input": {"command": "ls README.md"}, "text": "文件好像不存在，确认一下。"},
+  {"say": "项目根目录没有 README.md，需要我创建一个吗？"},
+  {"error": "auth", "message": "401 invalid x-api-key"}
+]

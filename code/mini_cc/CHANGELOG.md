@@ -1,0 +1,201 @@
+# mini_cc CHANGELOG
+
+每章一次增量。章节正文在仓库的 `p4-mini-cc/`。
+
+## 第 1 章 · 命令系统（01-cli.md）
+
+- 新增 `mini_cc/config.py:Settings`：模型、max_tokens、effort、cwd、home、max_iterations。
+- 新增 `mini_cc/model.py`：`ModelRequest` / `ModelResponse`、`ModelClient` 协议、`AnthropicClient.create`（messages.create 薄包装，content 转纯 dict）、`FakeClient`（按脚本回放 + 记录请求）、剧本助手 `say()` / `call()`、`FakeClient.from_json`（`--fake` 离线演示）。
+- 新增 `mini_cc/tools/`：`Tool` / `ToolResult` / `ToolContext`、`ToolRegistry`（按注册顺序输出 schema）、`Read` / `Write` / `Bash` 三个朴素工具。
+- 新增 `mini_cc/loop.py:Agent.run`：阻塞式 agent 循环，`Usage` 累计 token。
+- 新增 `mini_cc/cli.py`：`CommandRegistry`（别名 + difflib 纠错）、`App.handle_line` 唯一入口、命令 `/help` `/new`(`/clear`) `/status` `/model` `/exit`(`/quit`)；REPL（prompt_toolkit，管道输入时逐行回显）；参数 `--model` `-p` `--fake`。
+- 新增 `mini_cc/ui.py`：`BufferUI`（测试/纯文本）、`ConsoleUI`（rich）。
+- 测试：`tests/test_ch01_commands.py`（8 个）。
+
+## 第 2 章 · 逐步输出（02-realtime-output.md）
+
+- `model.py`：协议改为 `ModelClient.stream(req) -> Iterator[TextDelta | ThinkingDelta | MessageDone]`；新增 `complete()`；`AnthropicClient.stream` 用 `messages.stream()`，请求带 `thinking={"type":"adaptive","display":"summarized"}`，工具带 `eager_input_streaming: True`；`FakeClient` 按 4 字符切片流式回放，支持 `fail_after/fail_with`（为第 3 章准备）、`calls()` 并行调用、剧本里的 `thinking`。
+- 新增 `events.py`：`ToolStart` / `ToolEnd` / `Notice` / `TurnEnd`。
+- `loop.py`：`Agent.run_turn()` 生成器；拆出 `_call_model()` / `_run_tools()` 两个插槽；`run()` 变成收集事件的便捷封装。
+- `ui.py`：`BufferUI.render(event)` 状态机（`●` 文本 / `✻` 思考 / `⏺` 调用 / `✔✘` 返回），`ConsoleUI` 复用同一状态机实时打印。
+- `cli.py`：`handle_line` 消费事件流；提示符改为 `❯`。
+- `tools/bash.py`：输出整理（去尾部空行、只在非 0 时附 exit code、空输出显示 `(no output)`）。
+- 测试：`tests/test_ch02_streaming.py`（6 个）、`tests/sdk_stub.py`（假 SDK，测适配层不联网）。
+
+## 第 3 章 · 错误处理与重试（03-error-handling.md）
+
+- `model.py`：新增 `ModelError(retryable, kind, status, retry_after)` 与 `to_model_error()`（SDK 异常 → ModelError；流迭代器里的 `ValueError` 视为可重试的 `invalid_json`）；`AnthropicClient` 关闭 SDK 自带重试（`max_retries=0`），默认开启服务端 refusal fallback（beta `server-side-fallback-2026-07-01` + `fallbacks="default"`，`MINI_CC_FALLBACKS=0` 关闭）；`FakeClient.from_json` 支持 `{"error": kind}`。
+- 新增 `retry.py:RetryPolicy`：指数退避 + 抖动，优先 `retry-after`。
+- `loop.py`：`_call_model` 带重试并发 `Notice`；`run_turn` 变为安全网外壳（`ModelError` / 任意异常都转成 `Notice + TurnEnd("error")`），真正循环移入 `_loop()`；处理 `refusal` / `max_tokens`+tool_use（不执行）/ `pause_turn`；`repair_history()` 在 `finally` 中补齐悬空 `tool_use`；`self.sleep` 可注入。
+- 新增 `tools/validate.py`：JSON Schema 子集校验。`ToolRegistry.execute` 两道防线（校验 + 异常兜底）、`<tool_use_error>` 包装、输出截断（`Settings.max_tool_output`）。
+- `tools/bash.py`：超时返回部分输出 + `[timed out after Ns]`。
+- `cli.py`：`handle_line` 捕获 `KeyboardInterrupt`。
+- `config.py`：`max_retries` / `retry_base_delay` / `retry_max_delay` / `fallbacks` / `max_tool_output`。
+- 测试：`tests/test_ch03_errors.py`（16 个）。
+
+## 第 4 章 · 持久化聊天记录（04-resume.md）
+
+- `loop.py`：历史唯一写入口 `Agent._append(msg, **meta)` + `Agent.listeners`（每条新消息回调）；`load_history()` 恢复历史并 `repair_history()`。
+- 新增 `session.py`：`project_slug()`（非字母数字 → `-`，同 Claude Code）、`Session.record()`（每条消息一行，`uuid`/`parentUuid` 串链、assistant 行带 `usage`，首条消息时才建文件）、`SessionStore.load/list/resolve`（容忍半行、序号或 id 前缀）。
+- `cli.py`：`App._attach/new_session/resume`；`/new` 保留旧会话；新命令 `/resume`；参数 `-r/--resume`、`-c/--continue`；`/status` 显示 session id。
+- 测试：`tests/test_ch04_session.py`（7 个）。
+
+## 第 5 章 · 工具调用权限审批（05-permission.md）
+
+- 新增 `permissions.py`：模式常量（`default` / `acceptEdits` / `auto` / `plan` / `bypassPermissions`）、`Decision` / `PermissionRequest` / `PermissionReply`、`PermissionManager.decide()`（deny 规则 → `extra_checks` 扩展钩子 → bypass → 工具自检 → 只读 → 会话 allow 规则 → acceptEdits 项目内编辑 → auto 审查员 → ask）、`set_mode/next_mode/cycle/on_mode_change`、`denied_message()`（措辞参考 Claude Code）。
+- `tools/base.py`：`Tool.read_only / kind / path_arg / self_check() / rule_key()`；`ToolContext.rel()`。`Read` 只读，`Write` 为 edit 类，`Bash` 为 exec 类并实现 `self_check`（只读命令白名单 + `shlex` 拆分管道/`&&`、含重定向与命令替换一律不放行；高危正则一律要问）与按命令的 `rule_key`。
+- `tools/registry.py`：拆出 `check_input()`（权限判定前先校验参数）。
+- `events.py`：新增 `PermissionDecision`。
+- `loop.py`：`Agent.permissions` / `Agent.approver`；`_authorize()` 权限关卡；`_run_tools()` 返回「是否结束本轮」——拒绝且无理由时同批剩余调用标记 Skipped，`TurnEnd("denied")`。
+- `ui.py`：`BufferUI.ask()`（测试从 `answers` 取答案）/ `ask_permission()` 三选项弹窗；`ConsoleUI.ask()` 读键盘；渲染 `PermissionDecision`。
+- `cli.py`：`/mode` 命令、Shift+Tab 循环切换与底部状态栏、`--permission-mode`；模式变化写入会话（`{"type":"permission-mode"}`）；管道模式改用 `readline()`，与弹窗的 `input()` 共用缓冲。
+- `config.py`：`permission_mode`。
+- 测试：`tests/test_ch05_permissions.py`（20 个）。
+
+## 第 6 章 · auto 模式（06-auto-mode.md）
+
+- 新增 `auto_mode.py`：`AutoReviewer`（独立请求；只给审查员「用户原话 + 待执行动作 + 项目目录」，不给工具输出与 assistant 文字；`output_config.format` json_schema 取 `{"decision","reason"}`；`effort: low`；fail closed；连续 3 次 block 升级为 ask）、`user_intent()`、`REVIEWER_SYSTEM`、离线用的 `keyword_reviewer_turn`。
+- `permissions.py`：Shift+Tab 循环加入 `auto`；auto 模式复用 acceptEdits 的项目内编辑快速通道。
+- `model.py`：`FakeClient(responder=...)`，剧本放完后用 responder 一直回答。
+- `cli.py`：`App(reviewer_client=...)`，审查员与主对话用不同 client；`--fake` 下用关键词审查员；`/status` 显示审查员调用次数。
+- `ui.py`：渲染审查员放行/拦截。
+- 测试：`tests/test_ch06_auto_mode.py`（10 个）；`test_ch05_permissions.py::test_mode_cycle` 固定为第 5 章的循环。
+
+## 第 7 章 · 可靠的文件编辑工具（07-file-edit.md）
+
+- 新增 `tools/file_state.py`：`FileStateCache`（路径 → mtime_ns + sha256 + 是否部分读取；`is_stale()` 先比 mtime 再比内容）、`read_text/write_text`（`newline=""` 保留 CRLF）、`guard_write()`（先读后改、读后未变；报错文案与 Claude Code 一致）。
+- `tools/read.py`：`cat -n` 风格行号、`offset/limit`、长行截断、目录/二进制拒读、读后登记文件状态。
+- `tools/write.py`：已存在文件必须先读且未变；写后登记状态；`ctx.before_write()` 钩子。
+- 新增 `tools/edit.py:EditTool`：`old_string` 唯一匹配 / `replace_all` / 拒绝 no-op / 空 `old_string` 新建文件 / CRLF 对齐；找不到时诊断（行号前缀、弯引号、缩进）；成功返回改动附近的带行号片段。
+- `tools/base.py`：`ToolContext.file_state`、`ToolContext.write_hooks` + `before_write()`（为第 13 章 rewind 预留）。
+- `tools/__init__.py`：默认工具加入 `Edit`。
+- 测试：`tests/test_ch07_file_edit.py`（15 个）。
+
+## 第 8 章 · 用 @ 引用文件（08-file-mention.md）
+
+- 新增 `attachments.py`：`Attachment(kind, title, text)`、`render()`（`<system-reminder>` 包裹的文本块）、`is_reminder()`。
+- 新增 `mentions.py`：`find_mentions()`（排除邮箱、支持引号路径、中文标点截断）、`resolve_mentions()`（文件按 Read 的 `cat -n` 格式附加并**登记 FileState**、目录列一层、非路径原样保留、超 2000 行截断）、`build_user_content()`（附件在前、原话在后）、`list_project_files()`（优先 `git ls-files`）、`fuzzy_score/rank`（子序列模糊匹配）、`FileMentionCompleter`（5 秒缓存）。
+- `cli.py`：`handle_line` 解析 @ 并显示「已附加」；REPL 用 `merge_completers` 合并命令补全与文件补全。
+- 测试：`tests/test_ch08_mentions.py`（9 个）。
+
+## 第 9 章 · 更灵活的上下文注入机制（09-context-injection.md）
+
+- 新增 `context.py`：
+  - `STATIC_PROMPT`（身份、工作规则、`<system-reminder>` 语义说明）+ `environment_text()`（cwd、是否 git、平台、shell、模型）组成 system；`ContextBuilder.system_blocks()` 会话内只算一次，最后一块带 `cache_control`；`system_sections` 扩展点。
+  - 提供者（provider）机制：`InjectState(agent, trigger)`，`trigger` 为 `user` / `tool_result`；提供者扫描历史判断是否需要注入（不维护标志位，`/resume`、压缩后依然正确）。
+  - 内置提供者：`instructions_provider`（`~/.mini_cc` 与项目根 → cwd 的 `AGENTS.md`/`CLAUDE.md` + 会话开始时的 git 快照，每会话一次）、`date_provider`（首轮注入日期、日期变化时提醒）、`changed_files_provider`（读过的文件被外部修改 → 注入 unified diff 并按新内容登记）、`notifications_provider`（第 16–18 章的后台通知通道）。
+  - `ContextBuilder.inject()`：用户发话时注入块放最前，工具结果时放在 `tool_result` 之后；单个提供者异常被跳过。
+- `loop.py`：`Agent.context`、`Agent.notify()`（线程安全队列）/`drain_notifications()`、`_append_user()`（追加 user 消息并产出 `ContextInjected`）；`run_turn` 与 `_run_tools` 都经由它写 user 消息；请求带 `cache=True`。
+- `model.py`：`ModelRequest.cache` → 顶层 `cache_control={"type":"ephemeral"}`。
+- `tools/file_state.py`：`FileRecord.text` 保存模型看到的版本（≤20 万字符），用于算 diff。
+- `events.py` / `ui.py`：`ContextInjected`，显示为 `◇ system …`。
+- `cli.py`：新命令 `/context`。
+- 测试：`tests/test_ch09_context.py`（12 个）；`conftest.without_session_context()`，早期章节的 4 个测试改为忽略会话级注入。
+
+## 第 10 章 · 让 Agent 主动向你提问（10-ask-user-question.md）
+
+- 新增 `tools/ask_user.py`：`AskUserQuestionTool`（1–4 个问题、每题 2–4 个选项、`multiSelect`；只读、免审批；通过 `ctx.extras["ask_user"]` 回调拿答案；结果措辞参考 Claude Code「Your questions have been answered: … You can now continue …」；全部跳过返回 declined；无 UI 时让模型按默认值继续并声明假设）、`Question` / `Answer`、`parse_answer()`（序号 / 逗号多选 / 中文逗号 / 自由文本 = Other / 空 = 跳过 / 无效返回 None）、`render_question()`。
+- `ui.py`：`BufferUI.ask_questions()`（逐题显示，无效输入重问一次）。
+- `tools/__init__.py`：默认工具加入 `AskUserQuestion`。
+- `cli.py`：把 `ui.ask_questions` 接到 `agent.ctx.extras["ask_user"]`。
+- `context.py`：`STATIC_PROMPT` 增加「何时提问」一条。
+- 测试：`tests/test_ch10_ask_user.py`（8 个）。
+
+## 第 11 章 · 让 Agent 跟踪多步任务（11-task-management.md）
+
+- 新增 `tasks.py`：`Task` / `TaskStore`（每会话一个 `<session>.tasks.json`，先写临时文件再 `replace`；`create/update/unfinished/render`，☐◼☒ 清单）、`task_reminder_provider()`（清单未完成且模型连续 6 次请求没碰清单，或历史里看不到清单时注入提醒；扫描历史推导，不记标志位）。
+- 新增 `tools/task_tools.py`：`TaskCreate` / `TaskUpdate` / `TaskList`（只读免审批；`in_progress` 重复时提示；剩余数 / All tasks completed）。
+- `tools/base.py`：`ToolContext.pending_events` + `emit()`——工具执行期间产生的事件由循环在 `ToolEnd` 后转发（后续章节的后台任务也可复用）。
+- `events.py`：`TasksUpdated`。`loop.py`：一批工具调用里多次改清单只在批末转发一次。`ui.py`：画清单，Task 工具的结果行不重复显示。
+- `session.py`：`Session.tasks_path`。`cli.py`：`_attach` 时按会话载入清单（`/new` 新清单、`/resume` 旧清单）；新命令 `/todos`（`/tasks` 留给第 16 章后台任务）。
+- `context.py`：默认 provider 加入任务提醒；`STATIC_PROMPT` 增加「3 步以上先建清单」。
+- 测试：`tests/test_ch11_tasks.py`（8 个）。
+- 收尾（为第 12–21 章预留）：`loop.py` 新增生命周期钩子 `Agent.before_request`（每次请求模型前）与 `Agent.turn_end`（一轮结束时），循环拆为 `_loop()`（调 turn_end 钩子）+ `_steps()`；新增 `tests/test_extension_points.py`（3 个）验证 `before_request` / `turn_end` / `listeners` / `write_hooks` / `system_sections` / `extra_checks` / 运行时注册工具。扩展点清单见 `ARCHITECTURE.md`。
+
+## 第 12 章 · 长期记忆（12-memory.md）
+
+- 新增 `memory.py`：`MemoryStore`（`<home>/projects/<仓库根 slug>/memory/`，`MEMORY.md` 索引 + 每条记忆一个带 frontmatter 的 markdown；`save()` 同 slug 原地更新索引行、`delete()`、`entries()`；`load_index()` 截到 200 行 / 25KB 并明说截断；接近上限 90% 时保存结果里提醒精简）、`slugify()`（ASCII 可读 + 非 ASCII 补稳定哈希）、`system_section()`（记忆指引 + 索引，挂 `ContextBuilder.system_sections`）。
+- 新增 `tools/memory_tool.py:MemoryTool`（`save` / `delete`，`self_check` 返回 allow 免审批）；默认工具加入 `Memory`。
+- `cli.py`：`App.memory`、`ctx.extras["memory"]`；`_attach()` 换会话时 `context.invalidate()`（新记忆在下个会话进 system，同一会话 system 不变）；新命令 `/memory`（`/memory rm <slug>`）。
+- 测试：`tests/test_ch12_memory.py`（8 个）；`test_ch09_context.py` 的 system 断言改为按标题查找 `# Environment` 段。
+
+## 第 13 章 · rewind 回退对话和代码（13-rewind.md）
+
+- 新增 `rewind.py`：`Checkpoint(uuid, prompt, files)`、`FileHistory`（`<home>/file-history/<session>/index.json` + `<路径哈希>@v<n>` 备份；`begin()` 开检查点；`before_write()` 每个检查点每个文件只备份一次、新建文件记 `None`；`restore()` 取目标检查点之后第一次的备份；`truncate()`）、`is_prompt()` / `prompt_text()`。
+- `session.py`：`branch()` 从最新叶子沿 `parentUuid` 回走（`load` / `list` 都改用它）；`Session.chain`（与 `Agent.messages` 对齐）；`Session.rewind(keep)` 追加 `{"type": "rewind", "leafUuid"}` 记录。
+- `cli.py`：`App._on_message`（listener，排在落盘之后）开检查点；`write_hooks` 接 `FileHistory`；`App.rewind(n, mode)`（both / conversation / code；回退对话时清空文件状态表、原话放进 `App.prefill`，REPL 用作输入框默认值）；`App.checkpoints()`；新命令 `/rewind`（别名 `/checkpoint` `/undo`）。
+- `tools/file_state.py`：`FileStateCache.clear()`。
+- `ARCHITECTURE.md`：不变量 1 补充「分支点」说明（`load_history` 只用于 resume / rewind / compact）。
+- 测试：`tests/test_ch13_rewind.py`（8 个）。
+
+## 第 14 章 · compact 压缩上下文（14-compact.md）
+
+- 新增 `compact.py`：`compact(agent, trigger, instructions)`（简单压缩：同 system / 同 tools / 原样历史 + 摘要指令，`<summary>` 提取；新历史只有一条 user 消息 = `SUMMARY_HEADER` + 摘要 + 最近 5 个文件，再经 `context.inject(..., "user")` 让 providers 重新注入项目说明 / 日期 / 任务清单；失败时历史不变）、`auto_compact_hook`（挂 `before_request`，`last_input ≥ context_window - auto_compact_buffer` 时触发，只在最后一条是 user 时压缩）、`merge_consecutive_users()`、`extract_summary()`、`estimate_tokens()`。
+- `loop.py`：`_request()` 发请求前合并相邻 user 消息（历史不变，请求视图确定性合并）。
+- `session.py`：`meta["compact"]` → 先写 `{"type":"system","subtype":"compact_boundary","parentUuid":null,"logicalParentUuid",...,"compactMetadata"}`，摘要记录带 `isCompactSummary`；`chain` 从边界重新开始。
+- `config.py`：`context_window`（1M）、`auto_compact_buffer`（4 万）、`auto_compact`。
+- `tools/file_state.py`：`remember()` 先 pop 再插入，`paths()` 按最近看到排序。
+- `model.py`：`FakeClient.from_json` 支持每步 `usage`（演示上下文快满）。
+- `cli.py`：注册自动压缩钩子；新命令 `/compact [指令]`；`/status` 显示窗口与阈值；压缩生成的消息不开检查点。
+- 测试：`tests/test_ch14_compact.py`（8 个）。
+
+## 第 15 章 · 注册 MCP server（15-mcp.md）
+
+- 新增 `mcp_client.py`：`load_config()`（`<home>/mcp.json` 用户级 + `<cwd>/.mcp.json` 项目级，`${VAR}` / `${VAR:-默认}` 展开，stdio / http）、`ServerConfig.fingerprint()`、`McpManager`（后台线程 asyncio 循环；每个 server 一个常驻协程：`stdio_client` + `ClientSession`，stderr 写 `<home>/logs/mcp-<name>.log`；`start()` 并行连接限时 15s、失败只标 failed；`call()` 用 `run_coroutine_threadsafe`，超时 120s；`close()`；`instructions_section()` 挂 system）、`McpTool`（`mcp__<server>__<tool>`，`readOnlyHint` → `read_only`）、`mcp_tool_name()`（清洗 + 64 字符）、`convert_content()`（文本 / 图片块）、`Approvals` + `select_servers()`（项目级 server 首次启动前询问，按配置指纹记住）。
+- 新增 `examples/mcp_tracker_server.py`：演示用 stdio server（mcp 2.x `MCPServer`，3 个工具）。
+- `cli.py`：`App.mcp`、`App.start_mcp()`（`main()` 启动时调用）、`App.close()`；新命令 `/mcp`（`-v` 列出工具）。
+- `ui.py`：`preview()` 支持 content 块列表（文本拼接，其余显示 `[type]`）。
+- 测试：`tests/test_ch15_mcp.py`（7 个，其中 4 个真实拉起 stdio 子进程）。
+
+## 第 16 章 · 后台运行命令（16-background.md）
+
+- 新增 `jobs.py`：`Job`（kind / status / exit_code / output_file / tool_use_id）、`JobManager`（`start_bash()`：`Popen` 输出写 `<home>/tasks/<session>/b<n>.output`、`start_new_session` 自成进程组、`stdin=DEVNULL`，等待线程退出时 `notify(<task-notification>)`；`stop()` 用 `killpg`，主动停止不通知；`stop_all()`）、`render_notification()`（字段同 Claude Code：task-id / tool-use-id / output-file / status / summary）。
+- `tools/bash.py`：`run_in_background` / `description` 参数，返回文案同 Claude Code；工具描述加「Do not poll with sleep」；前台超时提示改用后台。
+- 新增 `tools/task_stop.py:TaskStopTool`（`task_id`，免审批）；默认工具加入 `TaskStop`。
+- `tools/base.py`：`ToolContext.tool_use_id`（循环执行工具前填入）、`untracked_dirs`；`context.py:changed_files_provider` 跳过 `untracked_dirs`。
+- `cli.py`：`App.jobs`、`App.busy`、`App.wake_if_idle()`（空闲且有通知时 `run_turn([])`）、`App._run()`；`close()` 先停后台任务；`LineReader`（管道模式读线程 + 队列，等待时轮询唤醒；`ui.line_source` 让交互问题从同一队列取答案）；终端模式看门线程让 `prompt_toolkit` 输入框以哨兵退出后唤醒；新命令 `/tasks`（别名 `/bashes`，`/tasks stop <id>`）。
+- 测试：`tests/test_ch16_background.py`（8 个，真实子进程）。
+
+## 第 17 章 · Sub Agent 机制（17-subagent.md）
+
+- 新增 `subagent.py`：`AgentType`（说明 + 工具子集 + read_only + load_instructions + effort）、内置 `general-purpose` / `Explore`（只读、不注入 AGENTS.md、effort low）、`load_agent_types()`（`<home>/agents/*.md`、`<cwd>/.mini_cc/agents/*.md`，frontmatter name / description / tools）、`run_subagent()`（全新 `Agent`：工具子集减去 `NEVER_FOR_CHILDREN`、自己的 `ContextBuilder` / `ToolContext` / `PermissionManager`，只读类型挂 `extra_checks`；进度回调；`max_turns` → `[partial]`；transcript 写 `subagents/agent-<id>.jsonl`，`isSidechain`）、`AgentTool`（描述里列出所有类型）、`SubagentRuntime`（前台同步、后台交给 `JobManager.start_thread`）。
+- `jobs.py`：`start_thread()`（线程型任务，通知里带 `<result>`）；`_new()` 支持指定 id。
+- `context.py`：`ContextBuilder.static_prompt`（sub agent 替换主 agent 的身份说明）。
+- `model.py`：`FakeClient.from_json` 支持 `{"main": [...], "agents": {description: [...]}}`。
+- `cli.py`：注册 `Agent` 工具、`ctx.extras["subagents"]`、`App.subagent_client` / `subagent_max_turns`；`--fake` 剧本里有 `agents` 时子 agent 用各自剧本。
+- 测试：`tests/test_ch17_subagent.py`（8 个）。
+
+## 第 18 章 · 监听外部事件（18-monitor.md）
+
+- `jobs.py`：`JobManager.start_monitor()`（stdout 逐行读、200ms 内合并成一个 `Monitor event` 通知；stderr 只进输出文件；单事件最多 `max_batch_lines` 行；`event_window` 内超过 `max_events` 自动停止；到期杀掉并通知 re-arm；进程退出时 `stream ended (exit code, N events)`；主动停止不通知）。
+- 新增 `tools/monitor.py:MonitorTool`（`command / description / timeout_ms`，默认 5 分钟、上限 30 分钟；权限复用 Bash 的命令分析；描述里写清「一次 vs 每次」、逐行刷新、过滤要覆盖失败、事件不是用户回复）；默认工具加入 `Monitor`。
+- `subagent.py`：`NEVER_FOR_CHILDREN` 加入 `Monitor`。
+- 测试：`tests/test_ch18_monitor.py`（7 个，真实子进程）。
+
+## 第 19 章 · 图片输入（19-image.md）
+
+- 新增 `images.py`：`sniff()`（按文件头识别 PNG / JPEG / GIF / WebP）、`image_info()`（只解析文件头取宽高，不依赖 Pillow）、`estimate_visual_tokens()`（28×28 一个 token；高分辨率档长边 2576 / 最多 4784 token 的缩放近似）、`load_image()`（8000px、base64 10MB 两道硬限制，`ImageError` 给出可照做的提示）、`ImageMeta`、`find_image_paths()`（拖入终端的路径：转义空格、引号）。
+- `attachments.py`：`Attachment.blocks`（说明之后紧跟的非文本块）。
+- `mentions.py`：`image_attachment()`；`@` 引用图片和拖入的图片路径都附加为 image 块；`build_user_content` 顺序为「说明 → 图片 → 原话」。
+- `tools/read.py`：图片返回 `[text 说明, image 块]` 的 tool_result；不登记文件状态。
+- `cli.py`：`handle_line` 区分斜杠命令和以 `/` 开头的绝对路径；`/context` 单独统计图片（含 `tool_result` 内嵌图片），字符数剔除 base64。
+- 测试：`tests/test_ch19_image.py`（8 个）。
+
+## 第 20 章 · 渐进式加载 Skills（20-skill.md）
+
+- 新增 `skills.py`：`Skill` / `load_skills()`（`<home>/skills/*/SKILL.md` + `<cwd>/.mini_cc/skills/*/SKILL.md`，frontmatter name / description / disable-model-invocation）、`listing()`（手动专用的不进目录；单个描述 ≤1536 字符；超预算时按调用次数从少到多砍描述、保留名字）、`render_body()`（`$ARGUMENTS` / `$0..$9` / `${SKILL_DIR}` 替换，`` !`cmd` `` 预处理、失败即中止，无占位符时补 `ARGUMENTS:`，前缀 `Base directory for this skill:`）、`SkillTool`（结果 `Launching skill: <name>`，正文经 `followup_blocks` 追加在结果之后）、`SkillRuntime`（调用次数落盘 `<home>/skills-usage.json`，记录本会话调用过的正文）。
+- `tools/base.py`：`ToolContext.followup_blocks`；`loop.py:_run_tools` 把它们追加在一批 `tool_result` 之后。
+- `cli.py`：目录挂 `system_sections`（预算 = 窗口 1% × 4 字符）；注册 `Skill` 工具；`CommandRegistry.dispatch` 未知命令若是 skill 名则走 `App.run_skill_command()`（prompt 型命令：正文 + `<command-name>` 作为用户消息）；命令补全包含 skill；新命令 `/skills`。
+- `compact.py`：压缩后原样挂回本会话调用过的 skill 正文（每个 ≤2 万字符）。
+- `subagent.py`：`NEVER_FOR_CHILDREN` 加入 `Skill`。
+- 测试：`tests/test_ch20_skills.py`（9 个）。
+
+## 第 21 章 · 先规划再动手 / plan 模式（21-plan.md）
+
+- 新增 `plan_mode.py`：`plan_check()`（挂 `extra_checks`，排在 bypass 之前：只读放行、计划文件可写免审批、非只读命令 / MCP 要问、其余编辑拒绝并说明出路）、`plan_mode_provider()`（扫描历史：进入时完整规则、每 5 次请求精简提醒、退出时一次「已退出」提醒）、`ExitPlanModeTool`（读计划文件 → 审批三选一：acceptEdits / default / 继续规划 + 反馈；批准文案参考 Claude Code 原文）、`EnterPlanModeTool`（模型主动进入，免审批）、`PlanController`。
+- `permissions.py`：Shift+Tab 循环改为 `default → acceptEdits → plan → auto`。
+- `subagent.py`：内置 `Plan` agent 类型（只读架构师）；plan 模式下派出的 sub agent 一律只读；`NEVER_FOR_CHILDREN` 加入 `ExitPlanMode` / `EnterPlanMode`。
+- `ui.py`：`ask_plan_approval()`。
+- `cli.py`：`App.plan_file`（`<home>/plans/<会话 id>.md`）、注册关卡 / provider / 两个工具 / `ctx.extras["plan"]`；新命令 `/plan [需求]`；`--fake` 时剧本可用 `{plan_file}` 占位符。
+- `model.py`：`FakeClient.vars`（剧本占位符，值可以是函数）。
+- 测试：`tests/test_ch21_plan.py`（11 个）；`test_ch06_auto_mode.py::test_cycle_includes_auto` 改为显式传入第 6 章时的循环。

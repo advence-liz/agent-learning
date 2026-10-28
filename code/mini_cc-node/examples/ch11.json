@@ -1,0 +1,21 @@
+[
+  {"calls": [
+    {"call": "TaskCreate", "input": {"subject": "读 posts 路由", "activeForm": "读 posts 路由"}},
+    {"call": "TaskCreate", "input": {"subject": "给 list_posts 加 page/page_size", "activeForm": "加分页参数"}},
+    {"call": "TaskCreate", "input": {"subject": "跑测试验证", "activeForm": "跑测试"}}
+  ], "text": "这个改动分三步，先建任务清单。"},
+  {"call": "TaskUpdate", "input": {"taskId": "1", "status": "in_progress"}},
+  {"call": "Read", "input": {"file_path": "posts.js"}},
+  {"calls": [
+    {"call": "TaskUpdate", "input": {"taskId": "1", "status": "completed"}},
+    {"call": "TaskUpdate", "input": {"taskId": "2", "status": "in_progress"}}
+  ]},
+  {"call": "Edit", "input": {"file_path": "posts.js", "old_string": "function list_posts(posts) {\n  return posts;\n}", "new_string": "function list_posts(posts, page = 1, page_size = 20) {\n  const start = (page - 1) * page_size;\n  return posts.slice(start, start + page_size);\n}"}},
+  {"calls": [
+    {"call": "TaskUpdate", "input": {"taskId": "2", "status": "completed"}},
+    {"call": "TaskUpdate", "input": {"taskId": "3", "status": "in_progress"}}
+  ]},
+  {"call": "Bash", "input": {"command": "node -e \"const { list_posts } = require('./posts.js'); const r = list_posts([...Array(50).keys()], 2, 20); if (r[0] !== 20 || r.length !== 20) process.exit(1); console.log('ok')\""}},
+  {"call": "TaskUpdate", "input": {"taskId": "3", "status": "completed"}},
+  {"say": "分页加好了：list_posts(posts, page=1, page_size=20)，测试通过。"}
+]

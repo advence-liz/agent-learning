@@ -1,0 +1,4 @@
+[
+  {"call": "Edit", "input": {"file_path": "app/config.py", "old_string": "TIMEOUT = 30", "new_string": "TIMEOUT = 60"}, "text": "文件内容已经在上下文里了，直接改。"},
+  {"say": "已把 app/config.py 的 TIMEOUT 从 30 改成 60。"}
+]

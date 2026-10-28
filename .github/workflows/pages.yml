@@ -1,0 +1,69 @@
+# 把知识库构建成 MkDocs 静态站点并发布到 GitHub Pages。
+# 构建步骤都在 tools/build_pages.sh 里，本地跑同一个脚本就能复现 CI。
+#
+# 启用前：仓库 Settings → Pages → Source 选「GitHub Actions」。
+# 注意：Pages 站点是公开的。发布检查（tools/check_publish.py）默认不放行内部信息，
+#       需要在 publish/allow.txt 里逐类确认后才会通过；私有规则放在 repo secret KB_PRIVATE_TERMS。
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'p*-*/**'
+      - 'README.md'
+      - 'curriculum.json'
+      - 'publish/**'
+      - 'tools/**'
+      - '.site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一次发布，新的推送取消还在排队的旧发布
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: .site/uv.lock
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build site
+        env:
+          KB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          KB_REPO_REF: ${{ github.sha }}
+          KB_SITE_URL: ${{ steps.pages.outputs.base_url }}/
+          # 公司名等私有检查规则，格式同 publish/private-terms.txt；没配就只跑公开规则
+          KB_PRIVATE_TERMS: ${{ secrets.KB_PRIVATE_TERMS }}
+        run: tools/build_pages.sh
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .site/build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
