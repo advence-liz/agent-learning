@@ -294,7 +294,7 @@ Python 版 server 拒了，而且错误信息不太直观（`Invalid request par
 
 ## 对照你的环境
 
-- 你的 `chrome-devtools` MCP 是 stdio（`npx -y chrome-devtools-mcp@latest ...`），走的就是本章这种一行一条的 JSON-RPC；`linear`、`notion`、`deploy`、`etp` 是 HTTP 传输，消息体同样是 JSON-RPC，只是装在 HTTP 请求里。
+- 你的 `chrome-devtools` MCP 是 stdio（`npx -y chrome-devtools-mcp@latest ...`），走的就是本章这种一行一条的 JSON-RPC；`linear`、`notion` 和团队的发布平台是 HTTP 传输，消息体同样是 JSON-RPC，只是装在 HTTP 请求里。
 - 某个 stdio MCP 连不上时，最直接的排查办法就是本章的思路：在终端里手动运行它的启动命令，往 stdin 贴一行 `initialize`，看 stdout 回不回、回的是不是 JSON。我在第 10 章就是这样验证 `uv run --directory ... notes_server.py`（Node 版 `node .../notes_server.ts`）能正常启动的。
 - 第 6 章 Agent SDK 的进程内 MCP 工具，CLI 发给 SDK 的 `mcp_message` 里装的也正是 `initialize` → `notifications/initialized` → `tools/call` 这串报文，只是外面多包了一层 `control_request`。
 
