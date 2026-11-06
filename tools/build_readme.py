@@ -11,8 +11,9 @@ PARTS = {
     'p4-mini-cc':         ('第 4 部分 · 手搓 mini Claude Code', '一个工程从 0 长到 21 个能力，每章一次增量', '⭐⭐⭐ 核心项目，2–3 周'),
     'p5-ml':              ('第 5 部分 · 机器学习基础 + 经典算法', '想看懂 LLM 训练再来，从拟合、梯度下降讲起', '选修'),
     'p6-nn-llm':          ('第 6 部分 · 神经网络 + LLM 开发基础', '手写自动求导、优化器、推理全流程、LoRA 微调', '选修'),
+    'p7-interview':       ('第 7 部分 · Agent 研发面试', '考点地图、高频十题、题库与系统设计示范，每题指回本库章节', '主线学完后，3–5 天'),
 }
-ORDER = ['p0-core', 'p1-tools', 'p3-agent-internals', 'p2-agent-basics', 'p4-mini-cc', 'p5-ml', 'p6-nn-llm']
+ORDER = ['p0-core', 'p1-tools', 'p3-agent-internals', 'p2-agent-basics', 'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview']
 
 def status(c):
     exists = os.path.exists(os.path.join(ROOT, c['out']))
@@ -30,7 +31,7 @@ w('📖 是免费章节的**读书笔记**（请先读原文）；✍️ 是**�
 w('')
 w('## 学习路线（为你调整过的顺序）')
 w('')
-w('你已经是 Claude Code 重度用户，所以顺序和原站不同：**先拆你每天在用的东西，再自己造一个**。机器学习部分是选修，和 Agent 主线相互独立。')
+w('你已经是 Claude Code 重度用户，所以顺序和原站不同：**先拆你每天在用的东西，再自己造一个**。机器学习部分是选修，和 Agent 主线相互独立。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。')
 w('')
 w('```mermaid')
 w('flowchart LR')
@@ -38,6 +39,7 @@ w('  P0["0 核心概念<br/>token · 上下文"] --> P1["1 工具技巧<br/>hook
 w('  P1 --> P2["2 拆解工业级 Agent<br/>抓包 · 压缩 · 记忆 · 权限"]')
 w('  P2 --> P3["3 Agent 开发基础<br/>chatbot · RAG · MCP"]')
 w('  P3 --> P4["4 手搓 mini Claude Code<br/>21 次增量"]')
+w('  P4 --> P7["7 Agent 研发面试<br/>考点 · 高频题 · 系统设计"]')
 w('  P0 -.选修.-> P5["5 机器学习基础"] --> P6["6 神经网络 + LLM<br/>推理 · LoRA"]')
 w('```')
 w('')

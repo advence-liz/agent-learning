@@ -15,7 +15,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTENT_DIRS = ['p0-core', 'p1-tools', 'p2-agent-basics', 'p3-agent-internals',
-                'p4-mini-cc', 'p5-ml', 'p6-nn-llm']
+                'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview']
 ALLOW_FILE = os.path.join(ROOT, 'publish', 'allow.txt')
 
 # 明显是示例用的假值：命中 BLOCK 规则但不算泄露

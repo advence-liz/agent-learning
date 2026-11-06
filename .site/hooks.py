@@ -46,6 +46,7 @@ PARTS = [
     ('p4-mini-cc', '4 · 手搓 mini Claude Code'),
     ('p5-ml', '5 · 机器学习基础（选修）'),
     ('p6-nn-llm', '6 · 神经网络 + LLM（选修）'),
+    ('p7-interview', '7 · Agent 研发面试'),
 ]
 
 

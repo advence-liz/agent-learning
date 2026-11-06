@@ -7,7 +7,7 @@
 
 ## 学习路线（为你调整过的顺序）
 
-你已经是 Claude Code 重度用户，所以顺序和原站不同：**先拆你每天在用的东西，再自己造一个**。机器学习部分是选修，和 Agent 主线相互独立。
+你已经是 Claude Code 重度用户，所以顺序和原站不同：**先拆你每天在用的东西，再自己造一个**。机器学习部分是选修，和 Agent 主线相互独立。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。
 
 ```mermaid
 flowchart LR
@@ -15,6 +15,7 @@ flowchart LR
   P1 --> P2["2 拆解工业级 Agent<br/>抓包 · 压缩 · 记忆 · 权限"]
   P2 --> P3["3 Agent 开发基础<br/>chatbot · RAG · MCP"]
   P3 --> P4["4 手搓 mini Claude Code<br/>21 次增量"]
+  P4 --> P7["7 Agent 研发面试<br/>考点 · 高频题 · 系统设计"]
   P0 -.选修.-> P5["5 机器学习基础"] --> P6["6 神经网络 + LLM<br/>推理 · LoRA"]
 ```
 
@@ -27,6 +28,7 @@ flowchart LR
 | [第 4 部分 · 手搓 mini Claude Code](#p4-mini-cc) | 一个工程从 0 长到 21 个能力，每章一次增量 | ⭐⭐⭐ 核心项目，2–3 周 |
 | [第 5 部分 · 机器学习基础 + 经典算法](#p5-ml) | 想看懂 LLM 训练再来，从拟合、梯度下降讲起 | 选修 |
 | [第 6 部分 · 神经网络 + LLM 开发基础](#p6-nn-llm) | 手写自动求导、优化器、推理全流程、LoRA 微调 | 选修 |
+| [第 7 部分 · Agent 研发面试](#p7-interview) | 考点地图、高频十题、题库与系统设计示范，每题指回本库章节 | 主线学完后，3–5 天 |
 
 ## 目录
 
@@ -82,6 +84,7 @@ flowchart LR
 - [ ] [Harness Engineering 是什么](p3-agent-internals/12-harness-engineering.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/harness-engineering/)
 - [ ] [Agent 构建指南：研发要素全景](p3-agent-internals/13-agent-build-guide.md) · ✍️ 原创
 - [ ] [Agent 评测实践指南](p3-agent-internals/14-agent-eval-guide.md) · ✍️ 原创
+- [ ] [Agent 安全：提示词注入与「致命三要素」](p3-agent-internals/15-agent-security.md) · ✍️ 原创
 
 <a id="p2-agent-basics"></a>
 ### 第 3 部分 · Agent 开发基础
@@ -162,6 +165,15 @@ flowchart LR
 - [ ] [优化器：Momentum 和 Adam](p6-nn-llm/04-ml-optimizers.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/machine-learning/ml-optimizers/)
 - [ ] [动手跑通 LLM 推理的全流程](p6-nn-llm/05-inference-process.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/inference-process/)
 - [ ] [动手用 LoRA 微调模型](p6-nn-llm/06-lora-fine-tuning.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/lora-fine-tuning/)
+
+<a id="p7-interview"></a>
+### 第 7 部分 · Agent 研发面试
+
+考点地图、高频十题、题库与系统设计示范，每题指回本库章节。
+
+- [ ] [Agent 研发面试考什么，怎么用这个知识库备考](p7-interview/01-interview-landscape.md) · ✍️ 原创
+- [ ] [十道高频题：强回答和弱回答差在哪](p7-interview/02-top-questions.md) · ✍️ 原创
+- [ ] [题库与系统设计：52 组真题和两道完整示范](p7-interview/03-question-bank.md) · ✍️ 原创
 
 ## 配套代码
 

@@ -663,6 +663,18 @@
   "kind": "lesson"
  },
  {
+  "part": "p3-agent-internals",
+  "part_name": "拆解工业级 Agent",
+  "idx": 15,
+  "id": "original/agent-security",
+  "title": "Agent 安全：提示词注入与「致命三要素」",
+  "free": true,
+  "src": "",
+  "out": "p3-agent-internals/15-agent-security.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
   "part": "p4-mini-cc",
   "part_name": "实现 Claude Code",
   "idx": 1,
@@ -1269,6 +1281,42 @@
   "free": false,
   "src": "https://labuladong.online/zh/ai-coding/llm/lora-fine-tuning/",
   "out": "p6-nn-llm/06-lora-fine-tuning.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p7-interview",
+  "part_name": "Agent 研发面试",
+  "idx": 1,
+  "id": "original/interview-landscape",
+  "title": "Agent 研发面试考什么，怎么用这个知识库备考",
+  "free": true,
+  "src": "",
+  "out": "p7-interview/01-interview-landscape.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p7-interview",
+  "part_name": "Agent 研发面试",
+  "idx": 2,
+  "id": "original/top-questions",
+  "title": "十道高频题：强回答和弱回答差在哪",
+  "free": true,
+  "src": "",
+  "out": "p7-interview/02-top-questions.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p7-interview",
+  "part_name": "Agent 研发面试",
+  "idx": 3,
+  "id": "original/question-bank",
+  "title": "题库与系统设计：52 组真题和两道完整示范",
+  "free": true,
+  "src": "",
+  "out": "p7-interview/03-question-bank.md",
   "src_headings": [],
   "kind": "lesson"
  }
