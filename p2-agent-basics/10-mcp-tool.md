@@ -61,6 +61,8 @@ MCP 值得的场景：
 
 本机装的是 `mcp` 2.3.0。注意它是 2.x 大版本：1.x 里常见的 `from mcp.server.fastmcp import FastMCP` 已经改名了，在 2.x 里 import 会直接报错并提示改成 `MCPServer`（我在 `mcp/server/fastmcp.py` 里看到了这条迁移提示）。网上很多教程还是 1.x 写法，照抄会踩坑。Node 版用的是 `@modelcontextprotocol/sdk` 1.32.1 的 `McpServer`：注册工具用 `registerTool(name, { description, inputSchema, outputSchema }, handler)`，旧教程里的 `server.tool(...)` 还能用，但类型声明里已经标了 `@deprecated`。
 
+> ⚠️ 补充：Python 这边要跑 v1 写法的老代码，就在依赖里固定 `mcp<2`；新代码用 `from mcp.server.mcpserver import MCPServer`（本机 mcp 2.3.0 实测可导入）。Node 版的 `@modelcontextprotocol/sdk` 没有这次改名，服务端类一直是 `McpServer`（`@modelcontextprotocol/sdk/server/mcp.js`）。另外，FastMCP 是官方 `mcp` SDK 里的模块；名叫 `fastmcp` 的独立 pip 包是另一个项目，别混了。
+
 === "Node"
 
     ```ts
@@ -152,7 +154,7 @@ MCP 值得的场景：
 
 三个 MCP 特有的细节：
 
-1. **stdout 是协议通道，不许 print**。stdio 传输下，client 读 server 的 stdout，每行一条 JSON-RPC 消息。你 `print("debug")` 一下，client 就会收到一行非法 JSON。所以日志一律写 stderr，上面的 `[notes] search ...` 和 `INFO Tool 'read_note' failed` 都是 stderr。
+1. **stdout 是协议通道，不许 print**。stdio 传输下，client 读 server 的 stdout，每行一条 JSON-RPC 消息（一种请求/响应都用 JSON 表示的远程调用格式，[下一章](11-mcp-protocol.md)细讲）。你 `print("debug")` 一下，client 就会收到一行非法 JSON。所以日志一律写 stderr，上面的 `[notes] search ...` 和 `INFO Tool 'read_note' failed` 都是 stderr。
 2. **想让模型看到错误原因，抛 `ToolError`**（这一条是 Python SDK 的行为；Node 版 `McpServer` 不区分，任何异常的 `message` 都会原样包成 `isError` 结果，所以上面直接 `throw new Error(...)`，也更要注意别把内部细节写进错误消息）。我第一版用的是 `ValueError`，结果客户端只收到 `Error executing tool read_note`，原因被藏了起来。看 SDK 源码（`mcpserver/tools/base.py`）才知道：普通异常被当作「崩溃」，细节留在服务端日志；`ToolError` 被当作「工具主动报错」，消息原样回给模型。这是个合理的安全默认（防止堆栈泄露内部信息），但不知道的话会以为模型「看不懂错误」。
 3. **工具错误不是协议错误**。越界读取返回的是一个正常的结果，只是 `isError: true`。模型能读到它、换个路径重试。第 11 章会看到原始报文。
 
@@ -298,9 +300,32 @@ s -> cc: "stderr: 日志（不参与协议）" {style.stroke-dash: 3}
 
 ## 练习
 
-1. 加一个 `list_tags` 工具：扫描所有笔记里的 `#标签`，返回标签和出现次数。
-2. 把 `NOTES_DIR` 指向你真实的笔记目录，用 `--scope user` 注册，在 Claude Code 里问「我记过哪些关于 SSE 的坑」，观察它调了哪些工具。
-3. 开放题：如果这个 server 要给团队用、笔记放在 Notion 里、需要每个人用自己的 Notion token，你会选 stdio 还是 HTTP 传输？token 放在哪？
+**1.** 加一个 `list_tags` 工具：扫描所有笔记里的 `#标签`，返回标签和出现次数。
+
+<details>
+<summary>提示</summary>
+
+照着 `search_notes` 写：Node 版 `mcp.registerTool("list_tags", ...)`，`outputSchema` 必须是对象，像 `search_notes` 那样包一层；Python 版 `@mcp.tool()` 加一个 `def list_tags() -> dict[str, int]`。扫描逻辑复用遍历 `NOTES_DIR` 下 `.md` 的那段。正则要求 `#` 后面紧跟非空白字符，这样 `# 标题` 这种 Markdown 标题和 `webapp-i18n.md` 里 ICU 语法的 `{# file}` 都不会被误认成标签。示例笔记里本来没有标签，测试要自己造一个带标签的笔记目录；现有测试断言工具名列表等于 `["read_note", "search_notes"]`，也要跟着改。
+
+</details>
+
+**2.** 把 `NOTES_DIR` 指向你真实的笔记目录，用 `--scope user` 注册，在 Claude Code 里问「我记过哪些关于 SSE 的坑」，观察它调了哪些工具。
+
+<details>
+<summary>提示</summary>
+
+注册命令照本章的写法，把 `--scope project` 换成 `--scope user`，`-e NOTES_DIR=` 指向你的笔记目录，后面接 `node <绝对路径>/notes_server.ts`。注册完先用 `claude mcp list` 确认连上了，再去提问。预期模型先调 `search_notes` 找关键词，再用 `read_note` 读命中的文件。留意一个细节：`search_notes` 要求多个词出现在同一行，模型如果一次传「SSE 坑」可能搜不到，你会看到它换关键词重试。试完记得 `claude mcp remove notes -s user`，免得每轮请求都多付这两个工具描述的 token。
+
+</details>
+
+**3.** 开放题：如果这个 server 要给团队用、笔记放在 Notion 里、需要每个人用自己的 Notion token，你会选 stdio 还是 HTTP 传输？token 放在哪？
+
+<details>
+<summary>提示</summary>
+
+stdio：每个人在自己机器上跑一份，token 通过 `-e` 放进**自己的用户级**配置，千万别写进会提交到仓库的 `.mcp.json`。好处是简单、token 不离开本机；坏处是每个人都要装运行环境，升级要各自升。HTTP：服务部署一份，升级一次全员生效，但每个请求要带上用户身份，MCP 规范里有专门的授权（authorization）一节，常见做法是 OAuth，让每个人授权自己的 Notion，服务端按用户保管 token。你在用的 linear、notion 就是 `type: http` 的远程服务。我的看法：团队小、笔记工具只是辅助，先上 stdio 加个人 env；需要统一升级和审计时再上 HTTP 加 OAuth。
+
+</details>
 
 ## 延伸阅读
 

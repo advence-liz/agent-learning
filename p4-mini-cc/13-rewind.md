@@ -440,9 +440,32 @@ sess.m1 -- bak.b1: "检查点 1" {style.stroke-dash: 3}
 
 ## 练习
 
-1. 第 11 章的任务清单存在独立的 `<session>.tasks.json` 里，回退对话时它不会跟着回去。给检查点也存一份清单快照，让 `/rewind` 一起恢复。
-2. 用第 7 章的 `file_state` 给 Bash 补一个「事后快照」：执行 Bash 前记下所有已读文件的 sha256，执行后比对，变了的文件补一份备份。这能覆盖 `sed -i`，但覆盖不了哪些情况？
-3. 开放题：Claude Code 的菜单里有「Summarize from here」。如果让你实现「保留前 3 轮原样，把第 4 轮以后压缩成摘要」，你会怎么接第 14 章的压缩？它对 prompt cache 和 thinking 块有什么影响？
+**1.** 第 11 章的任务清单存在独立的 `<session>.tasks.json` 里，回退对话时它不会跟着回去。给检查点也存一份清单快照，让 `/rewind` 一起恢复。
+
+<details>
+<summary>提示</summary>
+
+在 `rewind.py` 的 `Checkpoint` 上加一个字段（比如 `tasks: list[dict] | None`），`App._on_message` 调 `file_history.begin(...)` 时把当前 `ctx.extras["tasks"]`（`TaskStore`）的内容拍一份进去。`App.rewind` 的 conversation 分支里，用这份快照重建 `TaskStore`、`save()` 回 `session.tasks_path`，再放回 `ctx.extras`；Node 对应 `cli.ts` 的 `onMessage` / `rewind`。测试：第一轮建 1 个任务，第二轮再建 2 个，`/rewind 2` 之后 `/todos` 只剩 1 个，磁盘上的 `.tasks.json` 也只剩 1 个。想清楚 `code` 模式要不要动清单（我倾向不动：清单属于对话，不属于代码）。
+
+</details>
+
+**2.** 用第 7 章的 `file_state` 给 Bash 补一个「事后快照」：执行 Bash 前记下所有已读文件的 sha256，执行后比对，变了的文件补一份备份。这能覆盖 `sed -i`，但覆盖不了哪些情况？
+
+<details>
+<summary>提示</summary>
+
+改动放在 `tools/bash.py` 的 `BashTool.run` 前后：执行前遍历 `ctx.file_state.paths()`，用 `file_state.digest` 记下每个文件的 sha256；执行后再算一遍，变了的往当前检查点里补备份。坑在于执行后磁盘上已经是新内容了，备份要用执行前的版本：`FileRecord.text` 存着模型看到的那一版，可以直接拿来写；或者干脆执行前就对这些文件调 `ctx.before_write(p)`（`FileHistory.before_write` 每个检查点每个文件只备份一次，不会重复）。覆盖不了的：模型没读过的文件（`sed -i` 改了没 Read 过的文件、`rm -rf`、新建文件）、超过 `MAX_KEEP` 不存原文的大文件，以及文件系统之外的副作用（git commit、数据库、网络请求）。
+
+</details>
+
+**3.** 开放题：Claude Code 的菜单里有「Summarize from here」。如果让你实现「保留前 3 轮原样，把第 4 轮以后压缩成摘要」，你会怎么接第 14 章的压缩？它对 prompt cache 和 thinking 块有什么影响？
+
+<details>
+<summary>提示</summary>
+
+判断方向：这是「保留头部、压缩尾部」，正好和第 14 章「整段压成摘要」相反。实现上可以复用 `compact.py` 的流程：只拿第 4 轮以后的那段去生成摘要，新历史 = 前 3 轮原样 + 一条摘要 user 消息，再走 `load_history` 和 `_append`。好处是前 3 轮的前缀逐字节不变，prompt cache 能命中到那里，前 3 轮里的 thinking 块也照样有效（它们之前的内容没变）；摘要之后的部分要重新写缓存。我觉得值得做，但要守住一条：被压掉的后半段里的 thinking 块一个都不能带过去，它们前面的内容已经变了，带过去会直接 400。
+
+</details>
 
 ## 延伸阅读
 

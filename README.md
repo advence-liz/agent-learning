@@ -22,7 +22,7 @@ flowchart LR
 | 部分 | 讲什么 | 建议 |
 |---|---|---|
 | [第 0 部分 · 核心概念](#p0-core) | 主线的起点：token、上下文、API，所有后续章节的地基 | ⭐ 必读，1 天 |
-| [第 1 部分 · AI 工具使用技巧](#p1-tools) | 你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读） | ⭐ 只读付费 5 章，2 天 |
+| [第 1 部分 · AI 工具使用技巧](#p1-tools) | 你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读） | ⭐ 08–12 五篇原创必读，01–07 笔记速读（07 必读），13–14 选读；2 天 |
 | [第 2 部分 · Agent 开发基础](#p2-agent-basics) | 从聊天机器人到 Coding Agent、RAG、可观测性、MCP，亲手写一遍 | ⭐⭐ 重点，1 周 |
 | [第 3 部分 · 工业级 Agent：拆解与生产工程](#p3-agent-internals) | 抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后三章讲构建、评测、安全 | ⭐⭐ 重点，1 周 |
 | [第 4 部分 · 手搓 mini Claude Code](#p4-mini-cc) | 一个工程从 0 长到 21 个能力，每章一次增量 | ⭐⭐⭐ 核心项目，2–3 周 |

@@ -373,9 +373,32 @@ API 只支持这四种格式。你可能会问：扩展名不就够了？
 
 ## 练习
 
-1. 实现 `/paste`：在 macOS 上用 `osascript -e 'the clipboard as «class PNGf»'` 把剪贴板里的图片存成临时文件，然后像 `@` 一样附加。
-2. 会话 jsonl 里不存 base64：图片落盘到 `<home>/images/<sha256>.<ext>`，记录里只存 `{"type":"image","source":{"type":"local","path":...}}`，读取时还原。还原出来的块必须和第一次发送时**逐字节相同**，为什么？（提示：prompt cache 和第一条不变量。）
-3. 开放题：超过 2576px 的图服务端会缩小，那客户端要不要自己先缩？从 token 成本、请求体积、坐标精度（让模型说「按钮在 (x, y)」时）三个角度比较。
+**1.** 实现 `/paste`：在 macOS 上用 `osascript -e 'the clipboard as «class PNGf»'` 把剪贴板里的图片存成临时文件，然后像 `@` 一样附加。
+
+<details>
+<summary>提示</summary>
+
+在 `cli.py` 里注册一个 `/paste` 命令：osascript 输出的是 `«data PNGf89504E47…»` 这种十六进制文本，剥掉前后缀、`bytes.fromhex` 还原，写进临时文件。之后复用 `mentions.py` 的 `image_attachment(path, ref)`，和 `@` 走同一条路，`images.load_image` 的尺寸、大小校验都不用重写。剪贴板里不是图片时 osascript 会失败，要给一句人话的提示。测试里别真调 osascript：把「读剪贴板」抽成可注入的函数，喂一个小 PNG 的字节，断言下一次请求的 user 消息里有一个 `image` 块。
+
+</details>
+
+**2.** 会话 jsonl 里不存 base64：图片落盘到 `<home>/images/<sha256>.<ext>`，记录里只存 `{"type":"image","source":{"type":"local","path":...}}`，读取时还原。还原出来的块必须和第一次发送时**逐字节相同**，为什么？（提示：prompt cache 和第一条不变量。）
+
+<details>
+<summary>提示</summary>
+
+写入在 `session.py` 的 `Session.record`，读取在 `SessionStore.load`（Node 在 `session.ts`）：写之前把 `source.type == "base64"` 的块换成 `local` 引用、字节写到 `<home>/images/<sha256>.<ext>`，读的时候反过来读文件、重新 base64 编码。只改落盘的副本，内存里的 `agent.messages` 不能动。必须逐字节相同，是因为恢复后的历史要和当初发给模型的前缀一模一样（第一条不变量：历史只追加、不改写）；差一个字节，prompt cache 从那里往后全部失效，后面的 thinking 块也跟着失效。测试：发一张图、`/resume`，断言恢复后的 image 块和原块相等，jsonl 里搜不到 base64 数据。
+
+</details>
+
+**3.** 开放题：超过 2576px 的图服务端会缩小，那客户端要不要自己先缩？从 token 成本、请求体积、坐标精度（让模型说「按钮在 (x, y)」时）三个角度比较。
+
+<details>
+<summary>提示</summary>
+
+三个角度：token 成本上，服务端反正会把长边缩到 2576px 以内，你先缩不省 visual token，只是让 `/context` 的估算更准；请求体积上，先缩能明显减小上传量、离 10MB 的 base64 上限更远，而长会话每次请求都要重发历史里的图，这一项会累积；坐标精度上，模型说的 `(x, y)` 是它看到的那张图上的坐标，不管谁缩的，你都得按比例换算回原图。我的结论是客户端自己先缩到 2576px 以内，并记下缩放比例：体积小了，坐标换算也有确定的依据，不用去猜服务端怎么缩。
+
+</details>
 
 ## 延伸阅读
 

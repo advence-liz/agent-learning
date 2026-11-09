@@ -62,9 +62,11 @@ r -> u: 响应解析
 不是。adapter 只管字段**结构**，管不了字段的**语义**，这正是第三个假设失效的地方：
 
 - 同样写 `"thinking": {"type": "disabled"}`，有的厂商的模型接受；发给 `claude-opus-5-5` 会返回 **400**。这个模型不允许关闭思考，只能用 `output_config.effort: "low"` 把思考强度调低。
-- 同样写 `temperature: 0`，开源模型照单全收；当前一代 Claude 不收：`claude-opus-5-5` 传 `temperature`、`top_p`、`top_k` 都返回 400，Sonnet 5.5 和 Haiku 5.5 只接受默认值。
+- 同样写 `temperature: 0`，开源模型照单全收；Claude 这边要按 **API 版本**（请求头 `anthropic-version`）分两种情况：
+    - `2023-06-01`：看模型。`claude-opus-5-5` 传 `temperature`、`top_p`、`top_k` 都返回 400，Sonnet 5.5 和 Haiku 5.5 只接受默认值，老一些的模型（如 Sonnet 4.6）还能传别的值。
+    - `2026-10-21`：不看模型，只要请求里带了这三个字段就返回 400，哪怕写的是默认值 `temperature: 1`（见 [迁移指南](https://platform.claude.com/docs/en/api/migration-2026-10-21)）。
 
-（这两条都核对自 `claude-api` skill。）
+（这两条核对自 `claude-api` skill 和 [迁移指南](https://platform.claude.com/docs/en/api/migration-2026-10-21)。）
 
 所以切换厂商时，结构交给 adapter，语义要逐个参数回查目标模型的文档。
 
@@ -113,7 +115,7 @@ r -> u: 响应解析
     responses         text='超时是 15000ms。' stop='completed' in=120 out=12
     ```
 
-两版有一处真实差异：Node 的 `@anthropic-ai/sdk`（本机 1.1.0）把 `apiKey` 放在 `Authorization: Bearer` 里发，`anthropic-version` 也是新的 `2026-10-21`；Python 的 `anthropic` 1.17.0 发的是 `x-api-key` + `2023-06-01`。这是从 SDK 源码和抓到的头确认的，下面的表按 Python 版和官方文档写。
+两版有一处真实差异：Node 的 `@anthropic-ai/sdk`（本机 1.1.0）把 `apiKey` 放在 `Authorization: Bearer` 里发，`anthropic-version` 也是新的 `2026-10-21`；Python 的 `anthropic` 1.17.0 发的是 `x-api-key` + `2023-06-01`。这是从 SDK 源码和抓到的头确认的。按 [迁移指南](https://platform.claude.com/docs/en/api/migration-2026-10-21)，默认用 `2026-10-21` 的那一批新版 SDK 都改成用 `Authorization: Bearer` 发 API key，而 API 本身**两种头都接受**；所以差异来自 SDK 版本，不是接口变了。下面的表按 Python 版（`2023-06-01`）写。
 
 不加 `--compact` 能看到完整的缩进 JSON。下面摘出三份 body 里最能说明差异的片段，都取自实际输出（Python 版；Node 的 `JSON.stringify` 不加空格，`arguments` 是 `{"path":"apps/web/vitest.config.ts"}`，其余字段一致）。
 
@@ -159,7 +161,7 @@ Responses：不叫 `messages`，叫 `input`，里面的元素是一个个 item�
 | 维度 | Anthropic Messages | OpenAI Chat Completions | OpenAI Responses |
 |---|---|---|---|
 | 路径 | `/v1/messages` | `/v1/chat/completions` | `/v1/responses` |
-| 鉴权头 | `x-api-key` + `anthropic-version` | `Authorization: Bearer` | `Authorization: Bearer` |
+| 鉴权头 | `x-api-key` 或 `Authorization: Bearer`（API 都接受；`2026-10-21` 的新版 SDK 默认发 Bearer），外加 `anthropic-version` | `Authorization: Bearer` | `Authorization: Bearer` |
 | 系统提示 | 顶层 `system` | `messages[0]`，`role: system` | 顶层 `instructions` |
 | 对话容器 | `messages` | `messages` | `input`（item 列表） |
 | 输出上限 | `max_tokens`（**必填**） | `max_completion_tokens` | `max_output_tokens` |
@@ -190,7 +192,7 @@ Responses：不叫 `messages`，叫 `input`，里面的元素是一个个 item�
 1. **把 Chat Completions 的 system 消息原样塞进 Anthropic 的 `messages`**。Anthropic 的 system 在顶层；`messages` 里的 `role: "system"` 是新模型的另一种用法（会话中途追加的系统消息），而且不能放在第一位。
 2. **漏了 `max_tokens`**。Anthropic 接口里它是必填项，OpenAI 那边可以省略。
 3. **工具参数不 parse 或者 parse 两次**。OpenAI 给的是字符串，Anthropic 给的是对象。
-4. **只看结构不看语义**。`thinking: disabled`、`temperature`、强制 `tool_choice`（`any` / `tool` 在 Opus 5.5 上返回 400），这些都是「格式兼容、模型不收」。
+4. **只看结构不看语义**。`thinking: disabled`、强制 `tool_choice`（`any` / `tool` 在 Opus 5.5 上返回 400），这些都是「格式兼容、模型不收」。`temperature` 更要看 API 版本：`2023-06-01` 下是看模型收不收，`2026-10-21` 下任何模型带了都 400。
 5. **给 1.x 的 SDK 传老 `httpx` 对象**。见上面的 httpx2 提示。
 
 ## 练习
@@ -200,7 +202,7 @@ Responses：不叫 `messages`，叫 `input`，里面的元素是一个个 item�
 <details>
 <summary>参考答案</summary>
 
-至少六处：① 路径改成 `/v1/messages`；② 鉴权头从 `Authorization: Bearer` 改成 `x-api-key`，并加上 `anthropic-version`；③ 把 `role: system` 那条消息拿出来，放到顶层 `system`；④ 补上必填的 `max_tokens`；⑤ 工具定义去掉 `function` 那层，把 `parameters` 改名成 `input_schema`；⑥ 历史里的 `tool_calls` 改成 assistant 的 `tool_use` block（`arguments` 字符串要 parse 成对象），`role: tool` 改成 user 消息里的 `tool_result` block。读响应时，从 `choices[0].message.content` 改成遍历 `content[]` 取 type 为 text 的块，结束原因看 `stop_reason`。
+至少六处：① 路径改成 `/v1/messages`；② 加上 `anthropic-version`（鉴权头 `Authorization: Bearer` 在 Anthropic 这边也能用，改成 `x-api-key` 同样可以）；③ 把 `role: system` 那条消息拿出来，放到顶层 `system`；④ 补上必填的 `max_tokens`；⑤ 工具定义去掉 `function` 那层，把 `parameters` 改名成 `input_schema`；⑥ 历史里的 `tool_calls` 改成 assistant 的 `tool_use` block（`arguments` 字符串要 parse 成对象），`role: tool` 改成 user 消息里的 `tool_result` block。读响应时，从 `choices[0].message.content` 改成遍历 `content[]` 取 type 为 text 的块，结束原因看 `stop_reason`。
 
 </details>
 

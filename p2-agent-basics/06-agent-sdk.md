@@ -4,7 +4,7 @@
 
 > **一句话结论**：Claude Agent SDK（Python 包 `claude-agent-sdk`）就是**把 Claude Code 当成一个库来调**：它在子进程里启动 Claude Code CLI，用 stdin/stdout 上一行一个 JSON 跟它对话。循环、内置工具、上下文管理全部白送；你只写 prompt、options，以及想插进去的 hook 和自定义工具。
 
-第 2 章我们手写了 ~120 行的 Coding Agent。真要拿去用，你很快会想要：精确编辑而不是整文件覆盖、权限审批、上下文快满时自动压缩、subagent、MCP……这些 Claude Code 全都有。
+[第 2 章](02-coding-agent.md)我们手写了一个 130–140 行的 Coding Agent（Node 版 142 行、Python 版 131 行）。真要拿去用，你很快会想要：精确编辑而不是整文件覆盖、权限审批、上下文快满时自动压缩、subagent、MCP……这些 Claude Code 全都有。
 
 你可能会问：能不能直接把 Claude Code 的这套能力搬进我自己的程序？
 
@@ -261,9 +261,32 @@ SDK 侧的这些行为来自 `claude_agent_sdk/_internal/query.py` 源码，是�
 
 ## 练习
 
-1. 给 options 加一个 `PostToolUse` hook，把每次工具调用的名字和耗时追加到一个列表里，在 `ResultMessage` 到来时打印。用假 CLI 验证（提示：`fake_cli.ts`（Python 版 `fake_cli.py`）目前只发 PreToolUse，你需要让它也发 PostToolUse）。
-2. 用 `ClaudeSDKClient`（Node 版没有这个类，给 `query()` 的 `prompt` 传一个 `AsyncIterable` 消息流即可多轮）改写 `run()`，实现两轮对话：第一轮修 bug，第二轮「把刚才的修改写进 CHANGELOG」。
-3. 开放题：你的 `enforce-worktree.py` 如果改写成 SDK 里的 Python hook，好处和坏处各是什么？什么情况下你会选 SDK hook 而不是 settings 里的 shell hook？
+**1.** 给 options 加一个 `PostToolUse` hook，把每次工具调用的名字和耗时追加到一个列表里，在 `ResultMessage` 到来时打印。用假 CLI 验证（提示：`fake_cli.ts`（Python 版 `fake_cli.py`）目前只发 PreToolUse，你需要让它也发 PostToolUse）。
+
+<details>
+<summary>提示</summary>
+
+先改假 CLI：在 `play()`（Python 版 `_play`）里，发出 `tool_result` 之后再调一次 `this.runHooks("PostToolUse", name, args, tid)`。真实的 PostToolUse 输入里还有工具结果，需要的话一并塞进 `input`。再改 options：`hooks` 里加 `PostToolUse` 这一项，不写 matcher，所有工具都要计时。耗时的算法是：PreToolUse 回调里按 `tool_use_id` 记开始时间，PostToolUse 里取出来相减，追加进列表。注意 `makeOptions` 里原来那条 PreToolUse 带了 `matcher: "Bash"`，计时用的那条要单独挂。在 `run()` 里 `msg.type === "result"` 的分支打印列表。假 CLI 不真正执行内置工具，所以耗时基本只有 hook 来回的时间，数字很小是正常的。
+
+</details>
+
+**2.** 用 `ClaudeSDKClient`（Node 版没有这个类，给 `query()` 的 `prompt` 传一个 `AsyncIterable` 消息流即可多轮）改写 `run()`，实现两轮对话：第一轮修 bug，第二轮「把刚才的修改写进 CHANGELOG」。
+
+<details>
+<summary>提示</summary>
+
+Node 版：`prompt` 传一个 async generator，先 yield 第一条 user 消息（`SDKUserMessage` 的形状：`type: "user"` 加 `message`），等收到第一个 `result` 之后再 yield 第二条。可以在 for-await 循环里收到 `result` 时 resolve 一个 Promise，让 generator 在那里 await。Python 版用 `ClaudeSDKClient` 的 `query()` 发消息，`receive_response()` 收到 `ResultMessage` 为止，然后发第二轮。离线跑之前还得改假 CLI：它现在每收到一条 user 消息就把整个剧本从头放一遍，要把剧本拆成每轮一段，第几条消息放第几段。
+
+</details>
+
+**3.** 开放题：你的 `enforce-worktree.py` 如果改写成 SDK 里的 Python hook，好处和坏处各是什么？什么情况下你会选 SDK hook 而不是 settings 里的 shell hook？
+
+<details>
+<summary>提示</summary>
+
+好处：和你的程序同进程，能共享内存里的状态，能写类型、写单测，也不用每次 fork 一个子进程。坏处更要命：SDK hook 只在你的 SDK 程序里生效，你平时开的交互式 Claude Code 会话完全不受它管。`enforce-worktree.py` 的目的恰恰是管住所有会话，所以它应该留在 settings 里。另外 Python SDK 不支持 `SessionStart` 回调。我会在这种情况下选 SDK hook：agent 是你自己的产品，规则需要读写程序状态，比如按任务累计预算、写进内存里的审计日志。
+
+</details>
 
 ## 延伸阅读
 

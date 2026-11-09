@@ -1,6 +1,6 @@
 """补充章「Agent 构建指南」内核一：循环最难的是什么时候停。
 
-在第 1 章的 run_agent 上加三件事：
+在 p2-agent-basics「动手实现一个 Coding Agent」的 run_agent 上加三件事：
   1. 撞迭代上限 → 不抛错，再调一次模型（tool_choice=none）让它收口总结；
   2. 软预算到点 → 只拦「再开一圈」，已经在跑的这圈照常做完；
   3. 被打断 → 没执行的工具调用补一条 is_error 的 tool_result，历史保持「每个 tool_use 都有回音」。

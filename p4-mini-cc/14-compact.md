@@ -4,9 +4,11 @@
 
 > **一句话结论**：压缩就是多发一次请求，让模型把整段对话写成摘要，然后**用「摘要 + 程序重新挂回的东西」作为新的起点**。摘要只负责记住「我们在干什么」；项目说明、任务清单、最近读的文件这些能从磁盘重新拿的，由程序重新拿，不靠模型记。
 
+[如何实现上下文压缩](../p3-agent-internals/05-context-compaction.md)拆过 Claude Code 压缩后上下文里剩什么，也写了一个独立的最小压缩器；本章的增量是把压缩接进 mini-cc 的循环：复用同一前缀发摘要请求、用第 9 章的 providers 自动重新挂回项目说明和清单、在一轮中途按阈值自动触发、在会话文件里写 `compact_boundary` 让 `/resume` 和 rewind 跟着对，并且有测试守着。
+
 ## 压缩之后，它为什么忘了「别改函数名」？
 
-你本机的会话被压缩过 95 次，自动压缩前的中位数是 96.7 万 token（[如何实现上下文压缩](../p3-agent-internals/05-context-compaction.md)里统计过）。你多半遇到过这种情况：长会话后半段，它突然把你一小时前明确说过不许动的函数签名改了。
+你本机的会话被压缩（compaction）过 100 次，自动压缩前的中位数是 96.7 万 token（[如何实现上下文压缩](../p3-agent-internals/05-context-compaction.md)里统计过）。你多半遇到过这种情况：长会话后半段，它突然把你一小时前明确说过不许动的函数签名改了。
 
 你可能会问：压缩不是有摘要吗？摘要里没写吗？
 
@@ -150,7 +152,7 @@ l -> m: "正常请求（只带这一条消息）"
 
 比方在这里不成立：人写交接单时知道接班的人缺什么；模型写摘要时并不知道「之后会用到什么」。所以摘要提示词要**事先规定**必须写哪些小节，而且明确要求用户的原话尽量照抄。
 
-**回到主线**：压缩是最直接的「用信息损失换上下文空间」。把它做好的关键是分工：会丢失的信息交给摘要尽量保住，**能从磁盘重新拿的，一个字都不交给摘要**。
+**回到主线**：「用信息损失换上下文空间」这个道理 p3 已经讲过，落到实现上，压缩函数自己几乎不管「挂回什么」：它只负责要一份摘要、清空历史、调一次 `context.inject()`，剩下的由早就写好的 providers 按「扫描历史」的规矩补齐。**能从磁盘重新拿的，一个字都不交给摘要，也一行代码都不写进压缩函数**。
 
 ## 动手
 
@@ -407,19 +409,15 @@ buffer 要留够，原因有两个：
     146 passed in 5.18s
     ```
 
-## API 侧的两种做法
+## 为什么 mini-cc 坚持客户端压缩
 
-mini-cc 和 Claude Code 都是**客户端压缩**：自己调模型写摘要，自己重组 messages。Messages API 还提供了服务端的机制（claude-api 文档）：
+mini-cc 和 Claude Code 一样是客户端压缩；服务端压缩、上下文编辑这两种 API 侧做法和取舍见 [上下文压缩](../p3-agent-internals/05-context-compaction.md)的「API 侧的另外两种做法」。
 
-- **服务端压缩**：beta 头 `compact-2026-01-12`，请求里带 `context_management={"edits": [{"type": "compact_20260112"}]}`，默认在约 15 万输入 token 时由 API 自动总结。响应里会有 `compaction` 块，必须把整个 `response.content` 原样存回历史。
-- **上下文编辑**：`clear_tool_uses_20250919` 清掉旧的工具结果，`clear_thinking_20251015` 清掉旧的 thinking 块。
-
-文档说这两种都**不算编辑历史**，不会触发 thinking 块失效。如果你的 agent 只跑在官方 API 上，服务端压缩是更省事的选择。我在 mini-cc 里坚持自己做，原因是想把每一步摊开看；另外，走中转站时 beta 功能不一定可用，客户端压缩到哪都能跑。
+如果你的 agent 只跑在官方 API 上，服务端压缩更省事。我在 mini-cc 里坚持自己做，原因是想把每一步摊开看；另外，走中转站时 beta 功能不一定可用，客户端压缩到哪都能跑。
 
 ## 对照你的环境
 
-- 你的 SessionStart hook matcher 是空字符串，每次压缩后 `inject-guardrails.sh` 都会重跑（本机 154 次 `SessionStart:compact`）。这和 mini-cc 里 providers 自动重新注入项目说明是同一件事：护栏不能交给摘要。
-- 你本机有 43 次手动 `/compact`。在 webapp 上调了很久的 bug 准备换话题时，`/compact 只保留 XX 相关的结论` 能让摘要聚焦。mini-cc 的 `/compact <指令>` 是同一个用法。
+- 本机的压缩统计（手动 / 自动次数、压缩后 `SessionStart:compact` 重跑护栏、带指令的 `/compact`）见 [上下文压缩](../p3-agent-internals/05-context-compaction.md)的「对照你的环境」。落到 mini-cc：你的护栏 hook 在压缩后重跑，对应这里 providers 扫描历史后自动重新注入；`/compact 只保留 XX 相关的结论` 对应 mini-cc 的 `/compact <指令>`。
 - 第 11 章的任务清单存在独立文件里，压缩后由 provider 原样贴回来。这也是当初把计划从历史里拿出去的理由之一。
 
 ## 常见坑
@@ -432,9 +430,32 @@ mini-cc 和 Claude Code 都是**客户端压缩**：自己调模型写摘要，�
 
 ## 练习
 
-1. 实现「先清工具结果、再写摘要」的两级策略：超过 70% 时把较早的 `tool_result` 换成占位符（想想这算不算编辑历史？对 thinking 块有什么影响？），超过 96% 才写摘要。
-2. 捕获「上下文超长」的 API 错误（`ModelError.kind == "too_large"`），自动压缩一次再重试这一轮。压缩请求本身也超长怎么办？
-3. 开放题：把模型切到服务端压缩（`compact_20260112`）。`ContextBuilder` 的 providers 还能「扫描历史判断要不要重新注入」吗？压缩发生在服务端，客户端怎么知道该重新挂回哪些东西？
+**1.** 实现「先清工具结果、再写摘要」的两级策略：超过 70% 时把较早的 `tool_result` 换成占位符（想想这算不算编辑历史？对 thinking 块有什么影响？），超过 96% 才写摘要。
+
+<details>
+<summary>提示</summary>
+
+可以做成第二个挂在 `before_request` 上的钩子，排在 `auto_compact_hook` 前面：用 `agent.usage.last_input` 和 `settings.context_window` 算比例，到 70% 就把较早的 `tool_result` 内容换成一句占位符。这当然是在编辑历史中间：从第一个被改的位置往后，prompt cache 全部失效；而被改位置之后的 assistant 消息里的 thinking 块，前面的内容已经不是产生它时的样子了，同样会失效，新账号上会 400。所以要么连带剥掉那些轮次的 thinking 块，要么只在请求视图里改（像 `merge_consecutive_users` 那样不动 `agent.messages`），但请求前缀照样变了，cache 的代价一样。测试：构造一段带多个 `tool_result` 的历史，把 `last_input` 设到 75%，断言 `FakeClient.requests[-1]` 里旧的结果被替换、最近一个保留、没有发生摘要压缩。
+
+</details>
+
+**2.** 捕获「上下文超长」的 API 错误（`ModelError.kind == "too_large"`），自动压缩一次再重试这一轮。压缩请求本身也超长怎么办？
+
+<details>
+<summary>提示</summary>
+
+改 `loop.py` 的 `run_turn`：`except ModelError as err` 里判断 `err.kind == "too_large"`（`model.py` 把 413 映射成它），就先 `yield from compact(self, "auto")`，再 `yield from self._loop()` 重试，只重试一次，避免死循环。麻烦在压缩请求本身也是「完整历史 + 一条指令」，原请求超长它也超长；`compact()` 会捕获 `ModelError` 并保持历史不变，你又回到原点。退路是压缩前先给请求副本减肥：把最老的几轮或大的 `tool_result` 截短后再请求摘要，或者分段摘要再合并。测试：`FakeClient` 剧本第一步放一个 `too_large` 错误，断言紧接着出现一次压缩请求，然后这一轮正常结束。
+
+</details>
+
+**3.** 开放题：把模型切到服务端压缩（`compact_20260112`）。`ContextBuilder` 的 providers 还能「扫描历史判断要不要重新注入」吗？压缩发生在服务端，客户端怎么知道该重新挂回哪些东西？
+
+<details>
+<summary>提示</summary>
+
+判断方向：服务端压缩之后，客户端 `agent.messages` 里还留着完整的旧历史，但模型实际看到的只是压缩点之后的部分。像 `instructions_provider` 这种「扫描历史里有没有项目说明」的 provider 会被骗：历史里明明有，模型已经看不到了，于是不会重新注入。改法是把压缩点当边界：providers 只扫描最后一次压缩之后的消息，扫不到就当作上下文里没有，重新注入。我的倾向是 mini-cc 继续用本章的客户端简单压缩：挂回什么（最近的文件、skill 正文、项目说明）由程序决定，可控、可测；服务端压缩省掉的是一次摘要请求的代码，换来的是「客户端说不清模型看见了什么」。压缩后返回的具体块结构以 claude-api 文档为准。
+
+</details>
 
 ## 延伸阅读
 

@@ -202,9 +202,32 @@ prompt caching 文档还给出了另一条线索：作用于具体参数的 deny
 
 ## 练习
 
-1. 在 `prefix_cache.ts`（`prefix_cache.py`）里加一个场景：只改变 tools 列表的**顺序**，不增也不删。预测命中率，然后跑一下验证。想一想：为什么真实的 harness 要保证工具列表的顺序稳定？
-2. 加一个「工具保留、调用时拒绝」的场景：fork 的请求和父会话完全一致，另写一个 `execute(toolName)`（`execute(tool_name)`）对 Edit 返回错误。证明它的命中率和普通 fork 一样，同时 Edit 也被拦住了。
-3. （开放题）mini Claude Code 要实现 `/btw`，你会怎么设计请求的形状：tools 带不带、`tool_choice` 设不设、回答写不写进 messages？请分别估算每一种设计的缓存命中情况，再和本章的推测做对比。
+**1.** 在 `prefix_cache.ts`（`prefix_cache.py`）里加一个场景：只改变 tools 列表的**顺序**，不增也不删。预测命中率，然后跑一下验证。想一想：为什么真实的 harness 要保证工具列表的顺序稳定？
+
+<details>
+<summary>提示</summary>
+
+在 `run()` 里加一行：`cache.send([...TOOLS].reverse(), SYSTEM, [...hist, task])`。预测是 0%：`blocksOf()` 把整个 tools 数组渲染成**第一个** block，`stableJson` 只给对象的键排序，不给数组排序，顺序一变这串就变了，第一个 block 没命中，后面全部 uncached，和「删掉 Bash」那行一样。这也就是 harness 必须保证工具顺序稳定的原因：tools 排在前缀最前面，MCP server 连接先后、遍历顺序这类不起眼的抖动，都会让整个会话的缓存一起作废。
+
+</details>
+
+**2.** 加一个「工具保留、调用时拒绝」的场景：fork 的请求和父会话完全一致，另写一个 `execute(toolName)`（`execute(tool_name)`）对 Edit 返回错误。证明它的命中率和普通 fork 一样，同时 Edit 也被拦住了。
+
+<details>
+<summary>提示</summary>
+
+请求部分直接复用 `cache.send(TOOLS, SYSTEM, [...hist, 新任务])`，三样都不动。新任务的文字换一句和 fork 那行不同的，命中率就能和「Fork：同 tools/system/历史」那行对上（99.8% 左右）；要是一字不差，会是 100%，因为那个前缀刚刚已经写进缓存了。拦截放在执行侧：`execute(toolName)` 遇到 `Edit` 就返回 `{ is_error: true, content: "fork 里禁止 Edit" }`，其它工具正常返回。测试里同时断言两件事：命中率和普通 fork 相同，`execute("Edit")` 返回错误。
+
+</details>
+
+**3.** （开放题）mini Claude Code 要实现 `/btw`，你会怎么设计请求的形状：tools 带不带、`tool_choice` 设不设、回答写不写进 messages？请分别估算每一种设计的缓存命中情况，再和本章的推测做对比。
+
+<details>
+<summary>提示</summary>
+
+分三种设计算：① tools 原样、`tool_choice` 不动、harness 不执行任何调用，前缀全中，只付新问题和回答的钱，这就是本章的推测；② 去掉 tools，三层全部失效，接近 0%；③ 保留 tools 但改 `tool_choice`，tools 和 system 命中，messages 层失效，而长会话的大头恰好在 messages，几乎是全价。回答不写进主会话的 messages：文档说 `/btw` 的结果不进对话历史，写进去会让后面每一轮都多付这段的钱。注意模拟器里没有 `tool_choice`，要估算 ③ 得自己在 system 和 messages 之间加一个 block。
+
+</details>
 
 ## 延伸阅读
 

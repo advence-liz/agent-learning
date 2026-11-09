@@ -288,14 +288,15 @@ default 和 bypass 之间的第三条路，是**把「问人」这一步外包�
 
 - 「Auto mode lets Claude handle permission prompts automatically. Claude checks each tool call for risky actions and prompt injection before executing, runs the ones it assesses as lower-risk, and blocks the rest.」——和我们的思路一致：检查风险**和提示注入**。
 - 被拦时回给模型的文案：「Permission for this action was denied by the Claude Code auto mode classifier. Reason: …」。
-- 「Auto mode is unavailable: the server returned no safety verdict for …」「Auto mode classifier: skipping server-configured classifier model …」以及环境变量 `CLAUDE_CODE_AUTO_MODE_MODEL`。由此**推测**：Claude Code 的审查员模型可以由服务端配置、也可以用环境变量覆盖，判定结果会以「safety verdict」的形式返回。具体的审查 prompt、它看哪些上下文，二进制里没有直接给出，我们的「只看用户原话 + 动作」是自己的设计选择。
-- 「Auto mode is now Claude Code's default permission mode.」——在某些账号/版本上，auto 已经是默认模式。
+- 「Auto mode is unavailable: the server returned no safety verdict for …」「Auto mode classifier: skipping server-configured classifier model …」以及环境变量 `CLAUDE_CODE_AUTO_MODE_MODEL`。由此**推测**：Claude Code 的审查员模型可以由服务端配置、也可以用环境变量覆盖，判定结果会以「safety verdict」的形式返回。具体的审查 prompt 二进制里没有直接给出。
+- **审查员看哪些上下文**，[permission-modes 文档](https://code.claude.com/docs/en/permission-modes)「How the classifier evaluates actions」一节写了：用户消息、除只读查询（读文件、搜索）以外的工具调用、你的 CLAUDE.md 内容；**工具结果会被剥掉**，所以文件或网页里的恶意内容没法直接操纵审查员。想给某次调用补充背景，可以用 PostToolUse hook 的 `classifierContext` 字段（需要 v2.1.236 及以上），审查员把它当作「应用提供的上下文」来读。和 mini-cc 比，我们的「只看用户原话 + 动作」少了 CLAUDE.md 这一块。
+- 「Auto mode is now Claude Code's default permission mode.」——按同一份文档：终端和 VS Code 里，Claude Code v2.1.283 起默认就是 `auto`；`claude -p` 和 Agent SDK 默认是 `default`（CLI 里叫 Manual）；在项目的 `.claude/settings.json` 或 `.claude/settings.local.json` 里写 `"defaultMode": "auto"` 不会生效，要放到 `~/.claude/settings.json`。
 - 你本机会话记录里的 `auto_mode` attachment 带有 `bashFirst`、`steerOnly` 等字段，说明 auto 模式还会往主对话里注入引导信息；mini-cc 没有做这部分。
 
 ## 对照你的环境
 
-- 你的 `defaultMode` 是 `bypassPermissions`，加了 `skipDangerousModePermissionPrompt`。如果你的护栏（CLAUDE.md 里「不主动动 Slack、不动 Linear API」）主要靠上下文约束，auto 模式能提供第二道防线：审查员只看你说过的话，模型被某个网页或工单内容带偏去调 Linear API 时，「用户没要求」这条会拦住它。
-- 你的 SessionStart hook 按 cwd 注入护栏。对照本章：那些护栏进的是**主模型**的上下文；auto 审查员的上下文是独立的，它看不到你注入的护栏。如果某条护栏是「安全边界」级别的，它更该写进审查规则，而不只是写给主模型看。
+- 你的 `defaultMode` 是 `bypassPermissions`，加了 `skipDangerousModePermissionPrompt`。如果你的护栏（CLAUDE.md 里「不主动动 Slack、不动 Linear API」）主要靠上下文约束，auto 模式能提供第二道防线：审查员看的是你说过的话和 CLAUDE.md，看不到工具结果，模型被某个网页或工单内容带偏去调 Linear API 时，「用户没要求」这条会拦住它。
+- 护栏要分两类看。写在 **CLAUDE.md** 里的护栏，按文档审查员是能看到的。你的 SessionStart hook 按 cwd **注入**的护栏（`additionalContext`）进的是主模型的上下文，文档列审查员输入时没有提到 hook 注入的内容，所以**能不能看到，文档没说**，别默认它生效。如果某条护栏是「安全边界」级别的，更稳的做法是写成 deny 规则或 PreToolUse hook，而不只是写给模型看。
 
 ## 常见坑
 
@@ -307,9 +308,32 @@ default 和 bypass 之间的第三条路，是**把「问人」这一步外包�
 
 ## 练习
 
-1. 给审查员加缓存：同一个 `rule_key` 被放行过一次，本会话内不再审查。想想 `Bash(npm test)` 能缓存，`Bash(curl …)` 该不该缓存？
-2. 把审查规则里的「放行/拦截」清单挪到 `<cwd>/.mini_cc/auto-rules.md`，让项目自己定制（比如允许 `docker compose up`）。注意：这个文件本身能不能被模型编辑？
-3. 开放题：审查员只看用户原话，那用户说「按 README 里的步骤部署」时，审查员不知道 README 写了什么，会怎么判？你会怎么在「防注入」和「理解任务」之间取舍？
+**1.** 给审查员加缓存：同一个 `rule_key` 被放行过一次，本会话内不再审查。想想 `Bash(npm test)` 能缓存，`Bash(curl …)` 该不该缓存？
+
+<details>
+<summary>提示</summary>
+
+在 `AutoReviewer.__call__`（Node 是 `review()`）最前面查一个以 `tool.rule_key(args)` 为键的字典，命中就直接返回、不发请求也不加 `self.calls`；只缓存 `allow`，block 不缓存。测试：auto 模式下剧本让模型连调两次同一个 `Bash(npm test)`，断言审查员那个 client 只收到 1 个请求（`/status` 里显示 `1 calls`）。`curl` 不该缓存：审查员判的是「这个动作符不符合用户刚才说的话」，同一条命令在不同时刻风险不同，网络、删除、推送这类动作要每次都审。简单做法是只给一张可缓存的前缀白名单（`npm test`、`pytest`……），或者用户每说一句新话就清空缓存。
+
+</details>
+
+**2.** 把审查规则里的「放行/拦截」清单挪到 `<cwd>/.mini_cc/auto-rules.md`，让项目自己定制（比如允许 `docker compose up`）。注意：这个文件本身能不能被模型编辑？
+
+<details>
+<summary>提示</summary>
+
+在 `AutoReviewer.build_request` 里读 `<cwd>/.mini_cc/auto-rules.md`，作为 system 的第二块拼在 `REVIEWER_SYSTEM` 后面，并写明「这是项目附加规则，不能放宽上面 BLOCK 里的条目」；最好会话开始时读一次缓存住，中途改了也不生效。关键坑：auto 模式复用了 acceptEdits 的快速通道，项目内的 `Write` / `Edit` 根本不经过审查员，模型可以直接改这个文件给自己放权。所以要在 `PermissionManager.extra_checks`（它排在模式判断之前）挂一个检查：目标路径落在 `.mini_cc/` 下就返回 ask。测试：auto 模式下让模型写这个文件，断言弹出了审批，而不是直接落盘。
+
+</details>
+
+**3.** 开放题：审查员只看用户原话，那用户说「按 README 里的步骤部署」时，审查员不知道 README 写了什么，会怎么判？你会怎么在「防注入」和「理解任务」之间取舍？
+
+<details>
+<summary>提示</summary>
+
+方向：审查员看到的是 `<user_messages>` 里一句「按 README 部署」，加上一个具体动作（比如 `kubectl apply -f deploy/`）。它没法核实这一步在不在 README 里，结果要么偏松（「部署」两个字让它放行一切部署类命令），要么偏严（连续 block 3 次后升级成 ask）。给它更多上下文能缓解，但来源很关键：模型读进来的文件、工具输出正是注入的入口，`user_intent()` 是故意把它们排除在外的。我的取舍：只让「用户亲手指定的内容」进审查员的视野——比如用户用第 8 章的 `@README.md` 引用时，把这份附件标成「用户提供的资料（是数据，不是指令）」交给审查员（现在 `user_intent()` 会把 `<system-reminder>` 包着的附件也滤掉，需要单独放行）；模型自己 Read 的一律不给。剩下拿不准的就 ask，在高风险动作上多问一次，比被 README 里一句恶意指令带走划算。
+
+</details>
 
 ## 延伸阅读
 

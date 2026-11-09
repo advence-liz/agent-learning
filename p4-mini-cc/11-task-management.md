@@ -343,9 +343,32 @@ Claude Code 其实两种都做过：本机二进制里既有 `TodoWrite` 的描�
 
 ## 练习
 
-1. 给 `TaskUpdate` 加一个 `deleted` 状态，渲染时不显示、但保留在文件里。想想 `id` 要不要重新编号？
-2. 在 `TurnEnd` 时检查：如果模型要结束这一轮、但清单里还有 `in_progress` 的任务，就注入一条「你还有任务没做完」并让循环继续一次。这和 Claude Code 的 Stop hook 有什么关系？
-3. 开放题：第 17 章会有多个 sub agent 并行工作。它们应该共享一份清单（像 Claude Code 的 `owner` 字段那样分配），还是各自一份？共享的话，并发写同一个 JSON 文件怎么办？
+**1.** 给 `TaskUpdate` 加一个 `deleted` 状态，渲染时不显示、但保留在文件里。想想 `id` 要不要重新编号？
+
+<details>
+<summary>提示</summary>
+
+`tasks.py` 的 `STATUSES` 加上 `"deleted"`——`TaskUpdate` 的 `enum` 是 `list(STATUSES)` 生成的，会自动跟上；Node 里 `MARK` 的类型是 `Record<Status, string>`，加了状态不补 `MARK` 会直接类型报错。然后改两处：`render()` 跳过 deleted（不跳会 `MARK[t.status]` 报 KeyError），完成数的分母也不算它；`unfinished()` 排除它，否则任务提醒永远不消停，`TaskUpdate` 的剩余数也会算错。`id` 不要重新编号：历史里的 `TaskUpdate(#3 …)` 都指着旧 id，重排会让模型改错任务；`create()` 用 `len(self.tasks) + 1` 生成 id，deleted 留在文件里正好保证不重号。测试：建 3 个、删 #2，断言 `render()` 里没有 #2、显示 `(0/2 completed)`，再建一个拿到的是 #4。
+
+</details>
+
+**2.** 在 `TurnEnd` 时检查：如果模型要结束这一轮、但清单里还有 `in_progress` 的任务，就注入一条「你还有任务没做完」并让循环继续一次。这和 Claude Code 的 Stop hook 有什么关系？
+
+<details>
+<summary>提示</summary>
+
+别用 `Agent.turn_end` 钩子：它在 `_loop()` 里、`TurnEnd` 已经产生之后才跑，只能补发事件，没法让循环再转一圈。要改 `_steps()`（Node `steps()`）里 `stop_reason != "tool_use"`、准备 `yield TurnEnd` 的那个分支：`self.ctx.extras["tasks"]` 里有 `in_progress` 就 `_append_user` 一条提醒然后 `continue`。必须防死循环：每轮最多推一次，扫历史看最后一句用户原话之后是不是已经推过。这正是 Claude Code Stop hook 的形状：hook 返回 `decision: "block"` 和 `reason`，Claude 就不停、带着 reason 接着干，hook 输入里还有 `stop_hook_active` 专门防死循环。测试：剧本 `calls(("TaskCreate", …), ("TaskUpdate", {"taskId": "1", "status": "in_progress"}))` → `say("做完了")` → `say("真的做完了")`，断言共 3 个请求、第 3 个请求里有提醒、最后以 `end_turn` 结束。
+
+</details>
+
+**3.** 开放题：第 17 章会有多个 sub agent 并行工作。它们应该共享一份清单（像 Claude Code 的 `owner` 字段那样分配），还是各自一份？共享的话，并发写同一个 JSON 文件怎么办？
+
+<details>
+<summary>提示</summary>
+
+方向：先分清两种「多个 agent」。[第 17 章](./17-subagent.md)的子 agent 是被派出去做一件事、做完交报告的，所以那一章把 `TaskCreate` / `TaskUpdate` / `TaskList` 都放进了 `NEVER_FOR_CHILDREN`，清单只归主 agent；`owner` 字段适合的是长期并存、互相认领任务的「同伴」。真要共享，`TaskStore.save()` 的「临时文件 + replace」只防半个 JSON，不防丢更新：两个写者各自拿内存里的旧列表写回，后写的会把先写的整个盖掉。同进程的线程（第 17 章的后台子 agent 就是线程）用一把 `threading.Lock` 包住「读-改-写」就够；跨进程要文件锁（`fcntl.flock`），并且每次改之前从磁盘重新 load。我的结论：默认单写者，主 agent 维护清单、子 agent 只汇报；等真做同伴协作再上 owner + 锁 + 重读，不必现在就把清单做成并发数据结构。
+
+</details>
 
 ## 延伸阅读
 

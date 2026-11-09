@@ -425,9 +425,32 @@ handler 拿到的是 `App`，也就是整个客户端状态：Agent（messages�
 
 ## 练习
 
-1. 给 `/status` 加一行「本次会话预估花费」：按 `claude-opus-5-5` 每百万 token $4 输入 / $20 输出计算，并加一个测试断言。
-2. 实现 `/history`：把当前 messages 以「角色: 前 40 字」列出，tool_use / tool_result 显示成工具名。
-3. 开放题：仿照 Claude Code 的 `/context`，设计一个可视化：system、工具定义、历史消息、工具结果各占多少 token？真实场景可以用 `client.messages.count_tokens` 分段计数，离线测试又该怎么办？
+**1.** 给 `/status` 加一行「本次会话预估花费」：按 `claude-opus-5-5` 每百万 token $4 输入 / $20 输出计算，并加一个测试断言。
+
+<details>
+<summary>提示</summary>
+
+改 `cli.py` 的 `_status`（Node 是 `cli.ts` 里 `COMMANDS.register("/status", …)` 的回调），拿 `app.agent.usage` 的 `input_tokens` / `output_tokens`（Node 是 `inputTokens` / `outputTokens`）算 `in × 4 / 1e6 + out × 20 / 1e6`。价格写成一张按模型查的小表，`/model` 换成表里没有的模型就显示「未知」，别硬套 Opus 的价。测试照 `test_status_reports_usage` 写：`FakeClient` 默认每次回报 `input_tokens=100`、`output_tokens=20`，聊一句之后应该显示 $0.0008。缓存读写（`cache_read_input_tokens` 等）先不算，第 9 章请求带上 cache 之后要补上，不然会估低。
+
+</details>
+
+**2.** 实现 `/history`：把当前 messages 以「角色: 前 40 字」列出，tool_use / tool_result 显示成工具名。
+
+<details>
+<summary>提示</summary>
+
+在 `cli.py` 里再 `@COMMANDS.register("/history", ...)` 一个命令（Node 同理），遍历 `app.agent.messages`：`content` 可能是字符串也可能是块列表，`text` 块取前 40 字，`tool_use` 显示它的 `name`，`thinking` 块跳过。坑在 `tool_result`：它只有 `tool_use_id`、没有工具名，得先扫一遍 assistant 消息建一张 `id → name` 的表。测试：剧本 `call("Bash", {"command": "echo hi"})` 加 `say("好了")`，聊一句后执行 `/history`，断言输出里有类似 `assistant: [Bash]`、`user: [Bash 结果]` 的行，并且 `len(client.requests)` 没变（斜杠命令不该打到模型）。
+
+</details>
+
+**3.** 开放题：仿照 Claude Code 的 `/context`，设计一个可视化：system、工具定义、历史消息、工具结果各占多少 token？真实场景可以用 `client.messages.count_tokens` 分段计数，离线测试又该怎么办？
+
+<details>
+<summary>提示</summary>
+
+方向：`count_tokens` 每次调用都带固定开销，各段单独计数再相加会偏大；更准的是「差分」——只发 system 计一次，加上 tools 再计一次，再加上历史……相邻两次的差就是这一段。离线时把「计数器」做成可注入的函数：真实模式调 `client.messages.count_tokens`，fake 模式用「字符数 ÷ 4」这类估算，测试只断言各段的排序和大致比例，不断言精确值。我的看法：这个视图是帮你决定要不要压缩的，要的是「大头在哪」，不是对账单，所以默认用估算就够了，真实计数做成 `/context -v` 之类的可选项（它本身也是一次 API 请求）。[第 9 章](./09-context-injection.md)的 `/context` 就是这么折中的：各段按字符数统计，再附上最近一次请求真实的 `last_input`。
+
+</details>
 
 ## 延伸阅读
 

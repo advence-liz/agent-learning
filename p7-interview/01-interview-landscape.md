@@ -31,7 +31,7 @@
 
 ## 考点地图：每类题在本库哪里有答案
 
-面试题看着五花八门，归类后其实就六块，分别落在本库的四个部分里：
+面试题看着五花八门，归类后是下表的 11 类考点。答案主要集中在本库的四个部分（多 Agent 那一类还要用到第 1 部分的两篇工具章）：
 
 ```d2
 grid-columns: 2
@@ -47,7 +47,7 @@ k4: "第 4 部分 · mini Claude Code\n循环与错误处理 · 多 Agent\n项�
 | 考点 | 必读章节 | 面试时能拿出来讲的 |
 |---|---|---|
 | Agent 是什么、何时用 workflow | [LLM 和 Agent 的核心术语](../p0-core/01-llm-and-agent.md)、[Workflow 和 Agent](../p2-agent-basics/05-workflow-vs-agent.md) | 「控制流由谁决定」这一条分界线，以及五种 workflow 模式 |
-| 循环、停止条件、错误重试 | [Agent 构建指南](../p3-agent-internals/13-agent-build-guide.md) 的「动手」、[错误处理与重试](../p4-mini-cc/03-error-handling.md) | 三个 break：撞上限收口、软预算、打断后补齐工具结果 |
+| 循环、停止条件、错误重试 | [Agent 构建指南](../p3-agent-internals/13-agent-build-guide.md) 的「动手」、[错误处理与重试](../p4-mini-cc/03-error-handling.md) | 三个 break（撞上限收口、软预算、打断后补齐工具结果）在构建指南的「动手」里实现；mini Claude Code 撞上限时目前只发提示、以 `max_iterations` 结束，不收口，可以做构建指南的练习 1 自己补上，再拿来讲项目。错误处理那章能讲的是 API 重试与退避、工具报错回填 |
 | 上下文与 token 成本 | [上下文和 token 计费](../p0-core/03-messages-and-tokens.md)、[上下文压缩](../p3-agent-internals/05-context-compaction.md)、[compact](../p4-mini-cc/14-compact.md) | 压缩前后 messages 长什么样；改前缀为什么会让缓存失效 |
 | 记忆 | [Claude Code 自动记忆](../p3-agent-internals/06-auto-memory.md)、[mem0](../p3-agent-internals/08-mem0-memory.md)、[Zep](../p3-agent-internals/09-zep-memory.md)、[长期记忆](../p4-mini-cc/12-memory.md) | 三种记忆方案的取舍：文件、抽取合并、时序图谱 |
 | RAG 与检索 | [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md)、[RAG 原理](../p2-agent-basics/04-rag-principles.md) | 什么时候用向量检索，什么时候让 agent 自己 grep |
@@ -103,9 +103,38 @@ k4: "第 4 部分 · mini Claude Code\n循环与错误处理 · 多 Agent\n项�
 
 ## 练习
 
-1. 用上面的模板，给你做过的 mini Claude Code（或者你工作里接触过的任意一个 agent 功能）写一份项目深挖稿。
-2. 从「考点地图」里挑一个你最没底的考点，读完对应章节后，不看书讲给自己听三分钟，录下来回放一遍。
-3. 开放题：如果你是面试官，只有 45 分钟，你会问哪三个问题来区分「用过」和「做过」？为什么是这三个？
+**1.** 用上面的模板，给你做过的 mini Claude Code（或者你工作里接触过的任意一个 agent 功能）写一份项目深挖稿。
+
+<details>
+<summary>提示</summary>
+
+照模板逐栏写，每栏两三句。最容易空着的是「关键指标」和「最难的问题」：没有指标就先补一份 20 题的小评测集，评测怎么搭见 [Agent 评测实践指南](../p3-agent-internals/14-agent-eval-guide.md)。
+
+写完拿 [十道高频题](02-top-questions.md) 自检：每道题能不能用这个项目里的一个具体例子来答。答不上的题，就是你稿子里缺的那一栏。
+
+</details>
+
+**2.** 从「考点地图」里挑一个你最没底的考点，读完对应章节后，不看书讲给自己听三分钟，录下来回放一遍。
+
+<details>
+<summary>提示</summary>
+
+选题时可以对照「考点地图」表的第三列「讲清这个就够」，它就是讲三分钟要覆盖的范围。比如选「上下文与 token 成本」，三分钟里要讲到压缩前后 messages 的样子、改前缀为什么会让缓存失效，对应 [上下文和 token 计费](../p0-core/03-messages-and-tokens.md)。
+
+回放时重点听两件事：有没有一个自己的例子；有没有讲代价。这是 [十道高频题](02-top-questions.md) 「常见坑」里列的两类典型问题。
+
+</details>
+
+**3.** 开放题：如果你是面试官，只有 45 分钟，你会问哪三个问题来区分「用过」和「做过」？为什么是这三个？
+
+<details>
+<summary>提示</summary>
+
+判断方向：别问定义，问「坏了怎么办」和「怎么知道它好」。本章开头那段就是示范：问完 ReAct，接着问什么时候停、工具报错模型怎么知道、撞上限后前面查到的东西丢不丢。
+
+我会选这三类：一是停止条件和失败处理（对应 [十道高频题](02-top-questions.md) 第 2 题）；二是评测，问「你怎么知道改了提示词之后没变差」（第 8 题）；三是一次具体的失败复盘，从现象追到根因（[题库](03-question-bank.md)「项目深挖和行为面」）。理由：这三样都只有亲手做过、踩过坑才答得出细节，背是背不出来的。
+
+</details>
 
 ## 延伸阅读
 

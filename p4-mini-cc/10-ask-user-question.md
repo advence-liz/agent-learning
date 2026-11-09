@@ -266,9 +266,32 @@ Do not use this tool to ask for permission to proceed or to confirm a plan you c
 
 ## 练习
 
-1. 支持 `preview` 字段：选项带 `preview` 时，在选项下面缩进显示它（多行代码块）。想想终端宽度不够时怎么办。
-2. 给 `AskUserQuestion` 加一个「超时」：60 秒没回答就当作跳过，模型按默认值继续。提示：`input()` 没法直接超时，可以用 `select` 或 prompt_toolkit 的异步接口。
-3. 开放题：sub agent（第 17 章）在后台跑，它遇到需要用户决定的问题时该怎么办？直接弹窗会打断你和主 agent 的对话；不弹又只能瞎猜。你会怎么设计？
+**1.** 支持 `preview` 字段：选项带 `preview` 时，在选项下面缩进显示它（多行代码块）。想想终端宽度不够时怎么办。
+
+<details>
+<summary>提示</summary>
+
+在 `AskUserQuestionTool.input_schema` 选项的 `properties` 里加 `preview: {"type": "string"}`（Node 的 schema 同理），`DESCRIPTION` 里说明什么时候用（比如对比几种代码写法）。显示放在 `render_question()`（Node `renderQuestion`）：选项那行之后，把 `preview` 按行缩进输出。给它加一个 `width` 参数，默认取 `shutil.get_terminal_size().columns`（Node 用 `process.stdout.columns`，管道下是 undefined，要有默认值），每行截到宽度减缩进、末尾加 `…`，再限制最多十来行——代码被终端自动折行比截断更难读。测试：`BufferUI(answers=["1"])` 下让模型发一个带两行 preview 的问题，断言 `ui.text` 里有缩进后的那两行；再传一个很小的 `width` 断言出现了 `…`。
+
+</details>
+
+**2.** 给 `AskUserQuestion` 加一个「超时」：60 秒没回答就当作跳过，模型按默认值继续。提示：`input()` 没法直接超时，可以用 `select` 或 prompt_toolkit 的异步接口。
+
+<details>
+<summary>提示</summary>
+
+超时放在 UI 层，工具只关心结果：`ConsoleUI.ask_questions` 读答案时带超时，超时就返回带标记的 `Answer`（比如加一个 `timed_out: bool = False` 字段）。工具里不能复用「全部跳过 → declined」那句话（它让模型回头去问用户），要单独返回「用户 60 秒内没有回答，请按每题第一个（Recommended）选项继续，并写明你的假设」。读输入的办法：POSIX 下 `select.select([sys.stdin], [], [], 60)` 可行（Windows 不行），prompt_toolkit 可以 `asyncio.wait_for(session.prompt_async(), 60)`；Node 简单得多，`readline/promises` 的 `rl.question(prompt, { signal: AbortSignal.timeout(60_000) })`。测试别真等 60 秒：把超时做成参数，或者让 `ctx.extras["ask_user"]` 直接返回超时答案，断言工具结果里有按默认值继续的那句话、这一轮正常结束。
+
+</details>
+
+**3.** 开放题：sub agent（第 17 章）在后台跑，它遇到需要用户决定的问题时该怎么办？直接弹窗会打断你和主 agent 的对话；不弹又只能瞎猜。你会怎么设计？
+
+<details>
+<summary>提示</summary>
+
+方向：先看现状，[第 17 章](./17-subagent.md)把 `AskUserQuestion` 放进了 `NEVER_FOR_CHILDREN`，`BASE_PROMPT` 也直说「do not ask questions (nobody will answer)」。可选的设计有三种：按可逆的默认值继续、在最终报告里列出假设；碰到真正卡住的决定就提前结束，把问题写进报告交回主 agent，由主 agent 问你、再派一次；或者把问题递到主 agent 那里排队，子 agent 挂起等答案。要权衡打断成本、等待时长和瞎猜的代价。我的结论是前两种组合：主 agent 是唯一跟用户说话的人，子 agent 只负责「把假设说清楚」或「把问题带回来」；挂起等待会让后台任务占着资源无限期悬着，还得处理你一直不答的情况，得不偿失。
+
+</details>
 
 ## 延伸阅读
 

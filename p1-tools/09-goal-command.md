@@ -184,9 +184,32 @@ Judge 每次只给三种结论之一，并附一句理由：not yet met、met、
 
 ## 练习
 
-1. 改 `keywordJudge`（`keyword_judge`）：对话里同时出现 `0 failed` 和「删除了测试」时，返回 `not_met`，理由是「不允许删除测试」。补一条测试（`node:test` 或 pytest）。
-2. 不用 `/goal`，在测试仓库的 `.claude/settings.local.json` 里写一个 `type: "prompt"` 的 Stop hook，复现同样的「测试全过才许停」。它和 `/goal` 在作用范围、能不能用 `/goal clear` 撤销这两点上有什么区别？
-3. （开放题）Judge 和 Worker 用同一族模型，会不会有「同一个模型族的盲区」？如果让 Codex 来当 Judge（异源评审，就像你的 `codex-review`），要改 `goal_loop.ts`（`goal_loop.py`）的哪个接口？这样做的收益和成本各是什么？
+**1.** 改 `keywordJudge`（`keyword_judge`）：对话里同时出现 `0 failed` 和「删除了测试」时，返回 `not_met`，理由是「不允许删除测试」。补一条测试（`node:test` 或 pytest）。
+
+<details>
+<summary>提示</summary>
+
+在 `keywordJudge`（`keyword_judge`）里加一个分支：`text.includes("删除了测试")` 就返回 `{ status: "not_met", reason: "不允许删除测试" }`。顺序是关键：它必须放在返回 `met` 之前，不然证据一齐全就直接判达成了。注意这个 fake Judge 只看 `assistant` 消息，测试里的「删除了测试」要写在 assistant 那条里。测试可以直接调 `keywordJudge`，也可以用 `scriptedWorker` 走一遍 `runGoal`，断言 `outcome` 不是 `achieved`。
+
+</details>
+
+**2.** 不用 `/goal`，在测试仓库的 `.claude/settings.local.json` 里写一个 `type: "prompt"` 的 Stop hook，复现同样的「测试全过才许停」。它和 `/goal` 在作用范围、能不能用 `/goal clear` 撤销这两点上有什么区别？
+
+<details>
+<summary>提示</summary>
+
+配置形状：在 `hooks.Stop` 下放一条 `{"type": "prompt", "prompt": "..."}`，prompt 里写清验收条件，并要求只依据对话里已经出现的测试输出判断。它返回的是 `{"ok": false, "reason": "..."}` 这种形状，和 `/goal` 的三种判定一一对应。区别看本章那张对照表：写在 `settings.local.json` 里的 hook 对这个项目以后的**所有会话**都生效，`/goal` 只管当前会话；`/goal clear` 只能清掉 `/goal` 自己设的目标，撤不掉 settings 里的 hook，想停只能去改配置文件。
+
+</details>
+
+**3.** （开放题）Judge 和 Worker 用同一族模型，会不会有「同一个模型族的盲区」？如果让 Codex 来当 Judge（异源评审，就像你的 `codex-review`），要改 `goal_loop.ts`（`goal_loop.py`）的哪个接口？这样做的收益和成本各是什么？
+
+<details>
+<summary>提示</summary>
+
+盲区是有可能的，比如同族模型对「我改好了」这类说法的轻信程度相近；但条件写得越硬（要求贴出测试输出），盲区的影响越小。接口只要动 `Judge` 这一个类型：它的签名是 `(condition, transcript) => Verdict | Promise<Verdict>`，照 `makeLlmJudge()` 写一个返回同签名函数的 `makeCodexJudge()`，`runGoal` 一行都不用改。收益是两家的偏差不同、能互相补盲；成本是每轮多一次外部调用的延迟和费用，输出还得自己解析成 `status` / `reason`。我的看法：先把测试、lint 这类硬条件交给 command 型 Stop hook，只在软条件上才值得花钱请异源 Judge。
+
+</details>
 
 ## 延伸阅读
 

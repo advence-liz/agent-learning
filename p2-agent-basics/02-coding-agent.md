@@ -6,13 +6,13 @@
 
 你用 Claude Code 修 bug 时，经常看到它连着跑了十几步：读文件、改、跑测试、看报错、再改。你只说了一句话。
 
-你可能会问：上一章的聊天机器人也能调工具，它和 Claude Code 差在哪？
+你可能会问：上一章的聊天机器人每轮都要等你开口；给它加上工具，它和 Claude Code 还差在哪？
 
-差在「谁来决定下一步」。聊天机器人每轮都要等你开口；Agent 拿到工具结果后，**自己再问一次模型**，让模型决定接下来干什么。改动其实就是在内层再套一个循环。
+差在「谁来决定下一步」。光有工具还不够：模型要了工具，聊天机器人执行完就停下来等你；Agent 拿到工具结果后，**自己再问一次模型**，让模型决定接下来干什么。改动其实就是在内层再套一个循环。
 
 ## 先跑起来看看
 
-代码在 [`code/agent-node/coding_agent/agent.ts`](../code/agent-node/coding_agent/agent.ts)（Python 版 [`agent.py`](../code/agent/coding_agent/agent.py)），核心 ~100 行。演示脚本 [`demo.ts`](../code/agent-node/coding_agent/demo.ts)（[`demo.py`](../code/agent/coding_agent/demo.py)）在临时目录放一个把加法写成减法的 `calc` 模块和一个测试：
+代码在 [`code/agent-node/coding_agent/agent.ts`](../code/agent-node/coding_agent/agent.ts)（Python 版 [`agent.py`](../code/agent/coding_agent/agent.py)），整个文件 130–140 行（Node 版 142 行、Python 版 131 行，含三个工具的定义和实现；`run_agent` 循环本身 40–50 行）。演示脚本 [`demo.ts`](../code/agent-node/coding_agent/demo.ts)（[`demo.py`](../code/agent/coding_agent/demo.py)）在临时目录放一个把加法写成减法的 `calc` 模块和一个测试：
 
 === "Node"
 
@@ -235,9 +235,32 @@ f -> b
 
 ## 练习
 
-1. 加一个 `list_dir` 工具，并在 demo 脚本里让 fake 模型先 `list_dir` 再读文件。
-2. 把 `write_file` 换成 `edit_file(path, old, new)`：`old` 在文件里必须恰好出现一次，否则返回错误。写测试覆盖「出现 0 次」和「出现 2 次」。
-3. 开放题：`run_command` 现在能执行任何命令。你会怎么设计权限审批？是白名单、黑名单，还是让另一个模型判断？参考 Claude Code 的 permission mode 说说各自的取舍。
+**1.** 加一个 `list_dir` 工具，并在 demo 脚本里让 fake 模型先 `list_dir` 再读文件。
+
+<details>
+<summary>提示</summary>
+
+两处要改：`TOOLS` 里加一份 `list_dir` 的定义（`input_schema` 带一个 `path`），`makeTools()` 里加实现，用 `readdirSync` 读目录。路径一定要先过 `safe()`，模型给的路径是不可信输入，不能让它列出工作区外的目录。`demo.ts` 的 `script()` 最前面插一步 `toolUse("list_dir", { path: "." })`。跑 demo 应该先看到一行 `⏺ list_dir(...)`，结果里有 `calc.mjs` 和 `test_calc.mjs`，后面的流程不变。
+
+</details>
+
+**2.** 把 `write_file` 换成 `edit_file(path, old, new)`：`old` 在文件里必须恰好出现一次，否则返回错误。写测试覆盖「出现 0 次」和「出现 2 次」。
+
+<details>
+<summary>提示</summary>
+
+实现上先数出现次数：`content.split(old).length - 1`，不等于 1 就 `throw`。`runAgent` 会把异常转成 `is_error` 结果回给模型，不用自己拼。错误信息要能指导模型改正，比如「old 出现了 2 次，请带上更多上下文让它唯一」。测试直接拿 `makeTools(tmp).edit_file` 调，0 次和 2 次各 `assert.throws` 一条，再补一条正常替换的。`old` 是空字符串时怎么处理也想一下。
+
+</details>
+
+**3.** 开放题：`run_command` 现在能执行任何命令。你会怎么设计权限审批？是白名单、黑名单，还是让另一个模型判断？参考 Claude Code 的 permission mode 说说各自的取舍。
+
+<details>
+<summary>提示</summary>
+
+三种各有短板：白名单最安全，但会频繁打断；黑名单好写，但很容易绕过，第 8 章常见坑里 `bash -c "..."` 就能躲开正则；让模型判断成本高、结果不确定，还可能被提示注入带偏。Claude Code 的做法是分层：deny 规则在所有模式下都生效，plan 模式只读，acceptEdits 只自动放行工作区内的文件编辑。我的建议照这个分层来：deny 名单硬拦，已知只读的命令走白名单自动放行，剩下的问人；模型判断只当辅助，不当最后一道闸。
+
+</details>
 
 ## 延伸阅读
 

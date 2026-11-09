@@ -18,6 +18,8 @@
 
 离线 fake 模型（`examples/ch02.json`：两次 `Bash`，最后一次回复带一段 thinking）：
 
+（Node 版的输出来自实现到后面章节的代码，所以多了两行 `◇ system  项目说明 / 日期`：那是 [第 9 章](09-context-injection.md)才有的上下文注入，本章先忽略。Python 版是本章当时的输出，没有这两行。）
+
 === "Node"
 
     ```console
@@ -310,9 +312,32 @@ l -> ui: "TurnEnd" {style.stroke-dash: 3}
 
 ## 练习
 
-1. 给 `ToolEnd` 加一个 `duration_ms` 字段，UI 在 `✔` 那一行末尾显示耗时。
-2. 让 `_run_tools` 对一组**全部只读**的工具调用并发执行（`concurrent.futures`），但事件依然按原顺序 yield。写一个测试证明总耗时小于串行。
-3. 开放题：Claude Code 的 `stream-json` 输出能被另一个程序消费。为 mini-cc 设计一个 `--output-format jsonl`：每个事件一行 JSON。哪些事件该输出，哪些（比如 4 个字符的 `TextDelta`）应该合并？
+**1.** 给 `ToolEnd` 加一个 `duration_ms` 字段，UI 在 `✔` 那一行末尾显示耗时。
+
+<details>
+<summary>提示</summary>
+
+`events.py` 的 `ToolEnd` 加 `duration_ms: int = 0`（给默认值，老代码不用动；Node 在 `events.ts` 的 `ToolEnd` 接口加可选字段）。在 `loop.py` 的 `_run_tools` 里用 `time.monotonic()` 包住 `self.tools.execute(...)`（Node 用 `performance.now()`），算出毫秒数塞进事件；`ui.py` 的 `BufferUI.render` 在 `✔` / `✘` 那行末尾拼上 `(123ms)`。测试：`app.agent.tools.register()` 一个 `run` 里 `time.sleep(0.05)` 的假工具，断言 `ToolEnd.duration_ms >= 50`，`app.ui.text` 里那一行能匹配 `\(\d+ms\)`。改完把前面的测试全跑一遍，看有没有断言整行文本被你改坏的。
+
+</details>
+
+**2.** 让 `_run_tools` 对一组**全部只读**的工具调用并发执行（`concurrent.futures`），但事件依然按原顺序 yield。写一个测试证明总耗时小于串行。
+
+<details>
+<summary>提示</summary>
+
+第 2 章还没有 `Tool.read_only`（第 5 章才加），先用工具名白名单（比如只有 `Read`）判断「只读」就行。思路：整批都只读时，先把所有调用 `submit` 给 `ThreadPoolExecutor`，再按原顺序逐个 `yield ToolStart` → `future.result()` → `yield ToolEnd`；只要有一个不是只读就退回串行。测试：注册一个 `run` 里 `time.sleep(0.2)` 的只读假工具，剧本用 `calls(("Slow", {}), ("Slow", {}), ("Slow", {}))` 一次发三个，断言整轮耗时小于 0.5 秒、`ToolEnd` 的 id 顺序和 `tool_use` 的顺序一致。Node 版用 `Promise.all`，但只对 `async run` 的工具有效（`Bash` 是，`Read` 是同步的），假工具里写 `await new Promise((r) => setTimeout(r, 200))`。
+
+</details>
+
+**3.** 开放题：Claude Code 的 `stream-json` 输出能被另一个程序消费。为 mini-cc 设计一个 `--output-format jsonl`：每个事件一行 JSON。哪些事件该输出，哪些（比如 4 个字符的 `TextDelta`）应该合并？
+
+<details>
+<summary>提示</summary>
+
+方向：按「消费方要不要据此做决定」来分。`ToolStart` / `ToolEnd` / `Notice` / `TurnEnd` 是离散的事，一行一个原样输出；只有 `TextDelta` / `ThinkingDelta` 需要合并——要么攒到这个块结束（碰到 `ToolStart` 或 `TurnEnd`）再输出整段，要么按时间窗（比如 100ms）或换行刷一次。我的看法是默认输出整段、加开关才输出增量片段：大多数消费方（脚本、CI）只关心完整结果，逐字片段是给要做实时 UI 的人用的。Claude Code 也是这么分的：`--output-format stream-json` 之外，要增量片段得再加 `--include-partial-messages`（`claude --help` 里能看到）。每行都带 `type` 字段，最后一行放带 usage 的汇总，消费方读到它就知道结束了。
+
+</details>
 
 ## 延伸阅读
 

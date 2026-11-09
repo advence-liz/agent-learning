@@ -44,7 +44,9 @@ h -> m: "可以动手了" {style.stroke-dash: 3}
 
 permission-modes 文档对 Plan Mode 的描述是：Claude 读文件、跑 shell 命令去探索、写一份计划，但**不改你的源码**。在 bypass 可用的交互式会话里，文档的原话是「Claude is still instructed to plan without editing」，说明「只规划」首先是一条给模型的指令。
 
-这条指令具体怎么送进上下文的？Claude Code 闭源，文档没说。我在本机 jsonl 里看到过很多类似的「模式提醒」机制，比如 `auto_mode`、`task_reminder` 这类 attachment，它们以 system 角色渲染、附在对话里。我推测 Plan Mode 的指令也是这种形式，而且可能每轮都提醒一次，因为一条只在开头说过一次的指令，在长对话里很容易被淹没。（推测，本机没有 plan 模式的会话记录可以核对。）
+这条指令具体怎么送进上下文的？[prompt-caching 文档](https://code.claude.com/docs/en/prompt-caching)给了答案：Plan Mode 和加载 skill 一样，是把自己的指令**作为对话消息追加**进去的，所以缓存好的前缀保持不变。这也解释了为什么切换权限模式不会让缓存失效（例外是 `opusplan`，它进出 plan 时会换模型）。
+
+至于这条消息长什么样、是不是每轮都提醒一次，文档没说。我在本机 jsonl 里看到过很多类似的「模式提醒」机制，比如 `auto_mode`、`task_reminder` 这类 attachment，它们以 system 角色渲染、附在对话里，推测 Plan Mode 的提醒也是这种形式。（推测，本机没有 plan 模式的会话记录可以核对。）
 
 ### 手段 2：权限层拦截
 
@@ -258,9 +260,38 @@ Plan Mode 比「先跟它说别动手」强在哪？强在另外两样东西：�
 
 ## 练习
 
-1. 给玩具 harness 加上「拒绝计划」分支：`input_from_user` 返回 False 时，模式保持 plan，模型收到反馈后继续规划。
-2. 把手段 1 的提醒改成「只在第一轮注入」，写一个假模型：上下文里没有提醒时有 30% 概率调用 Edit。对比「每轮提醒」和「只提醒一次」下被拦截的次数。
-3. 开放题：手段 3（不给工具）比手段 2（给了再拦）更可靠，那为什么主 agent 在 Plan Mode 下不也直接拿掉 Edit / Write？（提示：想想计划文件，想想退出 plan 之后的缓存。）
+**1.** 给玩具 harness 加上「拒绝计划」分支：`input_from_user` 返回 False 时，模式保持 plan，模型收到反馈后继续规划。
+
+<details>
+<summary>提示</summary>
+
+拒绝分支其实已经写在 `run_tool` 里了（`"✘ User rejected the plan: keep planning."`），缺的是让它跑得到：`input_from_user`（Node：`inputFromUser`）写死了返回 True。把它改成可注入的，比如 `Harness(approver=...)`，或者给一个返回值队列 `[False, True]`。拒绝时最好把用户的意见也拼进返回的结果里，模型才知道往哪改。
+
+预期：第一次 `ExitPlanMode` 之后 `mode` 仍是 `plan`，下一次 `build_turn` 照样注入提醒，紧跟着的 Edit 仍然被拦；改完计划第二次 `ExitPlanMode` 通过，`mode` 变成 `acceptEdits`。
+
+</details>
+
+**2.** 把手段 1 的提醒改成「只在第一轮注入」，写一个假模型：上下文里没有提醒时有 30% 概率调用 Edit。对比「每轮提醒」和「只提醒一次」下被拦截的次数。
+
+<details>
+<summary>提示</summary>
+
+在 `build_turn` 里只在第一次调用时 append `REMINDER`。假模型要看的是「最近这条 user 消息里有没有提醒」，不是整个 `messages`：只提醒一次时，那条提醒其实一直留在历史里，按整个上下文判断的话两种方案就没区别了。这本身就值得想一想：真实模型对很久以前的一条提醒会越来越不在意，用「最近几轮有没有」来近似更贴近现实。
+
+用固定种子的 `random.Random(seed)` 跑同样多轮，数 `run_tool` 返回 blocked 的次数。预期：每轮提醒时拦截很少（取决于你给「有提醒」设的概率），只提醒一次时大约是轮数的 30%。但两种情况下 Edit 都被手段 2 拦住了，文件没被改，差别只在浪费的轮次。再想想 bypass 会话里手段 2 不在，这个数就是真实的改动次数。
+
+</details>
+
+**3.** 开放题：手段 3（不给工具）比手段 2（给了再拦）更可靠，那为什么主 agent 在 Plan Mode 下不也直接拿掉 Edit / Write？（提示：想想计划文件，想想退出 plan 之后的缓存。）
+
+<details>
+<summary>提示</summary>
+
+两个原因。一是主 agent 得写计划文件：Plan 模式下它唯一允许的写就是 `PLAN_FILE`，拿掉 Write 就写不了。二是缓存：tools 排在缓存前缀的最前面（第 2 章），进 plan 时拿掉工具、退出时再加回来，等于两次改动前缀的最前段，后面整段历史的缓存全部失效；权限层拦截不动请求本身，前缀纹丝不动。
+
+子 agent 没这个问题，它是新起的上下文，本来就没有缓存可失效，裁剪工具几乎零成本。代价是主 agent 这边只能靠「给了再拦」，可靠性全押在拦截那道闸上，而你 bypass 启动的会话里，这道闸恰好不在。
+
+</details>
 
 ## 延伸阅读
 

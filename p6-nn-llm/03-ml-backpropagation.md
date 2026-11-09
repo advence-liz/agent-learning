@@ -235,9 +235,38 @@ dW1 = X.T @ dA;  db1 = dA.sum(0)
 
 ## 练习
 
-1. 给 `Value` 加一个 `sigmoid()` 方法（只写局部导数，别用 `exp` 拼），并在 `test_micrograd.py` 里加一条和 `torch.sigmoid` 对比的用例。
-2. 把 `backward()` 里的递归 `build` 改写成用显式栈的迭代版本，然后构造一个 5000 层深的加法链验证它不会 `RecursionError`。
-3. （开放）`Value` 每个节点都在内存里保留了 `_prev` 引用。训练一步后这 20508 个节点什么时候被释放？PyTorch 的 `loss.backward()` 默认会释放计算图（`retain_graph=False`），为什么要这样设计？这和推理时只需要前向、不需要保留计算图有什么关系（提示：`torch.no_grad()`，第 5 章会用到）？
+**1.** 给 `Value` 加一个 `sigmoid()` 方法（只写局部导数，别用 `exp` 拼），并在 `test_micrograd.py` 里加一条和 `torch.sigmoid` 对比的用例。
+
+<details>
+<summary>提示</summary>
+
+局部导数：$\sigma'(x) = \sigma(x)(1-\sigma(x))$，和 `tanh` 一样，用前向算出的输出 `s` 就能写出：`self.grad += s * (1 - s) * out.grad`。前向值可以用 `1 / (1 + math.exp(-x))` 算，但它是一个节点，不要拆成 `exp`、`+`、`/` 好几个 Value。
+
+测试：在 `test_micrograd.py` 的 `EXPRS` 里加一条，比如 `"sigmoid": lambda a, b: (a * b).sigmoid() + b`。torch 张量也有 `.sigmoid()` 方法，同一个 lambda 两边都能跑，参数化的 `test_grad_matches_torch` 会自动覆盖三组输入。
+
+</details>
+
+**2.** 把 `backward()` 里的递归 `build` 改写成用显式栈的迭代版本，然后构造一个 5000 层深的加法链验证它不会 `RecursionError`。
+
+<details>
+<summary>提示</summary>
+
+迭代版后序 DFS：栈里放 `(节点, 是否已展开)`。弹出未展开的节点时，先把 `(v, True)` 压回去，再把所有没访问过的子节点 `(c, False)` 压进去；弹出已展开的节点时 append 到 `topo`。这样子节点总是先于父节点进入列表，和递归版的拓扑序等价。
+
+验证：`x = Value(1.0)`，`y = x`，循环 5000 次 `y = y + 1`，再 `y.backward()`。递归版会报 `RecursionError`（Python 默认上限 1000），迭代版能跑完，`x.grad == 1.0`。
+
+</details>
+
+**3.** （开放）`Value` 每个节点都在内存里保留了 `_prev` 引用。训练一步后这 20508 个节点什么时候被释放？PyTorch 的 `loss.backward()` 默认会释放计算图（`retain_graph=False`），为什么要这样设计？这和推理时只需要前向、不需要保留计算图有什么关系（提示：`torch.no_grad()`，第 5 章会用到）？
+
+<details>
+<summary>提示</summary>
+
+micrograd 里，下一步 `loss` 变量被重新赋值，上一步的图就没人引用了。但每个节点的 `_backward` 闭包又引用着 `out`，形成循环引用，所以要等 Python 的循环垃圾回收来清，不是立刻释放。
+
+PyTorch 的 `retain_graph=False` 是同一个想法的工程版：反向传播需要前向时存下的中间结果，这部分内存通常比权重大得多；反向一做完就不再需要，立刻释放，峰值内存就压下来了。推理更进一步，`torch.no_grad()` 让前向根本不记录图、不存中间结果，内存只剩权重和 KV cache。第 5 章的 `generate_with_cache` 就加了 `@torch.no_grad()`。
+
+</details>
 
 ## 延伸阅读
 

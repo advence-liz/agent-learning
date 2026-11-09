@@ -172,9 +172,38 @@ a -> a1
 
 ## 练习
 
-1. 在狭长山谷上把 SGD 的学习率改成 0.041，跑 60 步，观察 $y$ 坐标的变化。用「$|1-50\eta|$」解释你看到的现象。
-2. 给 `optimizers.py` 加一个 RMSProp（只有 Adam 的 `v`，没有 `m` 和偏差修正），并像 `test_matches_torch_optim` 一样和 `torch.optim.RMSprop` 对齐轨迹。提示：PyTorch 的 RMSprop 默认 `alpha=0.99`、`eps` 加在开方之后。
-3. （开放）Adam 给每个参数「自适应」步长，依据的是梯度平方的历史平均。如果某个参数的梯度长期接近 0、偶尔突然很大（比如 LLM 里很少出现的 token 对应的嵌入向量），Adam 会怎么对待它？这是好事还是坏事？
+**1.** 在狭长山谷上把 SGD 的学习率改成 0.041，跑 60 步，观察 $y$ 坐标的变化。用「$|1-50\eta|$」解释你看到的现象。
+
+<details>
+<summary>提示</summary>
+
+`run(SGD(0.041), start=(-9.0, 1.5), steps=60, f=valley, grad=valley_grad)`，打印 `path[:, 1]`。
+
+预期：y 正负交替、绝对值越来越大。实测前几步是 1.5、-1.575、1.654、-1.736，60 步后到 28.0，f 涨到约 1.96 万。解释：每步 $y \leftarrow (1-50\eta)y = -1.05y$，负号让它来回横跳，$|-1.05| > 1$ 让它每次放大 5%，$1.05^{60} \approx 18.7$。而 x 方向是 $(1-\eta)^{60} \approx 0.08$，从 -9 收缩到 -0.73，还在正常下降。同一个学习率，一个方向收敛，另一个方向发散。
+
+</details>
+
+**2.** 给 `optimizers.py` 加一个 RMSProp（只有 Adam 的 `v`，没有 `m` 和偏差修正），并像 `test_matches_torch_optim` 一样和 `torch.optim.RMSprop` 对齐轨迹。提示：PyTorch 的 RMSprop 默认 `alpha=0.99`、`eps` 加在开方之后。
+
+<details>
+<summary>提示</summary>
+
+照 `Adam` 的写法：`v = alpha * v + (1 - alpha) * g * g`，`return p - lr * g / (np.sqrt(v) + eps)`，默认 `alpha=0.99, eps=1e-8`，不做偏差修正。
+
+在 `test_matches_torch_optim` 的参数列表里加一组：`(lambda: RMSProp(1e-3), lambda ps: torch.optim.RMSprop(ps, lr=1e-3))`。我实测 lr=1e-3 和 1e-2 跑 200 步都能对上 `rtol=1e-6`。容易错的两处：eps 加在开方之后（不是 `sqrt(v + eps)`）；不要照抄 Adam 去做偏差修正。
+
+</details>
+
+**3.** （开放）Adam 给每个参数「自适应」步长，依据的是梯度平方的历史平均。如果某个参数的梯度长期接近 0、偶尔突然很大（比如 LLM 里很少出现的 token 对应的嵌入向量），Adam 会怎么对待它？这是好事还是坏事？
+
+<details>
+<summary>提示</summary>
+
+算一笔账：一个参数梯度长期为 0，m、v 都接近 0；某步突然来一个梯度 g，那一步 $m = 0.1g$、$v = 0.001g^2$，步长约 $\eta \cdot 0.1g / \sqrt{0.001}|g| \approx 3.2\eta$，与 g 的大小无关。也就是说，罕见 token 的嵌入一被用到，就会被推一大步。
+
+我认为这大体是好事：SGD 下这类参数一年也更新不了几次、每次步子还和别人一样小，几乎学不到东西；Adam 帮它们「补课」。代价是不稳定：那一步比常规步大好几倍，如果这次梯度恰好是噪声，就会被放大。这也是大模型训练常配合 warmup、梯度裁剪一起用的原因之一。
+
+</details>
 
 ## 延伸阅读
 

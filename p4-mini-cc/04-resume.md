@@ -18,6 +18,8 @@
 
 启动两次进程（离线 fake 模型；`MINI_CC_HOME` 指到临时目录，不污染 `~/.mini_cc`；Node 版剧本是 `examples/ch04a.json` / `ch04b.json`，测试命令换成了 `npm test`）：
 
+（Node 版的输出来自实现到后面章节的代码，所以多了两行 `◇ system  项目说明 / 日期`：那是 [第 9 章](09-context-injection.md)才有的上下文注入，本章先忽略。Python 版是本章当时的输出，没有这两行。）
+
 === "Node"
 
     ```console
@@ -304,9 +306,32 @@ Agent 不知道磁盘的存在，它只负责在 `_append` 时通知 listener。
 
 ## 练习
 
-1. 给 `/resume` 加搜索：`/resume pytest` 只列出标题或内容里包含 pytest 的会话。
-2. 实现 `--fork-session`：恢复历史，但写入一个新的 session 文件。测试时注意新文件的第一条记录的 `parentUuid` 应该是什么？
-3. 开放题：两个终端同时 `mini_cc -c` 恢复同一个会话、各自聊天，文件会变成什么样？`parentUuid` 链会分叉吗？Claude Code 是怎么处理的？（`claude --help` 里 `--bg` 的说明给了一点线索：「continues that session … or starts a copy and says so when the session is already running」。）
+**1.** 给 `/resume` 加搜索：`/resume pytest` 只列出标题或内容里包含 pytest 的会话。
+
+<details>
+<summary>提示</summary>
+
+改 `cli.py` 的 `_resume`（Node 在 `cli.ts` 的 `/resume` 回调里）：参数不是序号、`store.resolve()` 也匹配不到时，当作关键词搜索，而不是直接报错。注意像 `abc` 这样的词也可能碰巧是某个 id 的前缀，想清楚两者谁优先。`SessionStore.list()` 只抽了标题，搜内容要另写一个 `search(keyword)`：对每个文件 `read_records()`，把 user / assistant 的文本块拼起来做大小写不敏感的包含判断（第 9 章以后还要跳过 `<system-reminder>` 块，`_first_text` 就是这么做的）。搜索结果的序号要能接着 `/resume <序号>` 用。测试：聊一句「跑 pytest」，`/new`，再聊一句「写 README」，`/resume pytest` 只列出第一个会话。
+
+</details>
+
+**2.** 实现 `--fork-session`：恢复历史，但写入一个新的 session 文件。测试时注意新文件的第一条记录的 `parentUuid` 应该是什么？
+
+<details>
+<summary>提示</summary>
+
+`main()` 加一个 `--fork-session`，和 `-r` / `-c` 搭配使用。关键：`load_history()` 不触发 `listeners`，所以只是换个新 `Session` 再 `load_history`，新文件里一行都没有，下次恢复这个分叉就只剩分叉之后的消息。要在 `App` 里加一个 fork：`store.load()` 拿到旧消息，`_attach(store.new())`，再把旧消息逐条 `session.record()` 写进新文件。所以新文件第一条记录的 `parentUuid` 应该是 `None`——它是新链的根，不该指向另一个文件里的 uuid；`sessionId` 是新 id。测试断言：旧文件行数不变，新文件第一行 `parentUuid is None`，之后两个会话各自追加互不影响。
+
+</details>
+
+**3.** 开放题：两个终端同时 `mini_cc -c` 恢复同一个会话、各自聊天，文件会变成什么样？`parentUuid` 链会分叉吗？Claude Code 是怎么处理的？（`claude --help` 里 `--bg` 的说明给了一点线索：「continues that session … or starts a copy and says so when the session is already running」。）
+
+<details>
+<summary>提示</summary>
+
+方向：两个进程内存里各有一份 `Session.last_uuid`，都往同一个文件追加。行不会交错（`append_record` 一次写一整行，靠 `O_APPEND`），但两边的新消息挂在同一个父节点下，`parentUuid` 链分叉成一棵树。第 4 章的 `load()` 按行顺序读，两边的消息交叉在一起，user / assistant 轮次和 tool_use / tool_result 配对都可能乱掉，下次恢复大概率直接 400；[第 13 章](./13-rewind.md)改成从最新的叶子沿 `parentUuid` 往回走之后不会乱了，但另一条分支会被悄悄藏起来。我的结论：同一会话同一时刻只允许一个写者——恢复时在会话文件旁放一个带 pid 的锁文件，已被占用就自动 fork 一份并明确告诉用户。`--bg` 说明里那句「starts a copy and says so」就是这个思路。
+
+</details>
 
 ## 延伸阅读
 

@@ -6,7 +6,7 @@
 
 ## 你的会话被压缩过多少次？
 
-先看一组本机数据。我用 `session_stats.py compact` 统计了本机所有会话里的压缩边界（`compact_boundary` 记录）：
+先看一组本机数据。我用 `session_stats.py compact` 统计了本机所有会话里的压缩（compaction，把旧对话换成摘要）边界（`compact_boundary` 记录）：
 
 === "Node"
 
@@ -282,12 +282,16 @@ before -> after: "模型写摘要（本机 durationMs 中位数约 2.5 分钟）
 
 注意 `keep_tail=1`：本来只保留最后 1 条消息，但最后一条是 `tool_result`，单独留下它会让 API 报错（找不到对应的 `tool_use`），所以切点往前挪了一位，保留了一对完整的调用。这种「切点对齐」在真实实现里很重要。
 
+还有一个这段 demo 没碰到的坑：保留尾巴在开了 thinking 的新模型上有代价。尾巴里的 thinking 块只在「它之前的内容和产生它时逐字节相同」时有效，而压缩恰好把尾巴之前的内容换成了摘要，这些 thinking 块随之失效，新账号上会直接 400。要么剥掉保留轮次里的 thinking 块，要么干脆不留尾巴。mini-cc 选了后者，论证见 [支持 compact 压缩上下文](../p4-mini-cc/14-compact.md) 的「新起点：简单压缩，不保留尾巴」一节。
+
 ## API 侧的另外两种做法
 
-Claude Code 的压缩是客户端做的：它自己调模型写摘要，自己重组 messages。Messages API 本身还提供了两种服务端的机制：
+Claude Code 的压缩是**客户端压缩**：它自己调模型写摘要，自己重组 messages（第 4 部分的 mini-cc 也是这么做的）。Messages API 本身还提供了两种服务端的机制（claude-api 文档）：
 
 1. **上下文编辑（context editing）**：beta 头 `context-management-2025-06-27`，在请求里带 `context_management.edits`。比如 `clear_tool_uses_20250919` 在输入超过阈值时清掉旧的工具结果；`clear_thinking_20251015` 清掉旧的 thinking 块。本机每次请求里都带着 `{"type": "clear_thinking_20251015", "keep": "all"}`，也就是声明了策略但保留全部 thinking。
-2. **服务端压缩（compaction）**：官方有按需压缩和按阈值压缩两种，各有自己的 beta 头，阈值版默认在 15 万输入 token 触发。
+2. **服务端压缩**：beta 头 `compact-2026-01-12`，请求里带 `context_management={"edits": [{"type": "compact_20260112"}]}`，默认在约 15 万输入 token 时由 API 自动总结。响应里会有 `compaction` 块，必须把整个 `response.content` 原样存回历史；只抽出文字存回去，压缩状态就悄悄丢了。
+
+文档说这两种都**不算编辑历史**，不会让 thinking 块失效。如果你的 agent 只跑在官方 API 上，服务端压缩是更省事的选择；代价是走中转站时 beta 功能不一定可用，而客户端压缩到哪都能跑。
 
 我的看法：清工具结果是「无损的有损」，丢掉的是程序随时能重新拿到的东西，很划算；写摘要才是真正的有损。两者可以叠加：先清旧工具输出，实在不够再写摘要。
 
@@ -311,9 +315,38 @@ Claude Code 的压缩是客户端做的：它自己调模型写摘要，自己�
 
 ## 练习
 
-1. 给 `Session.compact()` 加一个 `instructions` 参数，模拟 `/compact 只关注 X`，让假摘要只保留包含关键词的用户消息。
-2. 实现「先清工具结果、再写摘要」的两级策略：超过 60% 先把旧 `tool_result` 换成占位符，超过 80% 才写摘要。比较两种策略下 `postTokens` 的差别。
-3. 开放题：Codex 和 Claude Code 都会压缩，但压缩后「还剩什么」的取舍不同。如果让你给一个跑 8 小时的后台 Agent 设计压缩，你会额外保留什么？（提示：Anthropic 的 *Effective harnesses for long-running agents* 用了进度文件。）
+**1.** 给 `Session.compact()` 加一个 `instructions` 参数，模拟 `/compact 只关注 X`，让假摘要只保留包含关键词的用户消息。
+
+<details>
+<summary>提示</summary>
+
+签名改成 `compact(self, trigger, instructions=None)`，再传给 `fake_llm_summarize(head, instructions)`：有关键词时，`users` 只留包含它的那几句。为了看清效果，用一个不会自动触发的大窗口（比如 `Session(window=10**6)`）灌完同样的消息，再手动 `s.compact("manual", instructions="时区")`。
+
+预期：「All user messages」只剩含「时区」的那句，最后一行「用户原话是否还在」变成 False。这正好暴露了带指令压缩的代价：一句「只关注 X」，就可能把「别改 API 签名」这种约束丢掉。可以再写一版：「All user messages」永远全保留，指令只影响其他小节，比较两种结果。
+
+</details>
+
+**2.** 实现「先清工具结果、再写摘要」的两级策略：超过 60% 先把旧 `tool_result` 换成占位符，超过 80% 才写摘要。比较两种策略下 `postTokens` 的差别。
+
+<details>
+<summary>提示</summary>
+
+在 `Session.add()` 里分两道阈值：超过 `window * 0.6` 先调一个 `clear_tool_results()`，把除最后一对以外的 `tool_result` 的 `content` 换成 `"[cleared]"` 这样的占位符，保留 `type: "tool_result"` 这层结构，跟 `tool_use` 的配对不能断；清完还超过 `window * 0.8`，才走 `compact()`。用同一串消息分别跑两种策略，打印每次的 `postTokens` 和最后的 `tokens(s.msgs)`。
+
+预期：这个 demo 的大头是那 30 行 `tool_result`，清掉之后体积掉得很明显，很可能根本走不到写摘要那一步。用户原话、读过哪些文件也都原样还在，这就是本章说的「无损的有损」。
+
+</details>
+
+**3.** 开放题：Codex 和 Claude Code 都会压缩，但压缩后「还剩什么」的取舍不同。如果让你给一个跑 8 小时的后台 Agent 设计压缩，你会额外保留什么？（提示：Anthropic 的 *Effective harnesses for long-running agents* 用了进度文件。）
+
+<details>
+<summary>提示</summary>
+
+方向：把状态落到外部，压缩后由程序重新挂回，而不是指望摘要写得更全。
+
+8 小时的任务我会额外保留三样：一份进度文件（目标和验收标准、已完成 / 进行中 / 待办、试过但失败的方案和原因），每完成一步更新，压缩后像 CLAUDE.md 一样重新注入；git 提交记录，天然的检查点，回滚也靠它；最近一次测试结果。要权衡的是进度文件的可信度：它是模型写的，可能和真实状态不符。所以测试过没过、提交了什么这类关键状态，最好由程序生成，不要让模型自述。
+
+</details>
 
 ## 延伸阅读
 

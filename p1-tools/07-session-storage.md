@@ -86,7 +86,7 @@ cli -> f: "追加 user/assistant 行（parentUuid 指向上一条）"
 - **你踩过 provider 过滤的坑，只是可能没发现**。本机 Codex 会话里，`model_provider` 为 `llm_proxy` 的有 172 个，`llm_proxy_v2` 有 2 个，`openai` 有 3 个。你当前的 `~/.codex/config.toml` 是 `model_provider = "llm_proxy"`，所以那 5 个非 `llm_proxy` 的会话在 Codex 的历史列表里大概率看不到。想找回来的话，用原文的脚本先 dry-run：`uv run flip.py openai llm_proxy`。
 - **`codex-review` 留下的痕迹**：那 44 个 `source={"subagent":"review"}` 的会话，基本就是你的 `codex-review` 和 `codex-cross-review` skill 在后台调用 `codex review` 时产生的。想统计「Codex 异源 review 跑了多少次」，直接数这个字段就行，不用另外打点。
 - **`session-audit` 和 `/insights`**：你的 `session-audit` skill、内置的 `/insights`、`~/.claude/stats-cache.json`，读的都是 `~/.claude/projects/*/*.jsonl` 这一层数据。自己写分析脚本时，按 `type` 过滤出 `user` 和 `assistant`，再按 `isSidechain` 区分主会话和子会话。
-- **worktree 和项目路径的关系**：本机 `~/.claude/projects/` 下有一批 `-private-tmp-ab-wt-*` 目录。这说明每个 worktree 路径都算一个独立的「项目」，它的 memory 和会话都不会跟回主仓库。你 CLAUDE.md 里规定「默认走 worktree」，那么跨 worktree 想留下来的经验，就应该写进 skill 或用户级 memory，不能指望项目级 memory。
+- **worktree 和项目路径的关系**：本机 `~/.claude/projects/` 下有一批 `-private-tmp-ab-wt-*` 目录。这说明会话记录按 cwd 分开存：每个 worktree 路径的 jsonl 落在自己的目录下，不会跟回主仓库。auto memory 则不一样：按 [memory 文档](https://code.claude.com/docs/en/memory)，记忆目录由 git 仓库推出来，同一个仓库的所有 worktree 和子目录共用一份（见 [Claude Code 自动记忆系统](../p3-agent-internals/06-auto-memory.md)）。所以你 CLAUDE.md 里规定「默认走 worktree」并不会让项目级 memory 散掉；要换地方存的是**跨仓库**都要用的经验，这类写进 skill 或用户级 CLAUDE.md。
 
 ## 自测题
 
@@ -110,3 +110,5 @@ cli -> f: "追加 user/assistant 行（parentUuid 指向上一条）"
 - [安装使用 Codex](./03-install-and-use.md)
 - [持久化聊天记录](../p4-mini-cc/04-resume.md) · [支持 rewind 回退对话和代码](../p4-mini-cc/13-rewind.md)
 - [Claude Code 自动记忆系统](../p3-agent-internals/06-auto-memory.md) · [Codex 自动记忆系统](../p3-agent-internals/07-auto-memory.md)
+
+从下一章起是原创课文，每章带可跑代码：先跑起来，再拆实现。

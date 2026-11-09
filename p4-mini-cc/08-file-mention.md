@@ -18,6 +18,8 @@
 
 离线 fake 模型（`examples/ch08.json`），`--permission-mode acceptEdits`：
 
+（Node 版的输出来自实现到后面章节的代码，所以多了两行 `◇ system  项目说明 / 日期`：那是 [第 9 章](09-context-injection.md)才有的上下文注入，本章先忽略。Python 版是本章当时的输出，没有这两行。）
+
 === "Node"
 
     ```console
@@ -259,9 +261,32 @@ REPL 里命令补全和文件补全用 `merge_completers` 合在一起（Node �
 
 ## 练习
 
-1. 支持行号范围：`@app/config.py#L10-20` 只附加第 10 到 20 行（注意：这算部分读取，`partial=True`）。
-2. 补全列表里把「最近被 Read / Edit 过的文件」排在最前面。提示：`FileStateCache.paths()` 就是一个现成的「最近文件」来源。
-3. 开放题：同一个文件在一个会话里被 `@` 了三次，上下文里就有三份内容。要不要去重？如果文件中间被改过，三份内容哪份才算数？你会怎么设计？
+**1.** 支持行号范围：`@app/config.py#L10-20` 只附加第 10 到 20 行（注意：这算部分读取，`partial=True`）。
+
+<details>
+<summary>提示</summary>
+
+`mentions.py` 的 `MENTION` 正则会把 `app/config.py#L10-20` 整个当成一个引用，`ctx.resolve()` 找不到这个文件，于是被当成「不是路径」静默跳过。所以要在 `resolve_mentions` 里先用 `re.fullmatch(r"(.+)#L(\d+)(?:-(\d+))?", ref)` 拆出路径和行号，再把范围传给 `_file_attachment`（Node 是 `resolveMentions` / `fileAttachment`）。切片用 `lines[start - 1:end]`，行号用 `number_lines(shown, start)` 从 10 开始编，登记时 `remember(..., partial=True)`，标题写明是第几到第几行。测试：30 行的文件，断言附件里有行号 10 和 20、没有 21，且 `ctx.file_state.get(path).partial` 为真。
+
+</details>
+
+**2.** 补全列表里把「最近被 Read / Edit 过的文件」排在最前面。提示：`FileStateCache.paths()` 就是一个现成的「最近文件」来源。
+
+<details>
+<summary>提示</summary>
+
+`FileMentionCompleter` 现在只认 `cwd`，给它加一个可选参数 `recent`（返回路径列表的函数），`cli.py` 构造时传 `lambda: app.agent.ctx.file_state.paths()`（Node 同理改构造函数和 `cli.ts`）。注意第 8 章的 `remember()` 对已有的键只是覆盖，字典顺序还是「第一次看到」的顺序；要真正按最近排，得先 `pop` 再插入（第 14 章就是这么改的），然后倒序、转成相对 `cwd` 的路径。`get_completions` 里先给命中 query 的最近文件，再给 `rank()` 的结果并去重。测试：`remember()` 两个文件，用 prompt_toolkit 的 `Document("@")` 调 `get_completions`，断言前两个补全就是它们、后登记的在前。
+
+</details>
+
+**3.** 开放题：同一个文件在一个会话里被 `@` 了三次，上下文里就有三份内容。要不要去重？如果文件中间被改过，三份内容哪份才算数？你会怎么设计？
+
+<details>
+<summary>提示</summary>
+
+方向：历史是只追加的（`Agent._append` 那条规矩），回头删掉前两份会打破 prompt cache，也让会话记录对不上，所以「去重」只能发生在新附件这一侧。判断依据是现成的：`file_state` 里有上次登记的 sha。我的设计：再次 @ 同一个文件时，内容没变（`is_stale()` 为假、也不是 partial）就只附一句「@x 和上文那份相同，未重复附加」；变了就附新全文（或者像第 9 章 `changed_files_provider` 那样附 diff），并写明「以这份为准，之前的已过期」。哪份算数永远是最新那份——位置靠后加一句明确声明，模型就不会混。
+
+</details>
 
 ## 延伸阅读
 

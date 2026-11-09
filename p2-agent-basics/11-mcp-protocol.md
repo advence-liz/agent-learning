@@ -308,9 +308,32 @@ Python 版 server 拒了，而且错误信息不太直观（`Invalid request par
 
 ## 练习
 
-1. 在 `raw_client.ts`（`raw_client.py`）里加一个 `tools/call`，故意传错参数类型（`{"query": 123}`），看 server 回的是 `isError` 还是 JSON-RPC error。
-2. 写一个「MCP 抓包代理」：它自己作为 stdio server 被 Claude Code 启动，再把真正的 server 作为子进程启动，把双向的每一行都原样转发并写到一个日志文件里。用它挂在 `notes` 前面，看看 Claude Code 真实发了哪些消息。
-3. 开放题：stdio 传输下，server 的生命周期和 client 绑定（client 关掉 stdin，server 就该退出）。HTTP 传输下没有这种天然绑定，你觉得会多出哪些问题需要协议来解决？
+**1.** 在 `raw_client.ts`（`raw_client.py`）里加一个 `tools/call`，故意传错参数类型（`{"query": 123}`），看 server 回的是 `isError` 还是 JSON-RPC error。
+
+<details>
+<summary>提示</summary>
+
+在 `session()` 第 4 步后面再加一个 `await c.request("tools/call", { name: "search_notes", arguments: { query: 123 } })`。我本机用两版 server 各试过一次：回的都是 `result.isError: true`，不是 JSON-RPC error。Node 版的文字是 `MCP error -32602: Input validation error: ...`，别被文字里的 `-32602` 骗了，它只是 content 里的一段文本，报文结构上仍然是工具失败。Python 版的文字是 `Error executing tool search_notes: 1 validation error ...`。换 SDK 版本可能不同，以你跑出来的报文为准。另外，现有测试断言了 7 条消息的方法序列，加在 `session()` 里会让它失败，可以改加到 `edgeCases()` 里。
+
+</details>
+
+**2.** 写一个「MCP 抓包代理」：它自己作为 stdio server 被 Claude Code 启动，再把真正的 server 作为子进程启动，把双向的每一行都原样转发并写到一个日志文件里。用它挂在 `notes` 前面，看看 Claude Code 真实发了哪些消息。
+
+<details>
+<summary>提示</summary>
+
+代理本身是一个普通的 stdio 程序：用 `spawn` 把真 server 拉起来，把自己的 stdin 原样转给子进程的 stdin，子进程的 stdout 原样转给自己的 stdout，同时按行切一份写进日志文件，带上方向和时间戳。铁律还是第 10 章那条：代理自己的 stdout 只能出现转发的协议行，调试信息一律写文件或 stderr。转发用原始字节，记日志另外切行，别为了记日志改写报文。生命周期也要跟着走：stdin 关闭时关掉子进程的 stdin，子进程退出时自己也退出。用 `claude mcp add` 注册时，把启动命令换成「node 代理 + 真 server 的命令」。日志里至少应该看到 `initialize`、`notifications/initialized`、`tools/list`，提问后还会有 `tools/call`。
+
+</details>
+
+**3.** 开放题：stdio 传输下，server 的生命周期和 client 绑定（client 关掉 stdin，server 就该退出）。HTTP 传输下没有这种天然绑定，你觉得会多出哪些问题需要协议来解决？
+
+<details>
+<summary>提示</summary>
+
+沿着「stdio 白送了什么」去想：stdio 下，一个进程就是一个会话，关 stdin 就等于断开，消息也天然有序。换成 HTTP，这些都得靠协议补：多个 client 连同一个 server，怎么区分谁是谁（会话 ID）；client 悄悄消失了，server 什么时候清理会话；网络断了，服务端推送的消息怎么续上，不丢也不重复；client 怎么显式结束会话；谁都能连上，所以要鉴权。可以对照 MCP 规范的 Transports 和 Authorization 两节，看看它们各自怎么回答这些问题。
+
+</details>
 
 ## 延伸阅读
 

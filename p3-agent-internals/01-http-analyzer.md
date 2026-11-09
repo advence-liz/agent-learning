@@ -339,9 +339,36 @@ p -> cc: '最后一个 chunk（0\r\n\r\n）' {style.stroke-dash: 3}
 
 ## 练习
 
-1. 给 `analyze.py` 加一个 `--grep 关键字` 参数：在所有请求里找某段文字出现在哪个请求的哪个块（比如找你的护栏标题）。
-2. 给代理加一个「请求改写」钩子：转发前把 system 最后一块删掉，用假上游验证 `cache_read` 怎么变。想想这为什么能用来做 A/B 实验，又为什么危险。
-3. 开放题：代理能看到所有流量，那它能不能当一个「外置 harness」？比如在代理层拦截含 `git push --force` 的 `tool_use`。和 PreToolUse hook 比，这样做好在哪、坏在哪？
+**1.** 给 `analyze.py` 加一个 `--grep 关键字` 参数：在所有请求里找某段文字出现在哪个请求的哪个块（比如找你的护栏标题）。
+
+<details>
+<summary>提示</summary>
+
+在 `analyze.py` 的 `main()` 里加一个 `ap.add_argument("--grep")`，然后遍历抓包目录下的每个请求子目录，读 `request.json`（`load()` 已经演示了怎么读）。逐块找的顺序照 `show()` 的拆法来：`system[i]`、tools 里的哪个工具、`messages[i].content[j]`，命中就打印「请求序号 + 块位置」。Node 版改 `analyze.ts` 的 `main()`，参数是手写解析的，照着 `--show` 加一个分支就行。用 demo 的抓包自测：搜「行为规范」，每个请求都应该落在 `system[1]`。拿真实抓包搜你的护栏标题，按下一章的结论，它应该出现在 messages 里，不在 system 里。
+
+</details>
+
+**2.** 给代理加一个「请求改写」钩子：转发前把 system 最后一块删掉，用假上游验证 `cache_read` 怎么变。想想这为什么能用来做 A/B 实验，又为什么危险。
+
+<details>
+<summary>提示</summary>
+
+改动点在 `proxy.py` 的 `make_handler` → `_proxy()`：`_read_body()` 之后、`client.stream(..., content=body)` 之前，把 body 解析成 JSON，去掉 `system` 的最后一块，再序列化回去。`content-length` 本来就按 hop-by-hop 去掉了，不用手动改。Node 版在 `proxy.ts` 的 `makeHandler` 里同一个位置改。顺手想想 `request.json` 该记改前还是改后，我建议两份都记。
+
+用 `fake_upstream.py`（`make_server`）照 `demo.py` 跑两轮。只改第二轮的话，前缀在 system 就分叉了，第二轮的 `cache_read_input_tokens` 会掉到 0；从第一轮起每轮都改，前缀又稳定了，第二轮照样读缓存。为什么能做 A/B：客户端不动、任务不动，只换一个块，就能比较行为和成本。为什么危险：Claude Code 不知道请求被改过，你删掉的可能正好是护栏，而且这时看到的缓存和行为数字已经不代表真实情况了。
+
+</details>
+
+**3.** 开放题：代理能看到所有流量，那它能不能当一个「外置 harness」？比如在代理层拦截含 `git push --force` 的 `tool_use`。和 PreToolUse hook 比，这样做好在哪、坏在哪？
+
+<details>
+<summary>提示</summary>
+
+判断方向：代理能拦，但它站的位置不对。
+
+好在哪：它独立于 Claude Code 的配置，任何走这个地址的客户端都管得到；模型改不到它；还能集中留痕。坏在哪：`tool_use` 在响应流里是一块块吐给客户端的，要拦就得把整条响应攒下来解析完再决定，等于放弃流式（本章常见坑第 1 条）；拦下之后还得伪造一条合法响应，否则客户端的历史就坏了；它看到的是模型「想」调什么，不是真正执行时的样子；把 `ANTHROPIC_BASE_URL` 一去掉，它就被绕过了。PreToolUse hook 拿到的是解析好的工具入参，退出码 2 还能把原因回灌给模型。我的结论：拦截交给 hook，代理只做观测和审计。
+
+</details>
 
 ## 延伸阅读
 

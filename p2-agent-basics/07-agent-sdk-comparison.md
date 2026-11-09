@@ -282,9 +282,32 @@ CrewAI 走的是「角色扮演 + 协作」路线：定义研究员、写手、�
 
 ## 练习
 
-1. 给 `langgraph_agent.ts`（Python 版 `langgraph_agent.py`）加一个「审批」节点：`write_file` 之前先经过它，如果 `content` 里含 `rm -rf` 就路由到 END。
-2. 把 `ai_sdk_agent.ts` / `pydantic_ai_agent.py` 的 `Report` 加一个字段 `files_changed`（zod 里是 `z.array(z.string())`，Python 里是 `list[str]`），让 fake 模型也填上，写测试断言。
-3. 开放题：如果要把第 5 章的分诊系统上线，并且要求「每张工单创建前都要人工确认，且服务重启后能接着处理」，你会选哪个 SDK？为什么？
+**1.** 给 `langgraph_agent.ts`（Python 版 `langgraph_agent.py`）加一个「审批」节点：`write_file` 之前先经过它，如果 `content` 里含 `rm -rf` 就路由到 END。
+
+<details>
+<summary>提示</summary>
+
+加一个 `approve` 节点，节点本身不改状态，返回 `{}` 就行。改 `route`：最后一条消息是 `write_file` 时去 `"approve"`，其它 tool 照旧去 `"tools"`。`addConditionalEdges("llm", ...)` 的目标列表也要加上 `"approve"`。再给 `approve` 加一条条件边：`content` 含 `rm -rf` 就去 `END`，否则去 `"tools"`。`SCRIPT` 是写死的，测试要能换剧本：把它改成可注入，造一个 `write_file` 内容带 `rm -rf` 的剧本，断言 `FILES["calc.py"]` 没被改。正常剧本还要照样修好 calc.py。这只是静态检查；真要「等人点头」，要用本章说的中断点。
+
+</details>
+
+**2.** 把 `ai_sdk_agent.ts` / `pydantic_ai_agent.py` 的 `Report` 加一个字段 `files_changed`（zod 里是 `z.array(z.string())`，Python 里是 `list[str]`），让 fake 模型也填上，写测试断言。
+
+<details>
+<summary>提示</summary>
+
+Node 版：`Report` 加 `files_changed: z.array(z.string())`，`model` 的 `doGenerate` 最后一步输出的 JSON 里加上 `files_changed: ["calc.py"]`。Python 版：`Report` 加 `files_changed: list[str]`，`scripted_model` 最后那个 `ToolCallPart(out_tool, {...})` 里加同样的字段。测试在 `sdk_compare.test.ts`（`test_sdk_compare.py`）里断言 `output.files_changed` 等于 `["calc.py"]`。建议先故意不填，看看两个框架各自怎么报校验错误，这正是「输出也是带校验的类型」的意义。
+
+</details>
+
+**3.** 开放题：如果要把第 5 章的分诊系统上线，并且要求「每张工单创建前都要人工确认，且服务重启后能接着处理」，你会选哪个 SDK？为什么？
+
+<details>
+<summary>提示</summary>
+
+两个要求拆开看：「每张单创建前人工确认」要能在工具执行前暂停，「重启后能接着处理」要把状态持久化。本章的对比表里，同时把这两件事当一等公民的是 LangGraph，它有中断点和 checkpoint。所以我会选 LangGraph，但 checkpoint 一定要存数据库，不能用内存，否则一重启照样丢。也可以换个角度：第 5 章说过分诊基本能写成 Workflow，用普通代码加一张数据库状态表也能做到，框架省下的是样板代码，不是能力。
+
+</details>
 
 ## 延伸阅读
 

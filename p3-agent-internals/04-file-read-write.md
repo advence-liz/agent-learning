@@ -324,9 +324,38 @@ Refusing to write <path> it is a symbolic link. Write to the link's target path 
 
 ## 练习
 
-1. 按官方文档放宽规则：过期时如果 `old_string` 在当前内容里仍唯一匹配，就允许编辑，并在返回值里标一个 `stale_recovered=True`。
-2. 给 `FileState` 加上「Bash 里的 `cat file` 也算读过」：写一个函数从命令里解析出被读的单个文件路径，读了就登记。想想 `cat a b`、`cat *.ts` 该怎么办。
-3. 开放题：如果两个 subagent 并行改同一个文件，每个 subagent 各有一份状态表，会发生什么？你会怎么设计，让它们不互相覆盖？
+**1.** 按官方文档放宽规则：过期时如果 `old_string` 在当前内容里仍唯一匹配，就允许编辑，并在返回值里标一个 `stale_recovered=True`。
+
+<details>
+<summary>提示</summary>
+
+改 `FileState.edit()`：把 `self._check_fresh(path)` 拆成两种情况。「没读过」照样直接拒；「过期」时先读当前内容，`text.count(old) == 1` 就继续，并记下 `stale_recovered = True`，否则仍然抛「modified since read」。返回值可以改成 dict 或者在字符串里带上这个标记。Node 版改 `checkFresh` 和 `edit`。
+
+用 demo 里「读完被别人改了」那一步验证：原来那次 `edit(p, "x = 2", "x = 3")` 现在会直接成功并带上 `stale_recovered=True`，最后文件里用户加的那行还在。再补一个反例：外部修改让 `old_string` 消失或出现两次，应该仍然被拒。
+
+</details>
+
+**2.** 给 `FileState` 加上「Bash 里的 `cat file` 也算读过」：写一个函数从命令里解析出被读的单个文件路径，读了就登记。想想 `cat a b`、`cat *.ts` 该怎么办。
+
+<details>
+<summary>提示</summary>
+
+写一个 `register_bash_read(fs, cmd)`：用 `shlex.split` 拆命令，只有「命令是 `cat`、恰好一个参数、不含通配符、没有管道和重定向」时，才按 `read()` 的方式登记（`fs.seen[path] = fs._stamp(path)`）。
+
+`cat a b` 两个文件的内容混在一个输出里，模型未必分得清哪段是哪个；`cat *.ts` 要等 shell 展开才知道读了哪些。两种我都建议不登记：误判「没读过」只是多一次 Read，误判「读过」可能让模型没看全就改文件。官方文档也只说对**单个文件** `cat`、`head`、`grep` 算读过。
+
+</details>
+
+**3.** 开放题：如果两个 subagent 并行改同一个文件，每个 subagent 各有一份状态表，会发生什么？你会怎么设计，让它们不互相覆盖？
+
+<details>
+<summary>提示</summary>
+
+先推一遍：A、B 各自读了文件，A 先改成功；B 再改时，它表里的 mtime 和哈希已经对不上磁盘，`_check_fresh` 会拒，B 重读后再改。所以「静默覆盖」大多会被挡住。
+
+真正的风险在两处。一是放宽规则之后（练习 1），B 的 `old_string` 只要还唯一就会直接改，语义上可能和 A 的改动打架。二是「检查」和「写入」之间没有锁，两个进程几乎同时写会互相踩。我倾向于从源头避免：给每个子 agent 分不相交的文件，或者各开一个 worktree 最后合并；非要共享，就按路径加文件锁，把「检查 + 写」做成一个原子操作。
+
+</details>
 
 ## 延伸阅读
 

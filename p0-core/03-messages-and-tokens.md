@@ -183,7 +183,16 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
 - **缓存省了 87.6%**。不开缓存的话，这个会话按标价要 $1910；实际是 $237。
 - **剩下的钱主要花在「读缓存」上**。拆开算：缓存读 $187.36，占 79%；两种写入合计 $33.7；输出只有 $16。即便单价打到一折，一个 46 万 token 的上下文被读两千次，依然是大头。这就是为什么长会话该压缩、新任务该开新会话：省下的不只是窗口，还有那 79%。
 
-还有一个实测观察：这个会话主线程的缓存写入里，1 小时 TTL 和 5 分钟 TTL 都有（约 500 万 vs 432 万）；6 个 subagent 的写入则**全是 5 分钟 TTL**。Claude Code 是按什么规则选 TTL 的，我没有查到文档，这里只记录现象。
+还有一个实测观察：这个会话主线程的缓存写入里，1 小时 TTL 和 5 分钟 TTL 都有（约 500 万 vs 432 万）；6 个 subagent 的写入则**全是 5 分钟 TTL**。
+
+这个现象和 [Claude Code 的 prompt-caching 文档](https://code.claude.com/docs/en/prompt-caching)「Which TTL each request gets」一节对得上。文档把请求分成两桶：
+
+- **主对话**（交互轮次、`-p`、Agent SDK 的轮次，以及跟着它们内联跑的辅助请求）：订阅用户在套餐额度内用 1 小时；超出额度改用 usage credits 后降到 5 分钟；API key 或云厂商一律 5 分钟。
+- **其余请求**（subagent、workflow、fork、压缩、会话标题等）：默认 5 分钟，订阅下只有少数由服务端控制的辅助请求用 1 小时。
+
+想自己定，可以用设置 `promptCacheTtl` / 环境变量 `CLAUDE_CODE_PROMPT_CACHE_TTL` 管主对话，`subagentPromptCacheTtl` / `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` 管其余请求，取值只认 `5m` 或 `1h`（需要 v2.1.242 及以上）。
+
+对照实测：subagent 全是 5 分钟，正好是「其余请求」那一桶；主线程两种都有，符合订阅账号的 1 小时默认，混进来的 5 分钟写入**推测**来自超出额度后的那段时间，或者记在主会话里的压缩等「其余请求」（文档没有说 jsonl 里怎么区分，这里没有逐条核对）。
 
 测试 [`core/usage_stats.test.ts`](../code/agent-node/core/usage_stats.test.ts)（Python 版 `core/tests/test_usage_stats.py`）用一份合成的 jsonl 覆盖了去重、`<synthetic>`、坏行、TTL 拆分和费用公式，并断言输出里不会出现正文；Node 版另有一个用例在临时目录里造会话文件，验证不带参数时取的是最大的那个。
 

@@ -4,6 +4,8 @@
 
 > **一句话结论**：skill 是一份分三层、按需进上下文的说明书。目录（名字 + 一句描述）常驻 system；正文在模型调 `Skill` 工具、或你敲 `/skill-name` 时作为一段普通文本**追加**进对话；正文里提到的附录文件，模型要用时自己去 Read。装五十个 skill，只为当下用到的那一个付 token。
 
+[用 Skills 定制你的 AI 工作流](../p1-tools/12-skills.md)从使用者角度讲了三层披露，并用一个独立的 `skill_loader` 演示了目录、渲染和追加；本章的增量是把它接进 mini-cc 的循环：目录进 system、`Skill` 工具和 `/skill-name` 命令两条入口共用一套渲染、压缩之后正文原样挂回，并且有测试守着。
+
 ## 装了四十多个 skill，上下文为什么没被撑爆？
 
 你 `~/.claude/skills` 下有四十多个 skill。[用 Skills 定制你的 AI 工作流](../p1-tools/12-skills.md)统计过：SKILL.md 正文合计五十多万字符，常驻的描述只有一万两千多字符。
@@ -378,9 +380,32 @@ skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精�
 
 ## 练习
 
-1. 支持 `allowed-tools` 字段：skill 加载后，这一轮里模型只能用列出的工具。用第 5 章的 `extra_checks` 实现，想想 skill 运行结束的边界在哪里。
-2. 项目级 skill 第一次执行 `` !`cmd` `` 前要你批准，并像第 15 章一样按内容指纹记住。为什么用户级 skill 可以不问？
-3. 开放题：Claude Code 的 skill 可以设 `context: fork`，在一个 sub agent 里执行，只把结果带回来。把第 17 章和本章接起来：什么样的 skill 适合 fork？它和「正文进主上下文」相比，各自省了什么、丢了什么？
+**1.** 支持 `allowed-tools` 字段：skill 加载后，这一轮里模型只能用列出的工具。用第 5 章的 `extra_checks` 实现，想想 skill 运行结束的边界在哪里。
+
+<details>
+<summary>提示</summary>
+
+`skills.py` 的 `_frontmatter` 已经能读到字段，给 `Skill` 加一个 `allowed_tools`。`SkillTool.run` 只拿得到 `ctx`，所以先在 App 里把 `PermissionManager` 放进 `ctx.extras`（第 10 章的 `ask_user` 就是这么挂的），加载成功后往 `extra_checks` 里挂一个 check：工具名不在列表里就返回 `Decision("deny", ...)`，理由写清楚是哪个 skill 限制的（参考 `subagent.py` 的 `_read_only_check`）。难点是边界：skill 没有「结束」事件，最自然的边界是这一轮结束，在 `turn_end` 钩子里把这个 check 摘掉。测试：加载一个 `allowed-tools: Read` 的 skill，剧本里接着调 Write，断言被拒；下一轮再调 Write，恢复正常的权限判断。
+
+</details>
+
+**2.** 项目级 skill 第一次执行 `` !`cmd` `` 前要你批准，并像第 15 章一样按内容指纹记住。为什么用户级 skill 可以不问？
+
+<details>
+<summary>提示</summary>
+
+在 `skills.py` 的 `render_body` 执行 `_CMD` 之前加一道审批：`Skill.scope == "project"` 时算正文的指纹，查一个和 `mcp_client.py` 的 `Approvals` 同样结构的批准表，没批过就问你，批了就记下，正文一改指纹变了就重新问。模型调用时 `SkillTool.run` 没有 UI，要像 `ask_user` 一样把提问函数放进 `ctx.extras`。用户级 skill 在 `<home>/skills/` 下，是你自己装的，装的那一刻就做了信任决定；项目级在 `.mini_cc/skills/`，跟着仓库走，clone 一个陌生仓库，你没看过的 `` !`cmd` `` 就会在你的机器上跑。测试：项目级 skill 第一次被拒时命令不执行，批准后第二次不再问，改了正文又问。
+
+</details>
+
+**3.** 开放题：Claude Code 的 skill 可以设 `context: fork`，在一个 sub agent 里执行，只把结果带回来。把第 17 章和本章接起来：什么样的 skill 适合 fork？它和「正文进主上下文」相比，各自省了什么、丢了什么？
+
+<details>
+<summary>提示</summary>
+
+判断方向：看 skill 的产出是「过程」还是「结论」。正文进主上下文时，模型一边照说明书做、一边保留全部中间过程，后续还能接着讨论，代价是正文和中间输出都留在主上下文里（压缩后正文还会被挂回）。fork 出去执行，主上下文只多一段结果，省掉大量中间 token；丢的是过程细节，以及和你的交互，子 agent 里没法跟你来回确认。我的结论：读得多、输出小、不需要你参与的 skill（「审一下这个 diff」「查日志找根因」）适合 fork；需要和你一步步来、或者产出要在主对话里接着改的（写方案、改代码）留在主上下文。
+
+</details>
 
 ## 延伸阅读
 

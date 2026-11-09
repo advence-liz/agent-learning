@@ -2,6 +2,9 @@
 
 > 原文（免费）：[Tensor 的常用操作](https://labuladong.online/zh/ai-coding/basics/pytorch-basics/) —— 建议先读原文，本页是我的笔记
 
+!!! note "可以先跳过本章"
+    第 5 部分后面的经典算法（第 4–18 章，代码在 `code/ml/classic`）全部用 numpy 写，不 import torch；只有第 2、3 章各有一小段「补充」用到 `torch.std` 和 `torch.linalg.lstsq`，看到时回来查即可。torch 要到第 6 部分训练神经网络、跑模型推理时才真正用上，读第 6 部分之前再回来把本章过一遍。
+
 **一句话结论**：Tensor 就是「带 shape 和 dtype 的多维数组」；写 ML 代码 90% 的 bug 都是 shape 对不上，所以每做一次运算前先在脑子里推一遍 shape。
 
 ## 核心要点

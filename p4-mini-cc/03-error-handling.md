@@ -18,6 +18,8 @@
 
 离线 fake 模型，剧本 `examples/ch03.json` 依次模拟：一次 529 过载、一次参数名写错、一次文件不存在、一次命令失败，最后一轮再来一次 401：
 
+（Node 版的输出来自实现到后面章节的代码，所以多了两行 `◇ system  项目说明 / 日期`：那是 [第 9 章](09-context-injection.md)才有的上下文注入，本章先忽略。Python 版是本章当时的输出，没有这两行。）
+
 === "Node"
 
     ```console
@@ -406,9 +408,32 @@ Claude Code 也有同样的机制，二进制里能看到它补的文案：`[Req
 
 ## 练习
 
-1. 给 `RetryPolicy` 加一个总时长上限（比如 2 分钟），超过就放弃，哪怕次数没用完。写测试时注意 `sleep` 是注入的，时间要怎么「模拟」？
-2. 现在超长输出是简单地截掉尾部。改成「保留头 2/3 和尾 1/3、中间省略」，因为编译错误和测试失败的关键信息常在末尾。
-3. 开放题：连续三次 529 之后，要不要自动换到 `claude-sonnet-5-5` 继续？换模型对 thinking 块、prompt cache 分别有什么影响？（提示：claude-api 文档提到 thinking 块与模型绑定，cache 也按模型隔离。）
+**1.** 给 `RetryPolicy` 加一个总时长上限（比如 2 分钟），超过就放弃，哪怕次数没用完。写测试时注意 `sleep` 是注入的，时间要怎么「模拟」？
+
+<details>
+<summary>提示</summary>
+
+给 `retry.py` 的 `RetryPolicy`（Node 是 `retry.ts`）加 `max_total: float = 120`，`should_retry` 多收一个「已经等了多久」的参数：已等的加上下一次要等的超过上限，就放弃。`sleep` 是注入的（`Agent.sleep`），测试里不会真睡，所以不能读真钟：最简单是在 `_call_model` 里把每次的 `delay` 累加成 `waited` 来判断；更通用的是再注入一个 `clock`，假 sleep 顺手把假钟往前拨。测试：剧本全是带 `retry_after=50` 的 `ModelError`，断言第 3 次请求失败后就放弃（`len(client.requests) == 3`、`slept == [50, 50]`），最后是 `TurnEnd("error")`。注意 `delay()` 会把 `retry_after` 截到 `max_delay`（默认 30），测试里要把 `Settings.retry_max_delay` 调大。
+
+</details>
+
+**2.** 现在超长输出是简单地截掉尾部。改成「保留头 2/3 和尾 1/3、中间省略」，因为编译错误和测试失败的关键信息常在末尾。
+
+<details>
+<summary>提示</summary>
+
+改 `tools/registry.py` 的 `truncate()`（Node 是 `registry.ts` 的 `truncate`）：头取 `limit * 2 // 3`、尾取 `limit // 3`，中间放一行 `[… N chars omitted …]`。最好把两个切口都挪到最近的换行处，别把一行报错从中间劈开。测试：造一个前面一大串 `x`、最后一行是 `FAILED test_foo` 的结果，`limit=300`，断言结果里同时有 `FAILED test_foo` 和 `omitted`，总长度不超过 limit 加标记那一行。`test_ch03_errors.py` 里断言 `output truncated` 的那条要跟着改。
+
+</details>
+
+**3.** 开放题：连续三次 529 之后，要不要自动换到 `claude-sonnet-5-5` 继续？换模型对 thinking 块、prompt cache 分别有什么影响？（提示：claude-api 文档提到 thinking 块与模型绑定，cache 也按模型隔离。）
+
+<details>
+<summary>提示</summary>
+
+方向：分开看「能不能换」「值不值」「谁来定」。thinking 块和生成它的模型绑定，工具循环中途换模型，本轮必须原样回传的 thinking 块就成了麻烦；prompt cache 按模型隔离，换过去等于整段前缀按写入价重来一遍，长会话里这笔钱不小。再说 529 是「这会儿过载」，退避一会儿通常就好，换模型解决的是另一类问题（能力、价格）。我的结论：不自动换，重试用尽后用 `Notice` 建议用户 `/model claude-sonnet-5-5`，由人来决定；就算要自动，也只在一轮结束、下一轮开始时切，并把切换写进会话记录，方便事后知道哪段回答出自哪个模型。
+
+</details>
 
 ## 延伸阅读
 

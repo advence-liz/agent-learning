@@ -6,7 +6,7 @@
 
 ## 加一个 MCP server，要改几行代码？
 
-在 [动手开发 MCP 工具](../p2-agent-basics/10-mcp-tool.md) 里，我们手写了一个 notes server，又手写了一段客户端：起子进程、握手、列工具、转发调用。那段客户端的 server 路径是写死在代码里的。
+在 [动手开发 MCP 工具](../p2-agent-basics/10-mcp-tool.md) 里，我们写了一个 notes server，用官方 client 调通了它；[拆解 MCP 通信协议](../p2-agent-basics/11-mcp-protocol.md)又不用任何库手写了一段客户端：起子进程、握手、列工具、转发调用。两处客户端的 server 路径都是写死在代码里的。
 
 你在 Claude Code 里接 Linear、Notion、chrome-devtools，从来没改过一行代码：往 `.mcp.json` 里加几行，重启，工具就出现了。你这个会话里就挂着几百个 `mcp__` 开头的工具。
 
@@ -480,9 +480,32 @@ Claude Code 对应的设置是 `enableAllProjectMcpServers` 和 `enabledMcpjsonS
 
 ## 练习
 
-1. 给 `McpTool` 加输出上限：结果超过 2.5 万 token（按 4 字符估）就截断并提示。Claude Code 对应的环境变量是 `MAX_MCP_OUTPUT_TOKENS`。
-2. 实现 `/mcp restart <name>`：关掉这个 server 的常驻协程、重新连接、重新注册工具。注意 prompt cache：工具列表变了会怎样？
-3. 开放题：你接了 20 个 server、300 个工具，每次请求光 schema 就几万 token。仿照 Claude Code 的 deferred tools，设计一个 `ToolSearch` 工具：`tools` 里只放名字和一句描述，模型搜到之后才把完整 schema 加进来。新加的 schema 放在哪里，才不会让 prompt cache 失效？（提示：claude-api 文档里的 tool search 工具和 `defer_loading`。）
+**1.** 给 `McpTool` 加输出上限：结果超过 2.5 万 token（按 4 字符估）就截断并提示。Claude Code 对应的环境变量是 `MAX_MCP_OUTPUT_TOKENS`。
+
+<details>
+<summary>提示</summary>
+
+改 `mcp_client.py` 的 `McpTool.run`（Node 在 `mcp_client.ts`）：拿到 `manager.call` 的 `ToolResult` 后，把文本块的字符数加起来，超过 25000×4 就截断，末尾追加一句「输出被截断，原始约 N token，请缩小查询范围」。上限可以读环境变量，默认 25000。注意 `ToolRegistry.execute` 已经有一道通用的 `max_output=30000` 字符截断，想清楚两道截断谁先生效，MCP 的上限才有意义。测试：用一个假的 `McpManager`（`call` 返回一大段文本）构造 `McpTool`，断言结果长度在上限附近且带提示，图片块不被算进字符数。
+
+</details>
+
+**2.** 实现 `/mcp restart <name>`：关掉这个 server 的常驻协程、重新连接、重新注册工具。注意 prompt cache：工具列表变了会怎样？
+
+<details>
+<summary>提示</summary>
+
+每个 server 在 `McpManager._serve` 里是一个常驻协程，靠 `ServerState._stop` 这个 `asyncio.Event` 收尾。restart 就是：`call_soon_threadsafe(st._stop.set)` 等它退出 → 用 `ToolRegistry.unregister` 去掉 `mcp__<name>__*` 的旧工具 → 对这一个 `ServerConfig` 重新连接 → `register` 新工具 → `agent.context.invalidate()`（instructions 可能变了）。命令解析放在 `cli.py` 的 `_mcp` 里。prompt cache：tools 排在请求前缀的最前面，工具列表一变（哪怕只是顺序变），整段 cache 从头失效，下一次请求要按写入价重算全部历史；所以重新注册后工具顺序要和原来一致，restart 也只在你明确要求时做。
+
+</details>
+
+**3.** 开放题：你接了 20 个 server、300 个工具，每次请求光 schema 就几万 token。仿照 Claude Code 的 deferred tools，设计一个 `ToolSearch` 工具：`tools` 里只放名字和一句描述，模型搜到之后才把完整 schema 加进来。新加的 schema 放在哪里，才不会让 prompt cache 失效？（提示：claude-api 文档里的 tool search 工具和 `defer_loading`。）
+
+<details>
+<summary>提示</summary>
+
+判断方向：关键是「完整 schema 出现在哪」。如果把搜到的 schema 加进 `tools` 数组，前缀从最开头就变了，每搜一次 cache 全部作废。claude-api 文档里的 tool search 走的是另一条路：工具定义一开始就全放在 `tools` 里但标 `defer_loading`，不进模型的上下文；模型调用搜索工具后，被选中的定义在对话里展开，`tools` 前缀保持不变（细节以文档为准）。我的结论：mini-cc 要做就照这个思路，`tools` 只放一份稳定的列表，新 schema 只能出现在对话末尾（比如作为搜索工具的 `tool_result`），绝不改前缀。代价是每次「搜 + 展开」多一次往返，模型也可能搜不到该用的工具，所以最常用的十几个工具还是应该常驻。
+
+</details>
 
 ## 延伸阅读
 

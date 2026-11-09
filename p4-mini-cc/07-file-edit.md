@@ -349,9 +349,32 @@ Claude Code 非要模型先读一遍，不是因为模型不知道文件内容�
 
 ## 练习
 
-1. 实现 `MultiEdit`：`edits: [{old_string, new_string, replace_all?}]`，按顺序应用，任意一步失败则整体不写盘。想想第二步的 `old_string` 是基于原文件还是第一步之后的内容？
-2. Claude Code 会自动尝试 `\uXXXX` 转义互换。给 `_diagnose_not_found` 加上「把 old_string 里的 `中` 换成『中』再试」的自动修复：匹配唯一时直接替换，并在结果里注明「auto-corrected」。
-3. 开放题：如果两个 sub agent（第 17 章）同时编辑同一个文件，`FileStateCache` 应该共享还是各自一份？各有什么问题？
+**1.** 实现 `MultiEdit`：`edits: [{old_string, new_string, replace_all?}]`，按顺序应用，任意一步失败则整体不写盘。想想第二步的 `old_string` 是基于原文件还是第一步之后的内容？
+
+<details>
+<summary>提示</summary>
+
+新建 `tools/multi_edit.py`（Node 照 `edit.ts` 写一个），在 `tools/__init__.py` 的默认工具里注册。建议先把 `EditTool.run` 里「找匹配、查唯一、替换」那段抽成一个纯函数 `(text, old, new, replace_all) -> (新文本, 错误)`，两个工具共用。流程：`guard_write` 一次 → `read_text` 一次 → 在内存里依次应用每个 edit → 全部成功才 `ctx.before_write()` + `write_text` + `file_state.remember`。按顺序应用，第二步的 `old_string` 自然是基于第一步之后的内容，工具描述里要写清楚，免得模型去找已被前一步改掉的文字。测试：两步都成功时两处都改了；第二步找不到时返回带「edit 2」字样的错误，文件字节完全没变。
+
+</details>
+
+**2.** Claude Code 会自动尝试 `\uXXXX` 转义互换。给 `_diagnose_not_found` 加上「把 old_string 里字面的 `\u4e2d` 换成『中』再试」的自动修复：匹配唯一时直接替换，并在结果里注明「auto-corrected」。
+
+<details>
+<summary>提示</summary>
+
+注意 `_diagnose_not_found` 只负责生成提示文字，自动修复要放在 `EditTool.run` 里 `count == 0` 的分支、调用诊断之前（Node 是 `edit.ts` 里 `n === 0` 那里）。做两个候选：把 `old_string` 里字面的 `\uXXXX` 解码成字符（`re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m[1], 16)), old)`），以及反方向把非 ASCII 字符编码成 `\uXXXX`；`new_string` 做同方向的变换，不然写进去的还是转义串。候选在文件里恰好出现一次才替换，结果里加上 `auto-corrected`；0 次或多次就照旧走诊断。测试：文件里是 `name = "中文"`，`old_string` 用字面转义写成 `name = "\u4e2d文"`，断言替换成功且结果含 `auto-corrected`。
+
+</details>
+
+**3.** 开放题：如果两个 sub agent（第 17 章）同时编辑同一个文件，`FileStateCache` 应该共享还是各自一份？各有什么问题？
+
+<details>
+<summary>提示</summary>
+
+方向：分别推演两种失败。共享一份：子 agent B 改完文件会 `remember()` 新版本，A 的守卫随之通过——可 A 从没看过 B 的改动，基于旧印象的 Write 能直接落盘，「先读后改」形同虚设。各自一份：B 改完后 A 再写，`is_stale()` 发现 mtime 和内容都变了，A 收到「modified since read」被迫重读——多花一次 Read，但不会悄悄覆盖别人的改动。我的结论是各自一份，[第 17 章](./17-subagent.md)的 `subagent.py` 正是给子 agent 新建一个 `ToolContext`、自带文件状态表；再补一把按路径的写锁，堵住「检查通过到写盘之间」被另一个线程插队的窄窗口。
+
+</details>
 
 ## 延伸阅读
 

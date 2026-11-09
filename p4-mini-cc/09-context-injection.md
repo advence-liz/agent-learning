@@ -418,9 +418,32 @@ git 快照（当前分支、`git status --short`、最近 5 次提交）也在�
 
 ## 练习
 
-1. 加一个「上下文快满了」的提醒：`agent.usage.last_input` 超过 15 万时，注入一句「上下文已用 X tokens，请尽量精简输出」。它应该每轮都发，还是只在跨过阈值时发一次？用扫描历史的方式实现。
-2. 实现子目录 `AGENTS.md` 的懒加载：模型 Read 了 `apps/web/src/x.ts` 之后，下一次追加 user 消息时，注入 `apps/web/AGENTS.md`（如果之前没注入过）。
-3. 开放题：`changed_files_provider` 注入 diff 后就把新内容登记为「已读」，模型可以直接 Edit。但它只看到了 diff，没看到全文。这样做安全吗？什么情况下会出问题，你会怎么改？
+**1.** 加一个「上下文快满了」的提醒：`agent.usage.last_input` 超过 15 万时，注入一句「上下文已用 X tokens，请尽量精简输出」。它应该每轮都发，还是只在跨过阈值时发一次？用扫描历史的方式实现。
+
+<details>
+<summary>提示</summary>
+
+照 `date_provider` 的样子在 `context.py`（Node `context.ts`）写一个新 provider，加进 `ContextBuilder.default` 的列表。判断用 `st.agent.usage.last_input`（Node 是 `lastInput`）；「发没发过」照规矩扫 `st.reminders()` 里有没有你的标题（比如 `# Context usage`），不记标志位。我建议只在跨过阈值时发一次：每轮都发既费 token，又会被模型当噪音忽略；因为是扫历史，第 14 章压缩之后旧提醒没了，再次跨过会自动重发。`user` 和 `tool_result` 两种触发都要处理，上下文多半是在工具循环里被撑大的。测试：把剧本里连续两个 `say()` 返回的 `FakeTurn.usage` 都设成 `{"input_tokens": 160000, "output_tokens": 20}`，聊三句，断言提醒在请求里只出现一次。
+
+</details>
+
+**2.** 实现子目录 `AGENTS.md` 的懒加载：模型 Read 了 `apps/web/src/x.ts` 之后，下一次追加 user 消息时，注入 `apps/web/AGENTS.md`（如果之前没注入过）。
+
+<details>
+<summary>提示</summary>
+
+再写一个 provider：扫 `st.messages` 里 assistant 的 `tool_use`，挑出 `name == "Read"` 的 `file_path`，从文件所在目录往上走到项目根（可复用 `git_root()`），收集沿途的 `INSTRUCTION_FILES`。去掉 cwd 链上那些（会话开头 `instructions_provider` 已经注入过），再看 `st.reminders()` 里有没有 `Contents of <那个路径>` 判断注入过没有。工具结果回填也是一条 user 消息，所以 Read 完紧接着的那次请求就能带上。测试：项目里建 `apps/web/AGENTS.md` 和 `apps/web/src/x.ts`，剧本 `call("Read", {"file_path": "apps/web/src/x.ts"})` → 再 Read 一个同目录文件 → `say("ok")`，断言第 2 个请求里有这份 AGENTS.md 的内容，第 3 个请求没有重复注入。
+
+</details>
+
+**3.** 开放题：`changed_files_provider` 注入 diff 后就把新内容登记为「已读」，模型可以直接 Edit。但它只看到了 diff，没看到全文。这样做安全吗？什么情况下会出问题，你会怎么改？
+
+<details>
+<summary>提示</summary>
+
+方向：看「模型以为自己知道的」和「文件实际内容」之间有没有缺口。正常情况下，之前读过的全文加上完整的 diff 能拼出新版本，问题不大；但 `changed_files_provider` 有两个分支会留下缺口却照样 `remember(path, new)`：diff 超过 `max_diff_lines`（默认 60 行）被截断时，以及文件太大 `rec.text is None`、只说了一句「Read it again」时——守卫照样放行。`Edit` 还好，`old_string` 必须逐字命中；危险的是 `Write` 整文件覆盖，会把模型没看到的外部改动直接抹掉。我的改法：只有 diff 完整给出时才登记新版本，截断或给不出 diff 时 `fs.forget(path)`，逼它重新 Read；别指望 `partial` 标记，第 7 章的 `guard_write` 并不看它。
+
+</details>
 
 ## 延伸阅读
 

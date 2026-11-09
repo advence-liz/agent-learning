@@ -286,9 +286,32 @@ content_block_delta -- note {style.stroke-dash: 3}
 
 ## 练习
 
-1. 给 `Accumulator` 加上 `thinking` 块的支持（`thinking_delta` 和 `signature_delta`），自己在 fixture 里构造一个 thinking 块验证。
-2. 写一个「容错 partial JSON」函数：输入 `'{"path": "calc.py", "con'`，返回 `{"path": "calc.py"}`。用 fixture 的每一步做测试。
-3. 开放题：如果前端要在 `write_file` 参数还在流式到达时就实时预览文件内容，同时保证最终执行的一定是完整参数，你会怎么设计前端状态？
+**1.** 给 `Accumulator` 加上 `thinking` 块的支持（`thinking_delta` 和 `signature_delta`），自己在 fixture 里构造一个 thinking 块验证。
+
+<details>
+<summary>提示</summary>
+
+先读一下 `Accumulator.feed()`：`thinking_delta` 和 `signature_delta` 已经各有一个分支，只是返回 `null`，fixture 里也没有 thinking 块，所以从来没被跑到过。要做的事：给这两个分支补上可读的返回文字；新建一份 fixture（`fixture.sse` 两版共用，现有测试依赖它，别直接改），在 index 0 放一个 thinking 块：`content_block_start` 带 `{"type": "thinking", "thinking": "", "signature": ""}`，几条 `thinking_delta`，一条 `signature_delta`，再 `content_block_stop`，后面的块 index 顺延。初始的空字符串很重要，不写的话 Node 版 `+=` 会拼出 `undefined...`。用 `replay(新文件路径)` 跑，断言 thinking 文字拼完整、signature 原样保留，它是赋值不是拼接。
+
+</details>
+
+**2.** 写一个「容错 partial JSON」函数：输入 `'{"path": "calc.py", "con'`，返回 `{"path": "calc.py"}`。用 fixture 的每一步做测试。
+
+<details>
+<summary>提示</summary>
+
+思路是逐字符扫描，记住三件事：是否在字符串里、上一个字符是不是反斜杠、当前嵌套深度。每遇到深度 1 的逗号，就记下这个位置，表示前面的键值对都完整了。`JSON.parse` 失败时，截到最后一个这样的逗号，补一个 `}` 再解析；一个完整的键值对都没有，就返回 `{}`。一定要追踪字符串状态：fixture 里的 `content` 是 `def add(a, b)`，字符串里就有逗号，按「最后一个逗号」朴素地截，会截在字符串中间。预期：`""` 和 `{"path": "ca` 都得到 `{}`，第三、四步都得到 `{"path": "calc.py"}`，最后一步得到完整对象。
+
+</details>
+
+**3.** 开放题：如果前端要在 `write_file` 参数还在流式到达时就实时预览文件内容，同时保证最终执行的一定是完整参数，你会怎么设计前端状态？
+
+<details>
+<summary>提示</summary>
+
+给每个 tool_use 块单独维护一份状态：`raw`（累计的 JSON 片段）、`preview`（尽力解析的结果，给界面用）、`input`（只在 `content_block_stop` 之后才填）、`status`（streaming / ready / executed）。预览只读 `preview`，可以激进一些，连没闭合的字符串也可以先显示出来；执行只读 `input`，`status` 不是 ready 一律不执行。还要处理流中断：一个块始终没等到 stop，就标成无效丢掉，不能拿 `preview` 去执行。一句话：预览可以激进，执行必须保守，两边读不同的字段。
+
+</details>
 
 ## 延伸阅读
 

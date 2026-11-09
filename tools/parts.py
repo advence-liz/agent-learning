@@ -13,7 +13,7 @@ PARTS = [
     ('p0-core', 0, '核心概念',
      '主线的起点：token、上下文、API，所有后续章节的地基', '⭐ 必读，1 天', 'main'),
     ('p1-tools', 1, 'AI 工具使用技巧',
-     '你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读）', '⭐ 只读付费 5 章，2 天', 'main'),
+     '你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读）', '⭐ 08–12 五篇原创必读，01–07 笔记速读（07 必读），13–14 选读；2 天', 'main'),
     ('p2-agent-basics', 2, 'Agent 开发基础',
      '从聊天机器人到 Coding Agent、RAG、可观测性、MCP，亲手写一遍', '⭐⭐ 重点，1 周', 'main'),
     ('p3-agent-internals', 3, '工业级 Agent：拆解与生产工程',

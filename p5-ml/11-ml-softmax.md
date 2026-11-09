@@ -139,9 +139,38 @@ for _ in range(self.epochs):
 
 ## 练习
 
-1. 写一个 `log_softmax(Z)`，不经过 `softmax` 直接计算，验证它在 logits = [1000, 1001, 1002] 时不出 nan。
-2. 用 digits 的训练集比较三种方案的测试准确率：softmax 回归、10 个一对多逻辑回归取最大、sklearn 的 `OneVsRestClassifier(LogisticRegression())`。
-3. （工程题）你想给团队的工单自动分到「前端 / 后端 / 运维 / 产品」四类，并且「模型拿不准时转人工」。用 softmax 概率怎么定义「拿不准」？（最大概率小于阈值？前两名差距太小？熵太高？）各有什么优缺点，怎么用历史工单选阈值？
+**1.** 写一个 `log_softmax(Z)`，不经过 `softmax` 直接计算，验证它在 logits = [1000, 1001, 1002] 时不出 nan。
+
+<details>
+<summary>提示</summary>
+
+公式：$\log \text{softmax}(z)_i = z_i - \log\sum_j e^{z_j}$。数值上先减最大值 $m$：`Z - m - log(sum(exp(Z - m)))`，和 `softmax` 里减最大值是同一个技巧。
+
+[1000, 1001, 1002] 减掉 1002 变成 [-2, -1, 0]，`exp` 不会溢出，结果是 [-2.4076, -1.4076, -0.4076]，和 `np.log(softmax(Z))` 一致。如果先算 softmax 再取 log，遇到极小概率会出 `log(0) = -inf`，这就是正文常见坑里说的下溢。
+
+</details>
+
+**2.** 用 digits 的训练集比较三种方案的测试准确率：softmax 回归、10 个一对多逻辑回归取最大、sklearn 的 `OneVsRestClassifier(LogisticRegression())`。
+
+<details>
+<summary>提示</summary>
+
+数据按 `ch11_softmax.main()` 的切法（`test_size=0.3, random_state=0, stratify=y`）。一对多：对每个 k 训一个 `LogisticRegressionGD`，标签是 `(ytr == k)`，拿 `decision_function` 拼成 10 列取 argmax。
+
+实测（C 都用 0.05）：softmax 回归 0.9685、手写一对多 0.970、`OneVsRestClassifier(LogisticRegression(C=0.05))` 0.9685；sklearn 默认 C=1 时是 0.950。三种方案在 1~2 个百分点内，差别主要来自正则强度。结论：准确率上一对多不吃亏，softmax 的优势在于给出一个和为 1、可以互相比较的概率分布，第 3 题就要用到它。
+
+</details>
+
+**3.** （工程题）你想给团队的工单自动分到「前端 / 后端 / 运维 / 产品」四类，并且「模型拿不准时转人工」。用 softmax 概率怎么定义「拿不准」？（最大概率小于阈值？前两名差距太小？熵太高？）各有什么优缺点，怎么用历史工单选阈值？
+
+<details>
+<summary>提示</summary>
+
+三种定义：最大概率 < 阈值，最直观，但四个类时 0.4 和 0.4 的「两强相争」与 0.4 加三个 0.2 的「全都不像」分不开；前两名差距小，专抓「在两类之间犹豫」；熵高，看整体有多分散，对类别数敏感，阈值不好解释。
+
+选阈值：拿一批有人工标注的历史工单，按「转人工比例」和「自动分派的准确率」画一条曲线，比如目标是自动部分准确率 ≥95%，就找满足它的最低转人工率。提醒一点：softmax 概率不一定校准，「0.9」未必真的 90% 对，所以阈值要按历史数据定，不能凭概率的字面意思拍。
+
+</details>
 
 ## 延伸阅读
 

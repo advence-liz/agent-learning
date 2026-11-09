@@ -13,7 +13,7 @@
    - 接近窗口上限时工具会**摘要压缩**，早期细节（比如开头约定的命名规范）被总结替换掉；
    - 即使没压缩，模型对开头和结尾的内容记得最牢、中间部分容易被忽略，即 **Lost in the Middle**。
 5. **主动压缩优于被动压缩**：不要等快满了让工具自动压缩，趁中间过程还不算太长时主动 `/compact`，保留下来的信息更完整。
-6. **首条消息贵，后面便宜**：Coding Agent 的 system prompt + 工具定义可能上万 token。第一次请求这段前缀没有缓存，全价计费；之后命中前缀缓存，只有新增部分按原价算。缓存有时效，原文以 Anthropic 默认的 5 分钟为例。
+6. **首条消息贵，后面便宜**：Coding Agent 的 system prompt + 工具定义可能上万 token。第一次请求这段前缀没有缓存，全价计费；之后命中前缀缓存，只有新增部分按原价算。缓存有时效，原文以 Anthropic API 默认的 5 分钟为例；Claude Code 里具体是多久，要看计费方式（见下面的勘误）。
 7. **断网 / 打断 / 换模型都不会失忆**：数组保存在客户端（Codex、Claude Code 存在本机），每次请求都完整重发。唯一的代价是换模型或隔久了再回来，缓存失效，首条请求贵一些。
 
 ```d2
@@ -59,7 +59,7 @@ s2 -> s1: "换主题就\n开新会话"
 
 > ⚠️ 勘误/补充
 > - 原文称 Lost in the Middle 由「斯坦福和 Meta AI 在 2023 年的研究中证实」。论文 *Lost in the Middle: How Language Models Use Long Contexts*（Liu et al., arXiv:2307.03172，2023-07）首页署名单位是 **Stanford University、UC Berkeley、Samaya AI**，没有 Meta AI（实测提取 arXiv PDF 首页文本）。
-> - 缓存时效：Anthropic API 的 prompt caching 默认 TTL 是 5 分钟，另提供可选的 1 小时 TTL（`cache_control` 里的 `ttl`）。Claude Code 实际对哪些前缀用哪种 TTL，本笔记未核实。
+> - 缓存时效：Anthropic API 的 prompt caching 默认 TTL 是 5 分钟，另提供可选的 1 小时 TTL（`cache_control` 里的 `ttl`）。Claude Code 按计费方式分情况（[prompt-caching 文档](https://code.claude.com/docs/en/prompt-caching)「Which TTL each request gets」）：订阅用户在套餐额度内，**主对话**用 1 小时，subagent、fork、压缩等其余请求用 5 分钟；超出额度改用 usage credits、或者用 API key / 云厂商，一律 5 分钟。可以用 `promptCacheTtl`（环境变量 `CLAUDE_CODE_PROMPT_CACHE_TTL`）和 `subagentPromptCacheTtl`（`CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL`）改成 `5m` 或 `1h`。本机实测数据见 [上下文是什么](../p0-core/03-messages-and-tokens.md)。
 > - 本机 Claude Code 2.1.306 还提供 `--autocompact <auto|tokens>`，可以把自动压缩的窗口设成 100k–1M token 之间的值（`claude --help` 实测），这是对「何时压缩」的显式控制，原文没提。
 
 ### 📝 作者是怎么讲的
@@ -68,7 +68,7 @@ s2 -> s1: "换主题就\n开新会话"
 - **所有问题都回到同一个机制。** 记忆、变笨、计费、断线恢复，最后都归结到「模型无状态，所有记忆都在 messages 数组里」。这正是 STYLE 里说的「朴实无华」：产品看起来记得你，其实只是往数组开头多塞了一段用户画像。
 - **用「你可能会问」推进。** 讲完「新会话就是清空数组」之后，马上接一句：那 ChatGPT 为什么越用越懂我？用一个反例逼出用户记忆（Memory）的解释，一个问题接一个问题往下推。
 - **用生活类比讲 Lost in the Middle。** 读一本长书，最记得开头和结尾，中间模糊。他还给出了这个比喻的边界：1M 上下文只是能力上限，不等于长上下文里不会变笨，并说明这是「我的实际体验」，把论文结论和个人观察分开写。
-- **从原理推出可操作的建议。** 知道压缩会丢细节，就得出：趁对话还不长时主动 `/compact`，不要等工具自动压缩。知道 system prompt 有上万 token、第一次请求没有缓存，就得出：第一条消息贵是正常的，不用紧张，但要注意 5 分钟的缓存时效。每个解释都落到一个具体动作上。
+- **从原理推出可操作的建议。** 知道压缩会丢细节，就得出：趁对话还不长时主动 `/compact`，不要等工具自动压缩。知道 system prompt 有上万 token、第一次请求没有缓存，就得出：第一条消息贵是正常的，不用紧张，但要注意缓存时效（原文举的是 API 默认的 5 分钟）。每个解释都落到一个具体动作上。
 - **用一句话先安抚读者，再讲原因。** 「会不会失忆」那一节，先回答「不会，放心吧」，再从「数组由客户端保存、每次完整发送」解释原因，最后补上唯一的代价：切换模型后缓存失效。对于读者担心的问题，先给答案再给理由。
 
 ## 回到主线
@@ -98,7 +98,7 @@ s2 -> s1: "换主题就\n开新会话"
 <summary>参考答案</summary>
 
 1. 开新会话（或用 subagent 隔离）。周报和修 bug 无关，旧的调试历史会每轮重发、增加费用，还会参与概率预测、干扰写周报的质量。
-2. 前缀缓存有 TTL（API 默认 5 分钟），超时后缓存失效，整个长前缀要重新按全价（甚至按写缓存价）计费，与消息条数无关。
+2. 前缀缓存有 TTL，超时后缓存失效，整个长前缀要重新按写缓存价计费，与消息条数无关。20 分钟会不会超时要看计费方式：用 API key、云厂商，或订阅已超额度在用 usage credits 时是 5 分钟，肯定过期了；订阅额度内主对话是 1 小时，20 分钟本不该过期，那就去查这期间有没有换模型、开关 fast mode 这类会让缓存失效的操作（完整清单见同一份文档「Actions that invalidate the cache」）。
 3. 一是那条约定已被自动压缩进摘要，细节丢了，规避办法是写进 CLAUDE.md 或项目层护栏，让它常驻、不被压缩。二是它还在上下文里，但位于长上下文中部（Lost in the Middle），规避办法是关键约束靠近末尾重申，或者用 hook / lint 强制，即你 CLAUDE.md 里的「工具链能强制的就别写进上下文」。
 
 </details>

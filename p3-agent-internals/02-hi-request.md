@@ -66,7 +66,7 @@ system 只有三块，加起来不到 1 万字符。第 0 块是一句 57 字符
 
 注意 cache 断点打在 `system[1]` 和 `system[2]` 上，而 `system[1]` 的断点还带着 `scope: "global"`。
 
-你可能会问：global 是什么意思？我在官方文档里没找到这个字段的说明，beta 列表里倒是有一个 `prompt-caching-scope-2026-01-05`。结合上面表格里会话 C 的数据，第一轮就 `cache_read` 了 26594 token，一个刚开的会话能读到缓存，说明有一段前缀是**跨会话**共享的。我的推测是：global scope 让所有人都一样的那段 system 前缀可以在不同会话、甚至不同用户之间共享缓存。（推测，依据是字段名、beta 名和第一轮就有 cache_read 这个现象。）
+你可能会问：global 是什么意思？我在官方文档里没找到这个字段的说明，beta 列表里倒是有一个 `prompt-caching-scope-2026-01-05`。结合上面表格里会话 C 的数据，第一轮就 `cache_read` 了 26594 token，一个刚开的会话能读到缓存，说明有一段前缀是**跨会话**共享的。我的推测是：global scope 让所有人都一样的那段 system 前缀可以在不同会话之间共享缓存，范围最多到同一组织内，因为 [prompt-caching 文档](https://code.claude.com/docs/en/prompt-caching)写明缓存在不同组织之间是隔离的。（推测，依据是字段名、beta 名和第一轮就有 cache_read 这个现象。）
 
 ### messages：你的个人上下文在这里
 
@@ -74,7 +74,7 @@ system 只有三块，加起来不到 1 万字符。第 0 块是一句 57 字符
 
 本机记录也对得上：第一条 user 消息里有好几个 text 块，第一块是用 `<system-reminder>` 包着的 `~/.claude/CLAUDE.md` 全文（你的「全局行为准则」，约 5000 字符），后面是账号上下文、提交署名提醒，**最后一块才是你敲的 hi**。
 
-再往后还有一大块环境信息：cwd、平台、git 状态、MCP server 的 instructions、skill 列表等等，本机一次请求里这块有四五万字符。在我本机的记录里，这一块的 role 被标成了 `system`，出现在 messages 数组中间；beta 列表里有 `mid-conversation-system-clear-at-…`、`message-threads-…` 这类名字，所以我推测这是一种「对话中途的 system 消息」的新能力，不是标准 Messages API 里的 user/assistant 两种角色。（推测，本机记录格式未公开，线上实际字节要抓包确认。）
+再往后还有一大块环境信息：cwd、平台、git 状态、MCP server 的 instructions、skill 列表等等，本机一次请求里这块有四五万字符。在我本机的记录里，这一块的 role 被标成了 `system`，出现在 messages 数组中间。这就是新一代模型支持的「对话中途的 `role: "system"` 消息」：在 messages 里追加一条 system 消息下达指令，又不破坏前面的缓存前缀，[上下文是什么](../p0-core/03-messages-and-tokens.md)里讲过。beta 列表里的 `mid-conversation-system-clear-at-…` 大概也和它有关（推测，依据只是名字）。（本机记录格式未公开，线上实际字节要抓包确认。）
 
 为什么这些放在 messages 而不放 system？想想缓存就懂了：system 越靠前，越应该是「所有人都一样」的东西。cwd、git 分支、你的 CLAUDE.md 是**每个人都不一样**的，放进 system 会让 global 缓存失效。`claude --help` 里有个参数把这个意图写得明明白白：
 
@@ -145,7 +145,7 @@ system 只有三块，加起来不到 1 万字符。第 0 块是一句 57 字符
 
 为什么 `input_tokens` 只有 2？因为断点之后、不进缓存的部分几乎为零。2 个 token 大概就是消息格式本身的一点尾巴（推测）。
 
-价格上，官方 prompt caching 文档给的倍率是：5 分钟缓存写入 1.25 倍、1 小时缓存写入 2 倍、缓存读取 0.1 倍（Opus 5.5 / Sonnet 5.5 是 0.05 倍）。本机请求里的 `cache_control` 都是 `ttl: "1h"`；Claude Code 文档说订阅用户主线程默认 1 小时、API key 默认 5 分钟，子 agent 默认 5 分钟。你的 usage 里 `cache_creation` 子字段会分开记 `ephemeral_5m_input_tokens` 和 `ephemeral_1h_input_tokens`，可以自己核对走的是哪一档。
+价格上，官方 prompt caching 文档给的倍率是：5 分钟缓存写入 1.25 倍、1 小时缓存写入 2 倍、缓存读取 0.1 倍（Opus 5.5 / Sonnet 5.5 是 0.05 倍）。本机请求里的 `cache_control` 都是 `ttl: "1h"`；Claude Code 的 [prompt-caching 文档](https://code.claude.com/docs/en/prompt-caching)说：订阅用户在套餐额度内，主对话默认 1 小时，subagent、fork、压缩等其余请求默认 5 分钟；API key 或云厂商一律 5 分钟（规则和本机实测的对照见 [上下文是什么](../p0-core/03-messages-and-tokens.md)）。你的 usage 里 `cache_creation` 子字段会分开记 `ephemeral_5m_input_tokens` 和 `ephemeral_1h_input_tokens`，可以自己核对走的是哪一档。
 
 ## 动手：自己验证缓存链
 
@@ -216,9 +216,36 @@ system 只有三块，加起来不到 1 万字符。第 0 块是一句 57 字符
 
 ## 练习
 
-1. 跑 `session_stats.py cache 10`，找出你本机哪个会话第一轮 `cache_read` 不为 0，想想它为什么能一开局就命中缓存。
-2. 用上一章的代理抓一次真实的 hi（需要你自己决定是否产生费用），用 `--show 1` 确认你的 `inject-guardrails.sh` 输出到底在哪个块里。
-3. 开放题：如果让你设计断点位置（最多 4 个），你会怎么分配给「全局 system / 个人 system / 历史消息 / 最新消息」？Claude Code 本机记录里用了 3 个，留一个空位，可能是为了什么？
+**1.** 跑 `session_stats.py cache 10`，找出你本机哪个会话第一轮 `cache_read` 不为 0，想想它为什么能一开局就命中缓存。
+
+<details>
+<summary>提示</summary>
+
+跑 `uv run python -m http_analyzer.session_stats cache 10`（Node：`node http_analyzer/session_stats.ts cache 10`），看每个会话第一行的 `cache_read` 列。找到不为 0 的那个，对照本章的推测：`system[1]` 的断点带 `scope: "global"`，那段人人相同的 system 前缀可以跨会话共享缓存。可以粗看一下它第一轮读到的量，是不是接近「tools + system」的规模，而不是整个上下文那么大。大多数会话第一轮是 0 也正常：缓存有过期时间（本章看到的断点是 1h），离上一个会话太久就过期了。
+
+</details>
+
+**2.** 用上一章的代理抓一次真实的 hi（需要你自己决定是否产生费用），用 `--show 1` 确认你的 `inject-guardrails.sh` 输出到底在哪个块里。
+
+<details>
+<summary>提示</summary>
+
+代理的 `--upstream` 指向你平时用的上游，新开的 claude 带上 `ANTHROPIC_BASE_URL`，发一句 hi 就退出。先看 `index.jsonl`：第一个请求不一定是主线程的 hi，可能还有别的路径。找到主线程那个再 `--show`。
+
+看 `-- system` 和 `-- messages` 两段：system 应该只有三块，长度和 `session_stats shape` 打出来的接近；护栏要去 messages 的各个 text 块里找。`--show` 只给类型和大小，想确认到底是哪一块，用上一章练习 1 的 `--grep` 搜护栏标题。
+
+</details>
+
+**3.** 开放题：如果让你设计断点位置（最多 4 个），你会怎么分配给「全局 system / 个人 system / 历史消息 / 最新消息」？Claude Code 本机记录里用了 3 个，留一个空位，可能是为了什么？
+
+<details>
+<summary>提示</summary>
+
+判断方向：越靠前的断点，越该放「最不变、共享面最大」的东西。
+
+我会这样分：全局 system 一个（能跨会话共享），个人那段按人不变的内容一个，最新消息末尾一个。历史消息不用单独给，末尾那个断点会把整段历史一起写进缓存，下一轮按最长前缀读回来，本章的 `read(n) = read(n-1) + create(n-1)` 就是证据。空着的那个只能猜：可能是留给中途追加的大块内容单独打点（比如对话中途的 system 消息），也可能只是给将来留余量。本机记录看不出来，写答案时要标「推测」。
+
+</details>
 
 ## 延伸阅读
 

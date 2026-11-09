@@ -93,7 +93,7 @@ hook 回话只有三个通道：退出码、stdout、stderr。规则很简单，
 
 `additionalContext` 进上下文时会被包成一条 system reminder，模型在下一次请求时看到。超过 10,000 字符的部分会被写成文件，模型只拿到路径和 2,000 字符的预览。
 
-还有一个特例：SessionStart 和 UserPromptSubmit 的**纯文本 stdout** 也会直接进上下文；其它事件的纯文本 stdout 只写进 debug log。
+还有一个特例：按 [hooks 文档](https://code.claude.com/docs/en/hooks)，退出码 0 时，`UserPromptSubmit`、`UserPromptExpansion`、`SessionStart`、`PostModelSwitch` 这四个事件的**纯文本 stdout** 会直接进上下文；`PreCompact` 的 stdout 不进对话，而是变成给压缩摘要的指令；其它事件的纯文本 stdout 只写进 debug log。注意「纯文本」指的是不是 JSON 对象的输出，看着像 JSON（以 `{` 开头、`}` 结尾）却解析失败的，算解析失败，不会进上下文。
 
 说穿了，hook 对主循环的影响，就是 harness 在循环里预留了几个 `if`：
 
@@ -303,9 +303,32 @@ hook 回话只有三个通道：退出码、stdout、stderr。规则很简单，
 
 ## 练习
 
-1. 给 `guard_bash.ts`（或 `guard_bash.py`）加一条规则：命令里出现 `.env` 就 deny。用 `run_demo.sh` 的方式造一份 stdin 验证，再写一条测试（`node:test` 或 pytest）。
-2. 把 `stop_gate.ts`（`stop_gate.py`）从「搜字符串 passed」改成真正解析 transcript jsonl：找到最后一次 Bash 的 `tool_result`，判断其中是否出现 `N passed` 且没有 `failed`。想一想：`transcript_path`「可能落后于内存中的对话」，这会给你的判断带来什么风险？
-3. （开放题）你现在有 45 个 skill，其中有哪些步骤其实是「每次都必须成立」、应该从 skill 正文挪到 hook 里的？挑一个，写出它应该挂在哪个事件、用哪个通道回话，并说明为什么不能继续只写在 skill 里。
+**1.** 给 `guard_bash.ts`（或 `guard_bash.py`）加一条规则：命令里出现 `.env` 就 deny。用 `run_demo.sh` 的方式造一份 stdin 验证，再写一条测试（`node:test` 或 pytest）。
+
+<details>
+<summary>提示</summary>
+
+改动点在 `guard_bash.ts` 的 `decide()`（Python 版同名）：照着 `git push --force` 那个分支，加一条「命令匹配 `/\.env\b/` 就返回 exit 0 + JSON」，`permissionDecision: "deny"` 放在 `hookSpecificOutput` 里，别放顶层。验证时仿照 `run_demo.sh` 的 `pre "cat .env"` 造 stdin，管道喂给脚本，应该看到 `exit=0` 加一行带 `deny` 的 JSON。测试照 `hooks_demo.test.ts`（`test_hooks_demo.py`）里「git push --force 走 JSON deny」那条抄，解析 stdout 断言 `permissionDecision`。顺手想想边界：`.env.example` 要不要拦？`.envrc` 会不会被误伤？
+
+</details>
+
+**2.** 把 `stop_gate.ts`（`stop_gate.py`）从「搜字符串 passed」改成真正解析 transcript jsonl：找到最后一次 Bash 的 `tool_result`，判断其中是否出现 `N passed` 且没有 `failed`。想一想：`transcript_path`「可能落后于内存中的对话」，这会给你的判断带来什么风险？
+
+<details>
+<summary>提示</summary>
+
+改 `stop_gate.ts` 的 `decide()`：不再取最后 50 行做字符串搜索，而是逐行 `JSON.parse`，倒着找最后一个 Bash 的 `tool_use`，再找 `tool_use_id` 和它对上的 `tool_result`，只对这一条结果判断。字段结构先去 `~/.claude/projects/*/*.jsonl` 里看一眼真实记录再写，别凭印象。小心「没有 failed」这个条件：pytest 的 `5 passed, 0 failed` 也带 `failed`，用 `[1-9]\d* failed` 判失败更准。至于落后的风险：文件里可能还没写进最后那次 Bash，你读到的是更早一次的 `passed`，结果是误放行；误拦反而不怕，`stop_hook_active` 会兜底。
+
+</details>
+
+**3.** （开放题）你现在有 45 个 skill，其中有哪些步骤其实是「每次都必须成立」、应该从 skill 正文挪到 hook 里的？挑一个，写出它应该挂在哪个事件、用哪个通道回话，并说明为什么不能继续只写在 skill 里。
+
+<details>
+<summary>提示</summary>
+
+判断方向：只挑「漏了要返工」、又能写成机器判断条件的步骤，比如「代码变更必须在 worktree 里」「完成前必须跑测试贴输出」。前者挂 `PreToolUse`（matcher `Edit|Write`），用 exit 0 + JSON `deny` 带理由；后者挂 `Stop`，用 `decision: "block"` + `reason` 把模型拦回去。不能只写在 skill 里，是因为 skill 正文要被调用才进上下文，进来之后会被后续对话稀释，压缩后也只剩前 5,000 token。反过来，「图和视频必须看完」这种需要理解才能判断的，写成 hook 也查不出来，还是留在 skill 里。
+
+</details>
 
 ## 延伸阅读
 

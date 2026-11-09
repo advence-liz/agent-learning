@@ -4,6 +4,8 @@
 
 > **一句话结论**：长期记忆说穿了是「一个目录 + 一份索引」。模型用一个工具把值得记的东西写成 markdown，下个会话开始时只把**索引**放进 system，正文等用到再读。记忆不是让模型变聪明，而是让它每次开工前都能读到同一页笔记。
 
+[Claude Code 自动记忆系统](../p3-agent-internals/06-auto-memory.md)拆过 Claude Code 的索引式记忆，也写了一个只读写文件的最小版；本章的增量是把它接进 mini-cc 的循环：索引放进 system 并在截断时明说、一个专用的 `Memory` 工具负责写、`/memory` 命令查看，并且有测试守着。
+
 ## 我上周教过它的，这周怎么又忘了？
 
 你一定有过这种体验：上周在 mini-cc 里说了一句「commit message 要带 `feat:` / `fix:` 前缀」，它那一轮照做了。这周开个新会话让它写提交信息，交出来的又是光秃秃的一句「修改分页逻辑」。
@@ -420,9 +422,32 @@ duplicate, and delete memories that turn out to be wrong.
 
 ## 练习
 
-1. 给 `MemoryStore` 加一个 `orphans()`：找出索引里指向不存在文件的行，以及没被索引引用的主题文件，并在 `/memory` 里提示。
-2. 用 `Agent.turn_end` 钩子实现一个「事后提炼」：一轮结束时，如果用户这一轮的原话里有「以后」「每次」「别再」这类词，就 `agent.notify()` 一条提醒，问模型要不要存成记忆。和让模型在对话中自己判断比，这种做法的误报和漏报各在哪里？
-3. 开放题：把 `Memory` 工具换成官方的 `memory_20250818`（在 `ToolRegistry` 里输出 `{"type": "memory_20250818", "name": "memory"}`，实现 `view/create/str_replace/...` 六个命令）。你会保留「索引常驻 system」这一层吗？两种方案各自省了什么、多花了什么？
+**1.** 给 `MemoryStore` 加一个 `orphans()`：找出索引里指向不存在文件的行，以及没被索引引用的主题文件，并在 `/memory` 里提示。
+
+<details>
+<summary>提示</summary>
+
+在 `memory.py` 的 `MemoryStore` 上加（Node 在 `memory.ts`）：一边用 `entries()` 拿到索引里的 slug，检查 `self.dir / f"{slug}.md"` 在不在；另一边 glob 目录下除 `MEMORY.md` 以外的 `*.md`，减掉索引里出现过的 slug。返回两个列表就行，`cli.py` 的 `_memory` 在列表后面多打两行提示。测试写在 `test_ch12_memory.py`：`save` 两条，手动删掉其中一个主题文件、再放一个没进索引的 `stray.md`，断言两类孤儿各一个，`/memory` 的输出里能看到它们。
+
+</details>
+
+**2.** 用 `Agent.turn_end` 钩子实现一个「事后提炼」：一轮结束时，如果用户这一轮的原话里有「以后」「每次」「别再」这类词，就 `agent.notify()` 一条提醒，问模型要不要存成记忆。和让模型在对话中自己判断比，这种做法的误报和漏报各在哪里？
+
+<details>
+<summary>提示</summary>
+
+往 `app.agent.turn_end` 里 append 一个函数 `(agent, end) -> list[Event] | None`：倒着找最后一条 `rewind.is_prompt` 为真的消息，用 `prompt_text` 取原话，命中关键词就 `agent.notify(...)`。注意 `notify` 不是立刻发给模型的，它要等下一条 user 消息才作为提醒送达；在 REPL 里空闲时 `wake_if_idle` 发现队列非空会马上开一轮，等于这条提醒会自己触发一次请求。测试用 `FakeClient` 跑一轮带「以后」的提示词，断言下一次请求的最后一条 user 消息里有这条提醒。误报：「以后再说吧」「每次都失败」不是偏好；漏报：「用 pnpm 不用 npm」这种不带关键词的纠正。模型自己判断能看懂语义，但会忘、会漏存；关键词规则正好相反，便宜、稳定，只能抓字面。
+
+</details>
+
+**3.** 开放题：把 `Memory` 工具换成官方的 `memory_20250818`（在 `ToolRegistry` 里输出 `{"type": "memory_20250818", "name": "memory"}`，实现 `view/create/str_replace/...` 六个命令）。你会保留「索引常驻 system」这一层吗？两种方案各自省了什么、多花了什么？
+
+<details>
+<summary>提示</summary>
+
+判断方向：官方工具省掉的是「工具定义 + 存储协议」这一层，但它默认的用法是模型自己先 `view` 目录再决定读什么，不负责在会话开头注入。要权衡的是：每个会话多一两次 `view` 的往返和延迟，对比 system 里常驻一份索引的 token（上限 200 行 / 25KB）。我的结论是保留索引常驻：索引在 system 里、会话内不变，几乎全走 prompt cache，成本很低；而「让模型记得先去看记忆」本身就不可靠，它不看，记忆就等于没存。官方工具适合替换写入那一半（六个命令比自己的 save/delete 表达力强），读取那一半还是让程序兜底。
+
+</details>
 
 ## 延伸阅读
 

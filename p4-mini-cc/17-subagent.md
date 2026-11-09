@@ -2,7 +2,9 @@
 
 > 对应原站：[实现 Sub Agent 机制](https://labuladong.online/zh/ai-coding/coding-agent/subagent/)（会员内容；本章为独立原创重写）
 
-> **一句话结论**：sub agent 就是在一次工具调用的内部，用一个**全新的 messages 数组**再跑一遍同一个 agent 循环。它只看得到委派 prompt，父 agent 只拿回最终结论；每种 agent 类型 = 一段 system 说明 + 一个工具子集 + 一条权限约束。放到后台跑，就是第 16 章的后台任务换了个干活的。
+> **一句话结论**：子 agent 就是在一次工具调用的内部，用一个**全新的 messages 数组**再跑一遍同一个 agent 循环。它只看得到委派 prompt，父 agent 只拿回最终结论；每种 agent 类型 = 一段 system 说明 + 一个工具子集 + 一条权限约束。放到后台跑，就是第 16 章的后台任务换了个干活的。
+
+[Sub Agent：上下文管理的艺术](../p1-tools/10-sub-agent.md)讲了「两个数组、一次交接」，并在你本机的 transcript 里看了这道墙；本章的增量是亲手实现它：`run_subagent` 组装新数组、agent 类型 = 说明 + 工具子集 + 权限约束、只读做成硬约束、复用第 16 章的任务表放到后台，transcript 记成 sidechain，并且有测试守着。
 
 ## 让它查个东西，上下文怎么就涨了两万 token？
 
@@ -128,11 +130,11 @@ t -> c: "Agent(同一个 client, 工具子集, 自己的 ContextBuilder / ToolCo
 
 图注：子 agent 和父 agent 跑的是**同一份** `Agent.run_turn` 代码，区别只在于构造时传进去的东西。
 
-打个比方，这像派实习生去资料室查东西。你给他一张写清楚要求的条子（prompt），他在资料室里翻多少本书都行（子数组），回来只交给你一页纸（结论）。你桌上只多了这一页。
+使用者视角的类比（派实习生去图书馆，只带回一页摘要）[Sub Agent 那章](../p1-tools/10-sub-agent.md)讲过了。换到写代码的视角，它更像一次函数调用：调用时开一个新栈帧，参数只有你传进去的那些（prompt），函数里声明多少局部变量都行（子数组），返回时栈帧整个弹掉，调用方只拿到返回值（结论）。
 
-这个比方在一处不成立：真实的实习生旁听过你们的会，知道前因后果；子 agent **什么都没听过**。条子上没写的，它一概不知。所以 `Agent` 工具的描述里第一句就要求：prompt 必须自足。
+这个类比在两处不成立。一是函数能读全局变量，子 agent 却连父亲的 messages 都看不到，它唯一共享的「全局状态」是磁盘上的项目文件（所以两个后台 agent 同时改一个文件会出事）。二是返回值的形状由函数签名保证，子 agent 的结论只是一段自由文本，写多写少全看它自己的 system 怎么约束。所以 `Agent` 工具的描述里第一句就要求 prompt 必须自足，子 agent 的 system 里还要规定结论怎么写。
 
-**回到主线**：sub agent 把「探索过程」和「结论」放进了两个不同的上下文。父上下文省下了 token，也保住了注意力；代价是一次有损的交接，结论里没写的东西，父 agent 永远看不到。
+**回到主线**：子 agent 把「探索过程」和「结论」放进了两个不同的上下文。落到代码上，隔离的边界就是「新建一个 messages 数组」这一行，而父 agent 能拿回什么，完全取决于结论那段文本写了什么。
 
 ## 动手
 
@@ -200,7 +202,7 @@ tools: Read
 
 所有类型列在 `Agent` 工具的描述里。模型选哪个类型，全靠这一行 description，和第 12 章记忆索引的 description 是同一个道理。
 
-### 2. 组装一个子 Agent：`run_subagent`
+### 2. 组装一个子 agent：`run_subagent`
 
 === "Node"
 
@@ -383,13 +385,13 @@ SDK 的客户端可以跨线程并发发请求。真正要小心的是**共享�
 - **继续一个子 agent**：Claude Code 用 `SendMessage` 恢复子 agent，它带着自己的完整历史接着跑。mini-cc 的子 agent 跑完就扔了（transcript 还在磁盘上，练习 2）。
 - **模型**：Claude Code 的 agent 定义可以指定 `model`；内置 Explore 按官方文档默认用主会话的模型（主会话是 Fable 时，部分接入方式下会换成 opus 别名对应的模型）。mini-cc 统一用同一个模型，只把 Explore 的 effort 调低。
 - **嵌套**：Claude Code 允许子 agent 再派子 agent（有深度上限，`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`）；mini-cc 直接禁止。
-- **Fork**：Claude Code 还有一种完整继承父上下文的 fork（[Fork Agent](../p1-tools/11-fork-agent.md)）。它和 sub agent 正好相反：继承上下文、复用父亲的 prompt cache。mini-cc 没做。
+- **Fork**：Claude Code 还有一种完整继承父上下文的 fork（[Fork Agent](../p1-tools/11-fork-agent.md)）。它和子 agent 正好相反：继承上下文、复用父亲的 prompt cache。mini-cc 没做。
 
 ## 对照你的环境
 
 - 你的 `~/.claude/agents/codex-review.md` 只声明了 `tools: Bash, Read`，正文就是它的全部人设。把它原样放进 `<home>/agents/`，mini-cc 就能用 `subagent_type="codex-review"` 派它：工具子集、正文作 system，都会生效。
 - 你的 `codex-cross-review` 是「并行起两个子 agent，主进程交叉比对」。在 mini-cc 里就是同一批 tool_use 里两个 `run_in_background=true` 的 Agent 调用，两条通知回来以后父 agent 比对。
-- 你常让 subagent 做调研，又发现它「不知道前情」。这正是本章 `BASE_PROMPT` 第二句写的事实，你的派发 prompt 要自带背景。
+- 你常让子 agent 做调研，又发现它「不知道前情」。这正是本章 `BASE_PROMPT` 第二句写的事实，你的派发 prompt 要自带背景。
 
 ## 常见坑
 
@@ -401,9 +403,32 @@ SDK 的客户端可以跨线程并发发请求。真正要小心的是**共享�
 
 ## 练习
 
-1. 让后台 agent 真正可停：给 `Agent` 加一个 `cancelled` 标志，`_steps()` 每次请求前检查，`TaskStop` 设置它。
-2. 实现 `SendMessage(agent_id, message)`：从 `subagents/agent-<id>.jsonl` 读回子 agent 的历史，`load_history` 之后再跑一轮。它的 prompt cache 前缀和第一次一样吗？
-3. 开放题：给 mini-cc 做 Fork：子 agent **继承**父亲的全部 messages、system 和 tools（前缀完全相同，能直接命中父亲的 prompt cache），只在末尾追加一条任务。它和 sub agent 在 token 成本和上下文隔离上各占什么便宜？什么时候该用哪个？
+**1.** 让后台 agent 真正可停：给 `Agent` 加一个 `cancelled` 标志，`_steps()` 每次请求前检查，`TaskStop` 设置它。
+
+<details>
+<summary>提示</summary>
+
+在 `loop.py` 的 `Agent.__init__` 加 `self.cancelled = False`，`_steps()` 的 for 循环开头检查，置位就 `yield TurnEnd("cancelled", "")` 并 return（Node 是 `loop.ts` 的 `steps()`）。连接点在 `jobs.py`：`JobManager.stop` 会调用 `job.extra["stop"]`，所以 `SubagentRuntime.launch` 的后台分支要拿到 `run_subagent` 里建出来的 child，设 `job.extra["stop"] = lambda: setattr(child, "cancelled", True)`。只在请求之间检查，正在流式的那一次请求会跑完。测试：剧本让子 agent 连续调工具，中途 `jobs.stop("a1")`，断言子 agent 的请求次数少于剧本长度、状态是 `killed`、没有发结束通知。
+
+</details>
+
+**2.** 实现 `SendMessage(agent_id, message)`：从 `subagents/agent-<id>.jsonl` 读回子 agent 的历史，`load_history` 之后再跑一轮。它的 prompt cache 前缀和第一次一样吗？
+
+<details>
+<summary>提示</summary>
+
+transcript 在 `<session>/subagents/agent-<id>.jsonl`，每行的 `message` 字段就是原始消息，读回来就是 `child.messages`。照 `run_subagent` 的方式重建 child（同一个 `AgentType` 的 system、同一套过滤后的工具），`load_history(messages)` 之后 `run_turn(message)`，新消息继续追加到同一个 jsonl。只要 system 和工具列表逐字节一致，前缀就和第一次完全相同，能命中子 agent 自己的 cache（在 TTL 内）；但日期这种按天变的注入、或者重启后 `.mini_cc/agents/*.md` 的类型定义改了，都会让前缀变。测试：先跑一个前台子 agent，再 SendMessage，断言新请求的前 N 条消息和第一次结束时的历史相同。
+
+</details>
+
+**3.** 开放题：给 mini-cc 做 Fork：子 agent **继承**父亲的全部 messages、system 和 tools（前缀完全相同，能直接命中父亲的 prompt cache），只在末尾追加一条任务。它和子 agent 在 token 成本和上下文隔离上各占什么便宜？什么时候该用哪个？
+
+<details>
+<summary>提示</summary>
+
+要权衡的维度：token 成本、上下文隔离、任务需要多少父亲的背景。Fork 前缀和父亲完全相同，第一次请求就能读父亲的 cache，背景不用复述；代价是子任务背着父亲的整个上下文，越长每次请求越贵、注意力越分散。子 agent 从空白开始，前缀短、便宜、不受父亲历史干扰，但你得在 prompt 里把背景写清楚，写漏了它就瞎猜。两者交回的都只是结果，父亲的上下文一样干净。我的结论：任务强依赖刚才的讨论（「按我们刚定的方案改这三个文件」）用 Fork；能用一段话说清、主要是大量搜索阅读的任务（「找出所有调用 X 的地方」）用子 agent，后者更常见。
+
+</details>
 
 ## 延伸阅读
 

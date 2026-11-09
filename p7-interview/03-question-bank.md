@@ -15,9 +15,9 @@
 | 题目 | 难度 | 答案在 |
 |---|---|---|
 | ReAct agent 的架构和工作原理；模型怎么决定调用哪个工具 | L1 | [核心术语](../p0-core/01-llm-and-agent.md)、[十题 · 1](02-top-questions.md) |
-| ReAct、Plan-and-Execute、Reflexion 有什么区别 | L2 | [Plan Mode](../p3-agent-internals/11-plan-mode.md)、[先规划再动手](../p4-mini-cc/21-plan.md) |
+| ReAct、Plan-and-Execute、Reflexion 有什么区别 | L2 | ReAct 见[核心术语](../p0-core/01-llm-and-agent.md)；Plan-and-Execute 和 Reflexion 本库未展开，见 [Reflexion 论文](https://arxiv.org/abs/2303.11366)；「先规划再执行」的思路可参考 [Plan-and-Solve 论文](https://arxiv.org/abs/2305.04091)。[Plan Mode](../p3-agent-internals/11-plan-mode.md) 讲的是 Claude Code 里「只规划、经你批准再动手」的实现，可以当先规划再执行的工程例子，但没有对比这几种范式 |
 | Agent、Workflow、Tool 有什么区别；什么时候不该用 Agent | L2 | [Workflow 和 Agent](../p2-agent-basics/05-workflow-vs-agent.md) |
-| MCP 和 Function Calling 有什么区别 | L1 | [MCP 工具](../p2-agent-basics/10-mcp-tool.md) |
+| MCP 和 Function Calling 有什么区别 | L1 | Function Calling 见[核心术语](../p0-core/01-llm-and-agent.md)，MCP 见 [MCP 工具](../p2-agent-basics/10-mcp-tool.md) |
 | MCP 里 Resources 和 Tools 的区别；传输方式怎么选 | L2 | [MCP 协议](../p2-agent-basics/11-mcp-protocol.md) |
 | MCP、A2A 分别解决什么问题 | L2 | [MCP 协议](../p2-agent-basics/11-mcp-protocol.md)、本章「补充：A2A」 |
 | 短期记忆和长期记忆分别放在哪；多轮记忆怎么设计 | L2 | [自动记忆](../p3-agent-internals/06-auto-memory.md)、[长期记忆](../p4-mini-cc/12-memory.md) |
@@ -25,9 +25,9 @@
 | 讲讲你的多级上下文压缩方案，阈值为什么这么定 | L3 | [上下文压缩](../p3-agent-internals/05-context-compaction.md) + 你的项目 |
 | Agentic RAG 和传统 RAG 有什么区别 | L2 | [RAG 原理](../p2-agent-basics/04-rag-principles.md) |
 | 从 ES 换成向量检索，哪些能力变弱、哪些变强 | L2 | [RAG 原理](../p2-agent-basics/04-rag-principles.md) |
-| chunk 策略和大小怎么定；混合检索；为什么要 rerank | L2 | [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md) |
+| chunk 策略和大小怎么定；混合检索；为什么要 rerank | L2 | chunk 见 [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md)和 [RAG 原理](../p2-agent-basics/04-rag-principles.md)的实验 1；混合检索和 rerank 见 [RAG 原理](../p2-agent-basics/04-rag-principles.md)的「混合检索和 rerank」一节 |
 | 你的 Recall@5 是怎么做到的，怎么防过拟合 | L3 | [评测实践指南](../p3-agent-internals/14-agent-eval-guide.md) + 你的项目 |
-| 幻觉的成因和缓解方法；怎么做引用溯源 | L2 | [token 预测](../p0-core/04-llm-token-prediction.md)、[RAG 原理](../p2-agent-basics/04-rag-principles.md) |
+| 幻觉的成因和缓解方法；怎么做引用溯源 | L2 | 成因本库未系统展开，见 [Why Language Models Hallucinate](https://arxiv.org/abs/2509.04664)；[token 预测](../p0-core/04-llm-token-prediction.md)的「第三步」只解释了其中一点：逐 token 抽样，一步抽歪，后面就顺着歪掉的前缀往下写。引用溯源的最小做法见 [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md)的「拼 prompt」：只按资料回答并标出处编号 |
 | 怎么防提示词注入；怎么给 DELETE 这类危险操作加护栏 | L2 | [Agent 安全](../p3-agent-internals/15-agent-security.md)、[权限检查](../p3-agent-internals/10-permission-check.md) |
 | 注册了 30 个工具后准确率下降，怎么办；什么样的工具定义算好 | L3 | [十题 · 3](02-top-questions.md) |
 | 外部工具出错或超时，怎么容错和恢复 | L2 | [错误处理与重试](../p4-mini-cc/03-error-handling.md) |
@@ -40,7 +40,7 @@
 | 什么是 SDD（规格驱动开发） | L2 | 本库未展开，见延伸阅读 |
 | 什么是 Harness Engineering，为什么能提升复杂任务的表现 | L3 | [Harness Engineering](../p3-agent-internals/12-harness-engineering.md) |
 | 设计或实现过 Agent Skill 吗，有哪些取舍 | L2 | [Skills](../p1-tools/12-skills.md)、[渐进式加载 Skills](../p4-mini-cc/20-skill.md) |
-| 模型不可用时怎么降级 | L2 | [错误处理与重试](../p4-mini-cc/03-error-handling.md) |
+| 模型不可用时怎么降级 | L2 | [错误处理与重试](../p4-mini-cc/03-error-handling.md)只覆盖一部分：529 过载是退避重试（不换模型），服务端 fallback 只在拒答时换模型。「重试用尽后切备用模型」本库未实现，那章练习 3 讨论了换模型对 thinking 块和 prompt cache 的影响，可以从这里展开答 |
 | 微调和 RAG 怎么选；LoRA 的原理 | L2 | [LoRA 微调](../p6-nn-llm/06-lora-fine-tuning.md)、[RAG 原理](../p2-agent-basics/04-rag-principles.md) |
 | 从用户按下回车到答案返回，中间发生了什么 | L2 | [发一句 Hi 会发生什么](../p3-agent-internals/02-hi-request.md)、[流式响应](../p2-agent-basics/09-streaming-response.md) |
 
@@ -63,7 +63,7 @@
 | 题目 | 难度 | 怎么准备 |
 |---|---|---|
 | 手写 ReAct loop，或写 agent loop 的伪代码 | L2 | 不看书写一遍 [Coding Agent](../p2-agent-basics/02-coding-agent.md) 的循环，带步数上限和错误回填 |
-| 用 numpy 手写多头注意力 | L2 | [推理过程](../p6-nn-llm/05-inference-process.md) |
+| 用 numpy 手写多头注意力 | L2 | [token 预测](../p0-core/04-llm-token-prediction.md)的「动手」用 numpy 写了一层单头因果注意力（`TinyAttention`，打分在 `code/agent/core/next_token.py` 的 `_logits_last`）。本库只写到单头，多头（拆头、各自算注意力、拼接再投影）需要自己扩展 |
 | LeetCode：合并有序数组、判断链表有环、编辑距离 | L1 | 国内面试基本必考一道，单独刷 |
 | 调试题：这个 agent 在某些输入上无限循环，找原因并修好 | L2 | [十题 · 2](02-top-questions.md)；练习读 trace |
 | Take-home：给 50 篇 Markdown，搭问答系统和 20 题评测集，报告 recall@5 和 faithfulness | L2 | [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md) 加一份评测集 |
@@ -109,7 +109,7 @@ s1 -> s2 -> s3 -> s4 -> s5 -> s6
 
 **3. 循环和工具。** 工具尽量少而通用：读文件、按字符串替换编辑文件、执行 shell、搜索代码。用通用工具，是因为模型对 bash 和文件操作训练得最充分，组合能力也最强。权限分三级：读文件和搜索自动放行；改文件放在沙箱的工作区里随意改；执行命令按白名单放行，联网的命令需要单独授权。停止条件：模型不再调用工具，或者撞上步数和时间上限；撞上限时让它总结做到了哪一步。
 
-**4. 上下文和状态。** 大仓库不做向量索引，让 agent 用 grep 和 glob 按需查找，这样不会遇到索引过期的问题；项目约定放在仓库根目录的说明文件里，每次预先加载。长任务开启压缩，保留最近几轮原文和最近读过的文件。任务状态写在进度文件和 git 提交里，中断后可以从最近一次提交续跑。
+**4. 上下文和状态。** 大仓库不做向量索引，让 agent 用 grep 和 glob 按需查找，这样不会遇到索引过期的问题；项目约定放在仓库根目录的说明文件里，每次预先加载。长任务开启压缩，保留最近几轮原文和最近读过的文件。保留尾部要先处理 thinking 块，否则会失效，见 [compact](../p4-mini-cc/14-compact.md)。任务状态写在进度文件和 git 提交里，中断后可以从最近一次提交续跑。
 
 **5. 安全。** 每个任务一个独立的沙箱，优先用 microVM，比普通容器隔离更强。代码仓库的凭证不进沙箱，由外部代理在提 PR 时注入。出网默认拒绝，包管理器的源走白名单。仓库里的 issue 内容和代码注释都算不可信输入，读过之后不允许执行对外发送数据的操作。
 
@@ -169,9 +169,43 @@ MCP 解决 agent 怎么接工具和数据，A2A（Agent2Agent）解决一个 age
 
 ## 练习
 
-1. 用六步框架，自己完整讲一遍「设计一个 Deep Research agent」，录音后对照示范一检查漏了哪一步、哪一步没讲代价。
-2. 从概念题表里随机挑五道，每道限时一分钟作答。答不上的，顺着「答案在」那一列回去读，第二天再答一遍。
-3. 开放题：示范二里「转人工率下降，但同一个用户隔天又来问」这个信号，你还能想到哪些类似的「指标看着变好，其实在变坏」的情况？怎么设计监控发现它们？
+**1.** 用六步框架，自己完整讲一遍「设计一个 Deep Research agent」，录音后对照示范一检查漏了哪一步、哪一步没讲代价。
+
+<details>
+<summary>提示</summary>
+
+题库里「设计多 agent 协作、产出带引用报告的 Deep Research」那一行已经给了骨架：编排者加执行者，子 agent 只回传摘要，最后单独核对引用。
+
+按六步自查最容易漏的地方：第 2 步要说清哪段固定（最后的引用核对、报告格式）、哪段交给模型（搜什么、搜几轮）；第 4 步讲子 agent 隔离上下文时，补上代价（token 多花几倍），参考 [十道高频题](02-top-questions.md) 第 7 题和 [Sub Agent](../p1-tools/10-sub-agent.md)；第 6 步讲怎么判卷，比如引用是否真的支持结论。
+
+</details>
+
+**2.** 从概念题表里随机挑五道，每道限时一分钟作答。答不上的，顺着「答案在」那一列回去读，第二天再答一遍。
+
+<details>
+<summary>提示</summary>
+
+「答案在」一列的链接就是回读的入口。限时一分钟，标准参考 [十道高频题](02-top-questions.md) 开头讲的结构：先一句结论，再一个例子，最后一句代价。
+
+第二天重答时，重点看是否还要靠回忆原文的措辞。如果还在背句子，说明理解没到位；换个角度说一遍，比如用你自己的项目举例。
+
+</details>
+
+**3.** 开放题：示范二里「转人工率下降，但同一个用户隔天又来问」这个信号，你还能想到哪些类似的「指标看着变好，其实在变坏」的情况？怎么设计监控发现它们？
+
+<details>
+<summary>提示</summary>
+
+判断方向：找「代理指标」和「真实目标」可以被分开的地方，被优化的往往是更容易动的那一个。几个例子：
+
+- 平均对话轮数下降，但用户其实是放弃了；
+- 工具调用失败率下降，因为模型不再调用工具，直接编答案；
+- LLM 评委打分上升，但和人工标注的一致率在下降（评委被讨好了）；
+- 平均 token 下降，因为压缩更激进，长任务的完成率掉了。
+
+监控设计：每个指标配一个「反向指标」成对看（转人工率配重复来访率）；按最终状态判分而不是看措辞；定期抽样人工复核、校准评委。原理在 [Agent 评测实践指南](../p3-agent-internals/14-agent-eval-guide.md) 和 [可观测性](../p2-agent-basics/08-agent-observability.md)。
+
+</details>
 
 ## 延伸阅读
 

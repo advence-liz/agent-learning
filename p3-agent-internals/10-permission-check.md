@@ -313,9 +313,38 @@ allow 列表还在起作用吗？在 bypass 模式下，几乎不起作用。byp
 
 ## 练习
 
-1. 给玩具引擎加上「多个 hook 取最严格」的逻辑：两个 hook 一个说 allow、一个说 ask，结果应该是 ask。
-2. 实现 Read 规则的四种锚点（`//`、`~/`、`/`、`./`），写几个测试用例验证 `/secrets/**` 在 user settings 和 project settings 里分别指向哪里。
-3. 开放题：你的 `enforce-worktree.py` 用正则判断 `git worktree add`，并且有意不处理 `bash -c "git worktree add …"`（docstring 里说这属于刻意绕过）。如果要防的是「模型被提示注入后刻意绕过」，hook 还够吗？沙箱和 hook 各自适合防什么？
+**1.** 给玩具引擎加上「多个 hook 取最严格」的逻辑：两个 hook 一个说 allow、一个说 ask，结果应该是 ask。
+
+<details>
+<summary>提示</summary>
+
+把 `check(tool, arg, mode, hook)` 的 `hook` 改成 `hooks` 列表（Node 同理）。先跑完所有 hook：任意一个退出码 2 就直接 deny；其余的 decision 按 `deny > ask > allow` 取最严格的那个。注意原玩具里 hook 返回的 `ask` 根本没被处理，要补一条：规则没命中 deny / ask 时，hook 的合并结果是 ask 就返回 `ask (hook)`，并且要在第 3 步模式兜底之前返回。
+
+验证：两个 hook 分别返回 `(0, "allow")` 和 `(0, "ask")`，`Edit(./README.md)` 应该得到 `ask (hook)`；顺序换一下结果不变。
+
+</details>
+
+**2.** 实现 Read 规则的四种锚点（`//`、`~/`、`/`、`./`），写几个测试用例验证 `/secrets/**` 在 user settings 和 project settings 里分别指向哪里。
+
+<details>
+<summary>提示</summary>
+
+写一个 `resolve(spec, settings_dir, cwd, home)`：`//x` → 文件系统的 `/x`；`~/x` → `home/x`；`/x` → `settings_dir/x`；`./x` 或裸路径 → `cwd/x`。先判 `//` 再判 `/`，顺序反了就全错。
+
+测试：user settings 在 `~/.claude/settings.json`，按本章的规则 `/secrets/**` 解析成 `~/.claude/secrets/**`（常见坑第 3 条）；project settings 用同一条规则，以项目里那份 settings 文件的位置为基准推。再加一条反例：`/Users/alice/file` 不是绝对路径，`//Users/alice/file` 才是。`/path` 的基准这一条，测试的期望值最好再对一遍官方 permissions 文档原文。
+
+</details>
+
+**3.** 开放题：你的 `enforce-worktree.py` 用正则判断 `git worktree add`，并且有意不处理 `bash -c "git worktree add …"`（docstring 里说这属于刻意绕过）。如果要防的是「模型被提示注入后刻意绕过」，hook 还够吗？沙箱和 hook 各自适合防什么？
+
+<details>
+<summary>提示</summary>
+
+不够。hook 是按命令文本判断的。无心之失（模型照习惯敲了 `git worktree add`）它能拦；被注入之后刻意绕过，`bash -c`、`eval`、base64 解码、先写个脚本再执行、用 Python 起子进程，正则永远追不上。
+
+分工可以这么定：hook 防「无意的违规」，顺便把原因回灌给模型，让它改正；沙箱在操作系统层限制文件和网络，不看命令长什么样，防「刻意的绕过」。本章也说了，Read 的 deny 挡不住所有读法，真要隔离得上沙箱。所以如果威胁模型里有提示注入，hook 只能当第一道，最后一道得是沙箱。
+
+</details>
 
 ## 延伸阅读
 

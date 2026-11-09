@@ -233,9 +233,32 @@ Node 没有 `with`，所以 `tracer.span(name, opts, fn)` 换成「把要执行�
 
 ## 练习
 
-1. 给 `invoke_agent` 根 span 加一个 `agent.estimated_cost_usd` 属性，按 Opus 5.5 的 $4 / $20 每百万 token 计算。
-2. 把 `printTree`（`print_tree`）改成按耗时画一个 ASCII 瀑布图（每个 span 一行，用 `█` 的长度表示耗时、用缩进表示开始时间）。
-3. 开放题：如果一轮里有 3 个工具并行执行，现在的 `tracedTools` 和 `pendingToolIds` 队列（Python 版 `traced_tools` / `pending_tool_ids`）还对吗？你会怎么改？如果再加上 subagent，trace 树应该长什么样？
+**1.** 给 `invoke_agent` 根 span 加一个 `agent.estimated_cost_usd` 属性，按 Opus 5.5 的 $4 / $20 每百万 token 计算。
+
+<details>
+<summary>提示</summary>
+
+在 `runTraced()` 的 `Object.assign(root.attrs, {...})` 里加一项：`"agent.estimated_cost_usd": (tc.totalIn * 4 + tc.totalOut * 20) / 1e6`。想在树里看到，就在 `printTree` 里 `agent.turns` 那个分支把它也打出来。导出时 `toOtlp` 会把小数编码成 `doubleValue`，可以顺手断言一下。名字里的 estimated 要当真：按常见坑第 1 条，真实响应的 `input_tokens` 不含缓存读写，这个估算没算缓存。
+
+</details>
+
+**2.** 把 `printTree`（`print_tree`）改成按耗时画一个 ASCII 瀑布图（每个 span 一行，用 `█` 的长度表示耗时、用缩进表示开始时间）。
+
+<details>
+<summary>提示</summary>
+
+先算全局时间轴：`t0` 取所有 span 里最小的 `startNs`，总长是最大 `endNs` 减 `t0`。然后按 `byStart` 排序逐行输出：前面空 `(startNs - t0) / 总长 × 宽度` 个空格，再画 `max(1, round(耗时 / 总长 × 宽度))` 个 `█`，最后跟上名字和毫秒数。宽度取 60 左右。预期：根 span 那条几乎占满整行，`chat` 和 `execute_tool` 的条一段接一段，不会重叠，因为现在的循环是串行的。
+
+</details>
+
+**3.** 开放题：如果一轮里有 3 个工具并行执行，现在的 `tracedTools` 和 `pendingToolIds` 队列（Python 版 `traced_tools` / `pending_tool_ids`）还对吗？你会怎么改？如果再加上 subagent，trace 树应该长什么样？
+
+<details>
+<summary>提示</summary>
+
+现在的 `runAgent` 是按顺序一个个执行工具，`pendingToolIds` 按工具名排队、执行时 `shift()`，靠的是「执行顺序 = 发出顺序」这个隐含约定。改成真并行之后，同名工具谁先 `shift()` 谁拿走前一个 id，一旦启动顺序和发出顺序不一致，id 就会挂错。更稳的改法是让 `runAgent` 把 `call.id` 显式传给工具包装层，不靠排队去猜。span 的父子关系不用担心：`AsyncLocalStorage` 会让 3 个并行的 `execute_tool` 都挂在同一个父 span 下，只是时间上重叠。加上子 agent 后，`execute_tool Agent` 那个 span 下面要再长出一整棵 `invoke_agent` 子树（它自己的 chat 和工具调用），子 agent 的 token 也要能单独汇总。
+
+</details>
 
 ## 延伸阅读
 

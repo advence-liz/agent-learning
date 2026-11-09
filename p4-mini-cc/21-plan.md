@@ -4,6 +4,8 @@
 
 > **一句话结论**：plan 模式不是一个新的权限开关，而是四个零件拼起来的一套流程：**权限关卡**挡住除计划文件以外的一切修改，**上下文提醒**告诉模型现在的规矩，**交接工具** `ExitPlanMode` 把「计划写好了」变成一次需要你点头的审批，**只读的 sub agent** 负责探索和设计。四个零件里，前三个都是第 5、9、10 章早就留好的扩展点。
 
+[Plan Mode 是怎么实现的](../p3-agent-internals/11-plan-mode.md)拆过 Claude Code 的三种手段（指令、权限层拦截、子 agent 拿不到写工具）和 `ExitPlanMode` 交接，并写了一个最小组合；本章的增量是把它们接进 mini-cc 已有的扩展点：权限关卡挂在第 5 章的检查链上、提醒走第 9 章的 providers、只读探索复用第 17 章的子 agent，`ExitPlanMode` 变成一次真正的审批，而且在 bypass 下也照样拦。
+
 ## 一次都没用过 plan 模式，它还值得手搓吗？
 
 [Plan Mode 是怎么实现的](../p3-agent-internals/11-plan-mode.md)那章翻过你本机的会话记录：一万三千多条 `permission-mode` 记录全是 `bypassPermissions`，`~/.claude/plans/` 是空的。你没用过 plan 模式。
@@ -437,6 +439,8 @@ Codex（本机 0.153.4）也有 plan 模式，但思路很不一样。从它二�
 
 我站 Claude Code 这一边。plan 模式的价值恰恰在于那个**保证**：我批准之前，工作区一个字节都没变。没有这个保证，「先规划」就只是一种建议，而建议我本来就可以自己说。
 
+不过要说清楚：这个保证在 bypass 会话里只有 mini-cc 给得出。Claude Code 在可以 bypass 的交互式终端里不强制拦截（见下面「和真实 Claude Code 的差异」和 [Plan Mode 是怎么实现的](../p3-agent-internals/11-plan-mode.md)），而你日常开的正是 bypass。在那种会话里进 plan 模式，挡住编辑的只剩提示词。
+
 ## 测试
 
 `tests/ch21_plan.test.ts`（Python 版 `tests/test_ch21_plan.py`），11 个：
@@ -495,9 +499,32 @@ Codex（本机 0.153.4）也有 plan 模式，但思路很不一样。从它二�
 
 ## 练习
 
-1. 实现「批准时可以改计划」：审批界面加一个选项「打开编辑器」，用 `$EDITOR` 打开计划文件，保存后再显示一次审批。模型拿到的 `Approved Plan` 应该是你改过的版本。
-2. 批准之后，让模型按计划自动建任务清单（第 11 章）：在 ExitPlanMode 的批准结果里附上「把计划的每一步建成一个任务」，并写一个测试，断言批准后的下一次请求里模型调用了 `TaskCreate`。
-3. 开放题：Codex 允许在 plan 模式里跑「会写缓存、但不改受版本控制的文件」的测试，mini-cc 一律要问你。如果要支持「允许写 `.cache/`、`node_modules/.vite/`、`target/`，其他一律拦截」，你会在哪一层实现？只读命令白名单、沙箱、还是事后用 `git status` 检查工作区有没有变？各自的漏洞在哪里？
+**1.** 实现「批准时可以改计划」：审批界面加一个选项「打开编辑器」，用 `$EDITOR` 打开计划文件，保存后再显示一次审批。模型拿到的 `Approved Plan` 应该是你改过的版本。
+
+<details>
+<summary>提示</summary>
+
+`ui.py` 的 `ask_plan_approval` 加第 4 个选项「打开编辑器」，返回一个新的 choice（比如 `"edit"`）；`plan_mode.py` 的 `ExitPlanModeTool.run` 收到它就用 `$EDITOR` 打开计划文件，结束后重新 `read_text`，再调一次 `plan_ctl.approve(plan)`，循环到批准或继续规划为止（Node 在 `ui.ts` 的 `askPlanApproval` 和 `plan_mode.ts`）。关键是 `## Approved Plan:` 后面拼的必须是重读后的内容，不是最初那份。测试里别真开编辑器：把「打开编辑器」做成可注入的函数，替身直接改写文件，断言 `tool_result` 里是改过的计划。
+
+</details>
+
+**2.** 批准之后，让模型按计划自动建任务清单（第 11 章）：在 ExitPlanMode 的批准结果里附上「把计划的每一步建成一个任务」，并写一个测试，断言批准后的下一次请求里模型调用了 `TaskCreate`。
+
+<details>
+<summary>提示</summary>
+
+改 `ExitPlanModeTool.run` 批准分支的返回文本，加一句「把计划的每一步用 TaskCreate 建成一个任务」（原文只有一句「Start with updating your todo list if applicable」，要说得更明确）。测试要想清楚测什么：`FakeClient` 按剧本回放，模型「调不调 TaskCreate」是你写进剧本的，直接断言它等于断言剧本本身。真正该断言的是：批准后的下一次请求（`FakeClient.requests[-1]`）里，ExitPlanMode 的 `tool_result` 带着这句指令；剧本里的 `TaskCreate` 在退出 plan 模式后能执行，`TaskStore` 里多出对应的任务。模型会不会听话，只能接真模型做评测，不是单测的事。
+
+</details>
+
+**3.** 开放题：Codex 允许在 plan 模式里跑「会写缓存、但不改受版本控制的文件」的测试，mini-cc 一律要问你。如果要支持「允许写 `.cache/`、`node_modules/.vite/`、`target/`，其他一律拦截」，你会在哪一层实现？只读命令白名单、沙箱、还是事后用 `git status` 检查工作区有没有变？各自的漏洞在哪里？
+
+<details>
+<summary>提示</summary>
+
+三层各有漏洞。只读命令白名单（`tools/bash.py` 的 `is_read_only`）最便宜，但测试命令本身就不是只读的，白名单表达不了「只许写这几个目录」，`npm test` 里实际跑了什么它也看不见。事后 `git status` 只能发现被跟踪的文件和没被忽略的新文件，`.gitignore` 里的东西、仓库外的写入、已经发生的副作用（删库、发请求）都发现不了，而且是事后，回滚要靠第 13 章。沙箱（macOS 的 seatbelt、Linux 的 bubblewrap / landlock）能在内核层只放行这几个目录的写入，是唯一真正拦得住的，代价是要按平台实现、调试麻烦。我的选择是沙箱做边界、`git status` 做事后提示，白名单只用来决定「要不要问你」，不当安全边界。
+
+</details>
 
 ## 延伸阅读
 

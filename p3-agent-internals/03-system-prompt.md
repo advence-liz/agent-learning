@@ -241,9 +241,38 @@ CLAUDE.md 写长了会怎样？它不会破坏缓存（它在 messages 里，每
 
 ## 练习
 
-1. 把上面的拼装器改成 `dynamic_to_user=True`，把动态段作为第一条 user 消息，验证前缀依然一致。
-2. 挑你 CLAUDE.md 里的三条规则，按「判断标准 → 例子 → 禁止项」重写，用 `wc -c` 比较字数变化。
-3. 开放题：snapshot 冻结让缓存稳定，但模型看到的 git 分支可能已经过时。你会怎么设计，让「环境变化」既能告诉模型，又不打断缓存？（提示：想想追加在 messages 末尾的提醒消息。）
+**1.** 把上面的拼装器改成 `dynamic_to_user=True`，把动态段作为第一条 user 消息，验证前缀依然一致。
+
+<details>
+<summary>提示</summary>
+
+把调用改成 `build_system(ctx, dynamic_to_user=True)`（Node：`buildSystem(ctx, true)`），它返回 `(stable, extra)`：`stable` 当 system，`extra` 拼成第一条 `{"role": "user", "content": extra}`。打印时分别算「system 全文」和「第一条 user 消息」的哈希。
+
+预期：两个用户的 system 全文哈希完全相同，不再只是断点前缀相同，因为整个 system 都是稳定段了；差异全部挪到了 user 消息里。
+
+</details>
+
+**2.** 挑你 CLAUDE.md 里的三条规则，按「判断标准 → 例子 → 禁止项」重写，用 `wc -c` 比较字数变化。
+
+<details>
+<summary>提示</summary>
+
+先用 `wc -c` 记下原规则的字数，重写后再量一次。字数多半会变多，因为加了判断标准和例子，这是正常的。
+
+要看的是值不值：拿一个规则里没写到的场景问自己，新写法能不能推出该怎么做。本章就有一个现成的例子：「不说某工具『更名 / 下线』」补一句「判断标准：只陈述本 session 能观测到的事实」。如果重写后长出很多，考虑把例子挪进 skill，常驻层只留判断标准。
+
+</details>
+
+**3.** 开放题：snapshot 冻结让缓存稳定，但模型看到的 git 分支可能已经过时。你会怎么设计，让「环境变化」既能告诉模型，又不打断缓存？（提示：想想追加在 messages 末尾的提醒消息。）
+
+<details>
+<summary>提示</summary>
+
+方向是「system 冻结，变化走追加」。
+
+会话开头的 snapshot 不动；harness 每轮开始前比对一下环境（分支、cwd），变了才在最新那条 user 消息末尾追加一段 `<system-reminder>`，新模型上也可以追加一条 messages 内的 `role: "system"` 消息。追加在末尾只影响断点之后那一小段，前缀不受影响。要权衡的是频率和噪声：每轮都报一遍当前分支是在浪费上下文，只在变化时报更好。检测也该由 harness 做，别让模型自己去跑 git。
+
+</details>
 
 ## 延伸阅读
 

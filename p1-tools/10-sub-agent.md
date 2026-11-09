@@ -154,9 +154,32 @@ c."子数组落盘到 subagents/agent-*.jsonl，不并入父会话"
 
 ## 练习
 
-1. 在 `subagent.ts`（`subagent.py`）里加一个场景：子 agent 返回的不是 5 行结论，而是 3 个文件的全文拼接。重新对比父上下文的字符数，验证常见坑第 2 条。
-2. 给 `makeAgentTool`（`make_agent_tool`）加一个 `maxTurns`（`max_turns`）参数：子循环超过 N 次请求就停下，返回 `[partial] ` 前缀加上目前为止最后一段文字，模拟文档里说的 partial 结果。
-3. （开放题）你的 `bug-intake` 流程要求「图和视频必须下载看完」。如果把「看图定性」派给子 agent，结论里要包含哪些字段，父 agent 才能放心地基于它建单？请设计一个结构化的返回格式。
+**1.** 在 `subagent.ts`（`subagent.py`）里加一个场景：子 agent 返回的不是 5 行结论，而是 3 个文件的全文拼接。重新对比父上下文的字符数，验证常见坑第 2 条。
+
+<details>
+<summary>提示</summary>
+
+照着 `scenarioSubagent()`（`scenario_subagent()`）复制一个新场景，只改子 agent 剧本的最后一步：把 `tx(CONCLUSION)` 换成 `tx(FILES.map((f) => toolReadFile({ path: f })).join("\n"))`，也就是把 3 个文件的全文当结论交回去。然后用 `size(msgs)` 量父 messages，和 inline、正常子 agent 两个场景放在一起打印。预期父上下文会涨回接近 inline 的量级：子 agent 白开了，墙被拆了。
+
+</details>
+
+**2.** 给 `makeAgentTool`（`make_agent_tool`）加一个 `maxTurns`（`max_turns`）参数：子循环超过 N 次请求就停下，返回 `[partial] ` 前缀加上目前为止最后一段文字，模拟文档里说的 partial 结果。
+
+<details>
+<summary>提示</summary>
+
+现在的 `runAgent` 是 `while (true)`，没有上限，所以要先给它加一个可选的请求次数上限（或者在 `makeAgentTool` 里包一层计数）。每次拿到响应都记下其中的文字部分作为 `lastText`；达到 N 次还没结束，就返回 `"[partial] " + lastText`。注意最后一次响应可能只有 `tool_use` 没有文字，所以要沿用之前最近的那段。测试可以直接复用 `scenarioSubagent` 的剧本（子 agent 本来要请求 3 次），设 `maxTurns: 2`，断言结果以 `[partial] ` 开头、`childStats.requests` 等于 2。
+
+</details>
+
+**3.** （开放题）你的 `bug-intake` 流程要求「图和视频必须下载看完」。如果把「看图定性」派给子 agent，结论里要包含哪些字段，父 agent 才能放心地基于它建单？请设计一个结构化的返回格式。
+
+<details>
+<summary>提示</summary>
+
+判断方向：父 agent 要的不是「结论」，而是「能验证结论的东西」。返回格式至少要有：附件清单（每个文件名、类型、是否下载成功、是否完整看完，视频还要写看到第几秒）、逐条观察（附出处：哪张图、哪个时间点）、定性结论和置信度、可证伪的复现步骤、看不清或没法确认的地方。观察和推断一定要分开写，不然父 agent 分不清哪句是看到的、哪句是猜的。我的建议：父 agent 只在「附件清单全部标记看完、且没有未确认项」时才建单，否则把缺口原样退回给子 agent。
+
+</details>
 
 ## 延伸阅读
 

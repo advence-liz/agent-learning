@@ -8,6 +8,8 @@
 
 答案是不能。因为接上前文的不是模型，而是 Claude Code 每一轮都把历史重新塞给了模型。这一章我们自己写一个聊天机器人，亲手维护这个数组，看清「记忆」到底住在哪。
 
+> 读过 [上下文是什么？token 怎么计费？](../p0-core/03-messages-and-tokens.md) 的话，「记忆」「人设」两节讲的道理你已经知道了，可以快速略过；重点看后面的「测试替身：不调用真模型怎么验证」，后面几章的离线 fake 模型都从那里来。
+
 ## 先跑起来看看
 
 代码在 [`code/agent-node/chatbot/bot.ts`](../code/agent-node/chatbot/bot.ts)（Python 版 [`bot.py`](../code/agent/chatbot/bot.py)），一共 90 来行（Python 版 80 行）。离线跑一下（离线 fake 模型，回复和 token 数都是脚本预设的）：
@@ -200,9 +202,32 @@ b."messages = [user, assistant, user, assistant]"
 
 ## 练习
 
-1. 给 `Chatbot` 加一个 `/history` 命令，打印当前数组的角色序列和每条的字数。
-2. 实现「只保留最近 N 轮」的滑动窗口，并写测试断言第 N+1 轮时最早的一问一答被丢掉了。注意别让数组以 assistant 开头。
-3. 开放题：滑动窗口会丢掉开头的「我叫小林」。有什么办法既控制长度、又不丢关键事实？（提示：想想 Claude Code 的 compact 和 memory 分别是怎么做的。）
+**1.** 给 `Chatbot` 加一个 `/history` 命令，打印当前数组的角色序列和每条的字数。
+
+<details>
+<summary>提示</summary>
+
+在 `repl()` 里照 `/reset` 的写法加一个 `line === "/history"` 分支，遍历 `bot.messages` 打印 `role` 和字数。坑在 assistant 消息上：`send()` 写回的是 `resp.content`，是一个块数组，不是字符串，要把其中 text 块的文字拼起来再数。用 `--fake` 那段脚本在中间插一行 `/history`，预期看到 user、assistant 交替，条数和输出里的「历史条数」一致。
+
+</details>
+
+**2.** 实现「只保留最近 N 轮」的滑动窗口，并写测试断言第 N+1 轮时最早的一问一答被丢掉了。注意别让数组以 assistant 开头。
+
+<details>
+<summary>提示</summary>
+
+在 `send()` 发请求之前裁剪：保留最近 N 轮，也就是最后 `2(N-1)` 条历史加上这次新的 user，一共 `2N-1` 条，并且总是成对地从开头删。这样数组开头永远是 user。测试用 `FakeAnthropic` 设 N=2，连发 3 句，查 `client.calls[2].messages`：第一条应该是第 2 句提问，最早那一问一答不在里面，而且 `messages[0].role === "user"`。`calls` 记的是每次请求的深拷贝，正好用来断言模型那一轮到底看到了什么。
+
+</details>
+
+**3.** 开放题：滑动窗口会丢掉开头的「我叫小林」。有什么办法既控制长度、又不丢关键事实？（提示：想想 Claude Code 的 compact 和 memory 分别是怎么做的。）
+
+<details>
+<summary>提示</summary>
+
+两条思路。compact 是在历史太长时让模型把旧对话总结成一段摘要放在开头，保住大意、丢掉细节，代价是多一次调用，摘要也可能漏掉关键事实。memory 是把稳定的关键事实（名字、职业、偏好）单独抽出来存在外面，每次请求放进 system 或开头，代价是要判断什么值得记。我的看法：「我叫小林」这类身份事实走 memory，放进 system；system 不变还有利于缓存。过程性的讨论交给 compact。
+
+</details>
 
 ## 延伸阅读
 

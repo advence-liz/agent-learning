@@ -318,9 +318,32 @@ e -> q
 
 ## 练习
 
-1. 让结束通知像 Claude Code 那样带上最后几行输出（`<event>` 里放最后 3 个非空行），并加测试。
-2. 给 Monitor 加一个 `ws` 源：用标准库以外的 `websockets` 包订阅一个 WebSocket，每个文本帧一个事件。和 `command: "websocat …"` 比，少了什么、多了什么？
-3. 开放题：两个 Monitor 同时在刷事件，而模型正在跑一个很长的工具调用。事件会在下一个 `tool_result` 里一起送达。如果你希望「紧急事件」能**打断**当前这一轮（比如生产告警），循环要怎么改？打断之后历史怎么保持合法（想想第 3 章的 `repair_history`）？
+**1.** 让结束通知像 Claude Code 那样带上最后几行输出（`<event>` 里放最后 3 个非空行），并加测试。
+
+<details>
+<summary>提示</summary>
+
+改 `jobs.py` 的 `start_monitor` 里 `tick()` 结尾那条结束通知（Node 在 `jobs.ts` 的 `startMonitor`）：stdout 每一行都写进了 `job.output_file`，结束时读它最后 3 个非空行，`escape` 之后放进 `<event>`。`render_notification` 是 Bash / sub agent 共用的，最好加一个可选参数，而不是改它的默认输出。测试写在 `test_ch18_monitor.py`：命令输出 `a`、`b`、空行、`c`、`d`，等任务结束，断言最后一条通知的 `<event>` 正好是 `b`、`c`、`d` 三行。
+
+</details>
+
+**2.** 给 Monitor 加一个 `ws` 源：用标准库以外的 `websockets` 包订阅一个 WebSocket，每个文本帧一个事件。和 `command: "websocat …"` 比，少了什么、多了什么？
+
+<details>
+<summary>提示</summary>
+
+在 `tools/monitor.py` 的 schema 里加一个 `ws` 字段（和 `command` 二选一），`JobManager` 加一个 `start_ws`：线程里跑一个 asyncio 循环，`async for msg in websocket`，每个文本帧走和 `flush` 一样的通知逻辑，节流、超时、刷屏保护都复用。比起 `websocat`：少了一个外部依赖和一层进程，帧边界天然就是事件边界（不靠换行），能带 header 鉴权、自己控制重连。多了的是重连、心跳、异常处理都得自己写，而且没法再用 `grep --line-buffered` 这种管道过滤，过滤规则要放进参数里。测试可以起一个本地 `websockets.serve` 发三帧，断言收到三条事件。
+
+</details>
+
+**3.** 开放题：两个 Monitor 同时在刷事件，而模型正在跑一个很长的工具调用。事件会在下一个 `tool_result` 里一起送达。如果你希望「紧急事件」能**打断**当前这一轮（比如生产告警），循环要怎么改？打断之后历史怎么保持合法（想想第 3 章的 `repair_history`）？
+
+<details>
+<summary>提示</summary>
+
+判断方向：现在事件只能搭工具结果或用户消息的便车，模型在跑一个长工具时谁也插不进去。要打断，`_run_tools` 执行工具时必须可取消：工具在线程里跑，主循环同时等「工具完成」和「紧急事件」两个信号，紧急事件先到就取消工具（杀进程组），给这个 `tool_use` 补一条 `is_error` 的 `tool_result`（写明被紧急事件打断），再把事件作为提醒并进同一条 user 消息。历史合法的关键还是第 3 章那条：每个 `tool_use` 后面必须紧跟对应的 `tool_result`，`repair_history` 那套「补错误结果」正好能复用。我的看法是只给极少数事件开这个口（由 Monitor 参数显式标 `urgent`），否则模型会被不停打断，什么事都做不完。
+
+</details>
 
 ## 延伸阅读
 

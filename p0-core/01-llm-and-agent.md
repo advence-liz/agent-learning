@@ -212,10 +212,6 @@ h -> u: 最终回答 {style.stroke-dash: 3}
 
 真实运行时，只要把 `new FakeAnthropic([...])` 换成 `new Anthropic()`（Python 版是 `anthropic.Anthropic()`），它会自动读 `ANTHROPIC_API_KEY` 和 `ANTHROPIC_BASE_URL`，`runAgent` 一行不用改。这个骨架后面会一路长大：[动手实现一个 Coding Agent](../p2-agent-basics/02-coding-agent.md) 的 `coding_agent/agent.ts`（`agent.py`）给它加上读写文件和跑命令的工具，[p4 的 mini Claude Code](../p4-mini-cc/01-cli.md) 再往上加流式输出、权限、恢复会话。
 
-> ⚠️ 两条和当前 API 有关的事实（核对自 `claude-api` skill，模型表缓存于 2026-10-06）：
-> - **思考强度**：Claude 这边控制「想多深」的参数是 `output_config.effort`（`low` / `medium` / `high` / `xhigh` / `max`），配合 `thinking: {type: "adaptive"}`。在 `claude-opus-5-5` 上思考**关不掉**：`{type: "disabled"}` 返回 400，默认 effort 是 `medium`。旧的 `budget_tokens` 写法在当前一代模型上也会返回 400。你 `settings.json` 里的 `effortLevel`（当前是 `high`）就是 Claude Code 对这个参数的封装。
-> - **MCP Python SDK 2.x 改了名**：很多教程里的 `from mcp.server.fastmcp import FastMCP`，在本机 `code/agent` 装的 mcp 2.3.0 上会报 `No module named 'mcp.server.fastmcp'`。报错信息本身就说明 FastMCP 改名成了 `MCPServer`，要改成 `from mcp.server.mcpserver import MCPServer`（本机实测可导入）。要跑 v1 的老代码，就固定 `mcp<2`。Node 版用的 `@modelcontextprotocol/sdk`（本机 1.32.1）没有这次改名，服务端类一直是 `McpServer`（`@modelcontextprotocol/sdk/server/mcp.js`）。另外，FastMCP 是官方 `mcp` SDK 里的模块；名叫 `fastmcp` 的独立 pip 包是另一个项目，别混了。
-
 ## 对照你的环境
 
 你的 Claude Code 配置，几乎每一项都能在上面那张表里找到位置：
@@ -261,7 +257,7 @@ CLAUDE.md 里那句「工具链能强制的就别写进上下文」，和本章�
 
 </details>
 
-**3.** 把第 1 章的 `run_agent` 改一下：在模型想结束时（`stop_reason != "tool_use"`），先调用一个 `check()` 函数（比如跑 `pnpm vitest run`）。检查不通过，就把失败输出作为一条 user 消息追加进去，继续循环。这就是一个最小的 Stop hook。
+**3.** 把本章的 `run_agent` 改一下：在模型想结束时（`stop_reason != "tool_use"`），先调用一个 `check()` 函数（比如跑 `pnpm vitest run`）。检查不通过，就把失败输出作为一条 user 消息追加进去，继续循环。这就是一个最小的 Stop hook。
 
 <details>
 <summary>提示</summary>

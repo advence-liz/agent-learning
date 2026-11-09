@@ -4,6 +4,9 @@
 
 > **一句话结论**：LLM 推理就是一个循环——把文字变成 token，前向算出「下一个 token 的分数」，按温度 / top-k / top-p 抽一个，接到末尾再来一遍；KV cache 让每一轮只算新来的那一个 token。我们手写的循环和 `model.generate` 逐 token 完全一致，连随机采样都能对齐。
 
+!!! note "前置阅读"
+    上一章还在讲优化器，这一章直接跳到一个完整的 Transformer，跨度不小。建议先读 [LLM 是怎么预测下一个 token 的](../p0-core/04-llm-token-prediction.md)：那里用 numpy 讲过的 token、logits、因果注意力和 KV cache，本章默认你已经知道，只讲它们在真实模型里长什么样。
+
 你每天都在用 Claude Code，可能也算过账：同一个会话里，第二轮请求的 `cache_read_input_tokens` 为什么会是前一轮的全部输入？「缓存」缓存的到底是什么？
 
 还有一个更常见的疑问：同一个 prompt 发两次，Claude 为什么给出不一样的回答？
@@ -277,9 +280,38 @@ got = continue_from_prefix(model, pcache, suffix_ids)      # 每个问题只算�
 
 ## 练习
 
-1. 用 `sample_next` 对同一个 prompt 在 $T \in \{0.3, 0.7, 1.0, 1.5\}$ 下各生成 5 次，统计 5 次回答中有几种不同的文本。和第 [4] 段的「有效候选数」对照着看。
-2. 改 `generate_with_cache`，让它在每一步打印 `cache.get_seq_length()` 和 `kv_cache_bytes(cache)`，画出「已生成 token 数 vs cache 字节数」的曲线，验证每个 token 45 KiB。
-3. （开放）Claude Code 的一个会话里，主 agent 和它派出的 Sub Agent 能共享 prompt cache 吗？结合「严格前缀匹配」想一想：Sub Agent 的 system prompt、tools 列表和主 agent 相同吗？你可以用本机 `~/.claude/projects/` 下 subagent 的 jsonl 里 `cache_read_input_tokens` 的值来验证你的猜想。
+**1.** 用 `sample_next` 对同一个 prompt 在 $T \in \{0.3, 0.7, 1.0, 1.5\}$ 下各生成 5 次，统计 5 次回答中有几种不同的文本。和第 [4] 段的「有效候选数」对照着看。
+
+<details>
+<summary>提示</summary>
+
+写一个 sampler：`lambda logits: sample_next(logits, temperature=T)`，传给 `generate_with_cache(..., sampler=...)`；每个 T 生成 5 次，把解码后的文本放进 `set` 里数个数。
+
+预期和第 [4] 段对得上：T=0.3 时有效候选数约 1，5 次几乎都一样；T=0.7、1.0 开始出现分叉；T=1.5 每一步都有几十个候选，5 次基本各不相同，而且会开始胡言乱语。注意有效候选数只是「某一个位置」的数，整段文本是几十步累乘的结果，所以文本的种类比单步候选数增长得更快。
+
+</details>
+
+**2.** 改 `generate_with_cache`，让它在每一步打印 `cache.get_seq_length()` 和 `kv_cache_bytes(cache)`，画出「已生成 token 数 vs cache 字节数」的曲线，验证每个 token 45 KiB。
+
+<details>
+<summary>提示</summary>
+
+最简单的办法是不改函数本身，用它已有的 `on_token` 回调：每次被调用时把 `cache.get_seq_length()` 和 `kv_cache_bytes(cache)` 追加进列表，正文 `main()` 里的 `track` 就是这么做的。
+
+预期：一条直线，起点是 prompt 那部分的字节数，斜率是每个 token 30 层 × K、V 两份 × 3 个 kv 头 × 64 维 × 4 字节 = 46080 字节 = 45 KiB。用 `np.diff` 看相邻两步的差，应该每步都正好是 46080。
+
+</details>
+
+**3.** （开放）Claude Code 的一个会话里，主 agent 和它派出的 Sub Agent 能共享 prompt cache 吗？结合「严格前缀匹配」想一想：Sub Agent 的 system prompt、tools 列表和主 agent 相同吗？你可以用本机 `~/.claude/projects/` 下 subagent 的 jsonl 里 `cache_read_input_tokens` 的值来验证你的猜想。
+
+<details>
+<summary>提示</summary>
+
+判断方向：不能共享主 agent 的缓存。缓存按严格前缀匹配，前缀从 tools、system 开始；子 agent 有自己的 system prompt 和工具集，第一个字节起就和主 agent 不同。[Sub Agent](../p1-tools/10-sub-agent.md) 那章引用的官方文档也是这么说的：子 agent 第一次请求读不到父会话的缓存，要自己预热。
+
+验证：找一个子 agent 的 jsonl，看第一条请求的 `cache_read_input_tokens`，再看它之后几轮，读缓存应该随着它自己的对话增长。还可以追一个问题：同一个会话里先后派出两个同类型的子 agent，第二个的首条请求能不能读到第一个写的缓存？去 jsonl 里找答案。这也是 [Fork Agent](../p1-tools/11-fork-agent.md) 想解决的冷启动成本。
+
+</details>
 
 ## 延伸阅读
 

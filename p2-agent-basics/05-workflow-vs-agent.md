@@ -196,9 +196,32 @@ Building effective agents 总结了五种模式，用这一章的例子各对应
 
 ## 练习
 
-1. 改造 `CLASSIFY` 让它输出标签列表（`["bug", "question"]`），并让 Workflow 两个分支都走，写测试覆盖本章的那条反馈。
-2. 给 Agent 版的 `create_ticket` 工具加上和 Workflow 一样的校验：body 缺小节就返回 `is_error`，让模型自己重写。对比这和 Workflow 闸门的区别。
-3. 开放题：你的周报生成（拉 GitHub / Linear / Notion 数据 → 写周报）应该做成 Workflow 还是 Agent？哪一步值得开放给模型自由发挥？
+**1.** 改造 `CLASSIFY` 让它输出标签列表（`["bug", "question"]`），并让 Workflow 两个分支都走，写测试覆盖本章的那条反馈。
+
+<details>
+<summary>提示</summary>
+
+三处改动：`CLASSIFY` 的 prompt 改成输出 `{"labels": [...]}`；`workflow()` 里把 `JSON.parse(...).label` 换成数组；原来 `if (label === "bug")` 和 `if (label === "question")` 两个分支抽成函数，按 labels 依次都跑，最后把结果拼起来。测试用 `FEEDBACK` 那条反馈，fake 剧本按调用顺序排：分类返回两个标签 → bug 草稿 → 问答回复。断言 trace 里同时有 `gate ✓` 和 `retrieve →`。剧本顺序和代码里的调用顺序必须对上，不然 fake 会把回复喂错步骤。
+
+</details>
+
+**2.** 给 Agent 版的 `create_ticket` 工具加上和 Workflow 一样的校验：body 缺小节就返回 `is_error`，让模型自己重写。对比这和 Workflow 闸门的区别。
+
+<details>
+<summary>提示</summary>
+
+改 `agent()` 里的 `createTicket`：`body` 缺「复现步骤」「期望」「实际」任何一个就 `throw`。`runAgent` 会把异常转成 `is_error` 结果，模型下一轮就能看到错误、自己重写。fake 剧本写两次 `create_ticket`：第一次 body 不全，第二次补齐；断言只建了一张单，trace 里有一行 `✘`。对比时注意一个细节：Workflow 的闸门只重试一次，重试后**不再校验**就打 `gate ✓` 放行；Agent 版的校验每次都执行，坏单一定建不出来，但要不要重写、重写几次、会不会干脆不建，都是模型决定的。
+
+</details>
+
+**3.** 开放题：你的周报生成（拉 GitHub / Linear / Notion 数据 → 写周报）应该做成 Workflow 还是 Agent？哪一步值得开放给模型自由发挥？
+
+<details>
+<summary>提示</summary>
+
+判断方向：拉数据这几步每次都一样，GitHub、Linear、Notion 拉什么、按什么时间范围，都能提前写死，交给代码。值得开放给模型的是「从一堆数据里挑重点、归纳成结论」那一步。我的看法是做成 Workflow：固定的采集步骤 + 一次模型写作 + 一道代码闸门（必需小节齐不齐、链接在不在），格式不合格就重试，和本章分诊的结构一样。
+
+</details>
 
 ## 延伸阅读
 

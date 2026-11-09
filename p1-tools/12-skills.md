@@ -169,6 +169,8 @@ c."L3 只在模型决定要看时进来"
 - 预处理命令失败时整个调用中止。
 - 调用只追加消息，不改动已有消息。
 
+这个加载器是独立脚本，没有接进 agent 循环。完整实现（`Skill` 工具和 `/skill-name` 命令、压缩后正文挂回、接进循环、带测试）见 [mini Claude Code：渐进式加载 Skills](../p4-mini-cc/20-skill.md)。
+
 统计你自己的 skill 目录，用 `node skills_demo/measure_real.ts`（Python 版 `uv run python skills_demo/measure_real.py`）。它只输出数字，不输出任何 skill 的内容。两版输出逐字一致（Node 版按 Unicode 码点数字符，和 Python 的 `len()` 对齐；直接用 `.length` 会把 emoji 算成 2 个）：
 
 === "Node"
@@ -212,9 +214,32 @@ c."L3 只在模型决定要看时进来"
 
 ## 练习
 
-1. 给 `skill_loader.ts`（`skill_loader.py`）加上 `user-invocable: false` 的支持：这样的 skill 不出现在 `/` 菜单里，但仍然在 listing 中，可以被模型调用。写一条测试（`node:test` 或 pytest），断言它和 `disable-model-invocation` 的效果正好相反。
-2. 实现压缩后的重新挂载：给定一份「调用历史」，每个 skill 只保留最近一次调用的前 N 个字符，总量不超过 M，优先保留最近调用的。用 N=5000、M=25000 的比例缩小后做测试。
-3. （开放题）你的 46 个 skill 里，哪 5 个的 description 最该重写？用 `measure_real.ts`（`measure_real.py`）找出最长的 description，判断它的前 200 个字符里有没有用户真正会说的那句话。如果要把其中一个的流程拆成「SKILL.md 导航 + references 细节」，你会怎么切分？
+**1.** 给 `skill_loader.ts`（`skill_loader.py`）加上 `user-invocable: false` 的支持：这样的 skill 不出现在 `/` 菜单里，但仍然在 listing 中，可以被模型调用。写一条测试（`node:test` 或 pytest），断言它和 `disable-model-invocation` 的效果正好相反。
+
+<details>
+<summary>提示</summary>
+
+`buildListing` 已经按 `disable-model-invocation` 过滤了；`/` 菜单目前没有对应函数，加一个 `slashMenu(skills)`（Python 版 `slash_menu`），返回 `meta["user-invocable"] !== "false"` 的那些名字。注意 `parseFrontmatter` 把值都存成字符串，要和 `"false"` 比，不是布尔值。测试造两个 skill：A 设 `disable-model-invocation: true`，B 设 `user-invocable: false`；断言 A 在菜单里、不在 listing 里，B 正好反过来。测试写在 `skill_loader.test.ts`（`test_skill_loader.py`）里。
+
+</details>
+
+**2.** 实现压缩后的重新挂载：给定一份「调用历史」，每个 skill 只保留最近一次调用的前 N 个字符，总量不超过 M，优先保留最近调用的。用 N=5000、M=25000 的比例缩小后做测试。
+
+<details>
+<summary>提示</summary>
+
+写一个 `reattach(history, n, m)`：`history` 按时间排好，倒着遍历（最近的先处理）。同一个 skill 只认最近一次，碰到旧的就跳过；每个取正文前 `n` 个字符，累计超过 `m` 就停。最后一个放不下时是截断还是整个丢掉，自己选一种，写进测试。测试按 1:5 缩小，比如 N=50、M=250：造 6 个各 100 字符的 skill 依次调用，预期留下最近 5 个、每个 50 字符，最早那个被挤掉；再让某个 skill 调用两次，断言只保留后一次的内容。本章说的上限单位是 token，这里按题目用字符模拟。
+
+</details>
+
+**3.** （开放题）你的 46 个 skill 里，哪 5 个的 description 最该重写？用 `measure_real.ts`（`measure_real.py`）找出最长的 description，判断它的前 200 个字符里有没有用户真正会说的那句话。如果要把其中一个的流程拆成「SKILL.md 导航 + references 细节」，你会怎么切分？
+
+<details>
+<summary>提示</summary>
+
+`measure_real.ts` 现在只输出总数，先加几行：按 `chars(s.description)` 排序，打印前 5 名的名字和长度（保持「不打印内容」的原则）。判断标准是前 200 个字符里有没有用户会说的那句话，比如「写周报」「查日志」，而不是方法论介绍；方法论应该进正文。拆分时，SKILL.md 只留触发条件、步骤目录、每步一句话和必须遵守的铁律，而且铁律放最前面，因为压缩后只保留前 5,000 token；长示例、检查清单、模板、踩坑细节都挪进 `references/`，正文里只放路径。
+
+</details>
 
 ## 延伸阅读
 

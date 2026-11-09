@@ -395,9 +395,32 @@ Node 版没有线程，两条路径都换成了定时器：管道模式的 `Line
 
 ## 练习
 
-1. 给后台任务加一个上限：同时最多 5 个，超过时 Bash 直接返回错误，让模型先停掉一个。为什么并发要有上限？（提示：你全局规则里的「并发必须显式控制」。）
-2. 改进终端模式的唤醒：输入框里有内容时不要打断，等你按下回车，先处理通知再处理你的输入。
-3. 开放题：Claude Code 允许你用 `Ctrl+B` 把一个正在**前台**跑的命令转到后台。mini-cc 的前台 Bash 用的是 `subprocess.run`，要支持「跑到一半转后台」，执行模型要怎么改？
+**1.** 给后台任务加一个上限：同时最多 5 个，超过时 Bash 直接返回错误，让模型先停掉一个。为什么并发要有上限？（提示：你全局规则里的「并发必须显式控制」。）
+
+<details>
+<summary>提示</summary>
+
+在 `jobs.py` 的 `JobManager` 上加一个 `max_running = 5`，`start_bash` 开头数 `self.running()`，满了就抛错；`tools/bash.py` 的 `BashTool.run` 在 `run_in_background` 分支接住，返回 `is_error=True` 的结果，列出正在跑的任务 id，让模型先用 TaskStop 停一个（Node 对应 `jobs.ts` 的 `startBash`）。检查和登记要在同一把 `_lock` 里，不然两个工具调用会同时通过检查。测试：连续起 5 个 `sleep 30`，第 6 个返回错误，`stop` 掉一个后第 6 个能起来。为什么要上限：每个后台进程都吃 CPU、内存、文件句柄，结束通知还挤占上下文；没有上限就没有背压，模型一个循环就能把机器拖垮。
+
+</details>
+
+**2.** 改进终端模式的唤醒：输入框里有内容时不要打断，等你按下回车，先处理通知再处理你的输入。
+
+<details>
+<summary>提示</summary>
+
+现在的唤醒在 `cli.py` 的 `repl` 里：`watch` 线程发现「空闲 + 有通知」就 `pt.exit(result=WAKE)`，不管输入框里有没有字。改法是在看门条件里加一句 `not session.app.current_buffer.text`：有内容就不打断，等你回车。回车之后先 `app.wake_if_idle()` 把通知交给模型跑一轮，再 `handle_line(line)` 处理你的输入；更省的做法是不单独跑一轮，让通知随你这条消息一起送达（`notifications_provider` 本来就会把队列里的通知并进下一条 user 消息）。交互逻辑不好写自动化测试，可以把「要不要打断」抽成纯函数 `(busy, has_notice, buffer_text) -> bool` 来测。
+
+</details>
+
+**3.** 开放题：Claude Code 允许你用 `Ctrl+B` 把一个正在**前台**跑的命令转到后台。mini-cc 的前台 Bash 用的是 `subprocess.run`，要支持「跑到一半转后台」，执行模型要怎么改？
+
+<details>
+<summary>提示</summary>
+
+判断方向：`subprocess.run` 是「起进程 + 阻塞等结束」一步到位，中途没有把手。要支持跑到一半转后台，前台命令也得用 `Popen` 起、输出写进文件（和 `start_bash` 一样），前台只是「在等它」；按下 Ctrl+B 就停止等待，把这个进程登记成一个 `Job`，给模型返回「已转到后台，id 是 …」的 `tool_result`。也就是说，前台和后台是同一种执行，区别只在调用方等不等。我觉得这才是对的模型：执行层只有一种，「前台」只是一个可取消的等待。Node 版的前台 `runShell` 本来就是 `spawn` + Promise，改起来比 Python 版容易。
+
+</details>
 
 ## 延伸阅读
 

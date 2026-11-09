@@ -145,6 +145,20 @@ agentic: Agentic search {
 }
 ```
 
+## 混合检索和 rerank：两种检索互补，再精排一次
+
+实验 2 和实验 3 正好是一对：字面检索漏掉了「换个说法」，向量检索分不清 `useTrackingStore` 和 `useTrackStore`。你可能会问：只用真 embedding，不就没有实验 2 的问题了？
+
+问题会换个地方出现。embedding 把整段话压成一个向量，记住的是「大意」。错误码 `E1042`、产品型号、函数名这类精确词，在向量里和长得像的另一个词离得很近，结果就像实验 3 那样，排在前面的是「看起来差不多」的那段。
+
+所以自然语言知识库的常见默认是**混合检索**（hybrid search）：一路走关键词，通常是 BM25（按词频打分，并对常见词降权、对长文档做归一化，Elasticsearch 默认的相关性算法就是它）；另一路走向量。两路各取 top-k，再合成一个排序。
+
+合并时有个小坑：BM25 的分数没有上限，余弦相似度在 -1 到 1 之间，直接相加没有意义。常用的做法是 **RRF**（Reciprocal Rank Fusion，倒数排名融合）：只看名次不看分数，每段的得分是它在各路结果里 `1 / (k + 名次)` 的和，k 常取 60。两路都排得靠前的段落自然胜出。
+
+**rerank**（重排）是再加一道精排。embedding 检索用的是双塔结构（bi-encoder）：问题和文档各自算向量，文档向量可以提前算好，所以快。rerank 模型是交叉编码器（cross-encoder）：把「问题 + 某一段」拼在一起送进模型，直接输出相关度。它能看到问题和段落之间逐词的对应，更准，但每个候选都要在查询时算一遍，所以只用在召回的前几十到上百段上，从中挑出最终放进上下文的那几段。
+
+代价也要算清：两套索引要一起维护；rerank 多一次模型调用，延迟和费用都会上去；k 值、两路各取多少、最后留几段，都得拿评测集调。Anthropic 在 Contextual Retrieval 一文里给过一组数据：上下文化的 embedding 加 BM25，top-20 检索失败率从 5.7% 降到 2.9%；再加 rerank（先取 150 段、精排后留 20 段），降到 1.9%。
+
 ## 长上下文之后，RAG 还有用吗
 
 有用，但门槛变了。
@@ -178,13 +192,37 @@ agentic: Agentic search {
 
 ## 练习
 
-1. 在 `experiments.ts`（Python 版 `experiments.py`）里给实验 2 再加三个同义改写，统计哈希 TF-IDF 的 top-1 命中率。
-2. 实现一个最简单的混合检索：`score = 0.5 * tfidf + 0.5 * bm25`（BM25 可以自己用普通数组写，Python 版用 numpy），对比实验 2 的结果。
-3. 开放题：如果你要给 webapp 做一个「问代码库问题」的内部工具，你会用 RAG、agentic search，还是两者结合？说说你会怎么处理「代码每天都在变」这件事。
+**1.** 在 `experiments.ts`（Python 版 `experiments.py`）里给实验 2 再加三个同义改写，统计哈希 TF-IDF 的 top-1 命中率。
+
+<details>
+<summary>提示</summary>
+
+在 `exp2Paraphrase()` 里照现有的两行再加三个 `show(idx, ...)`，比如「账号进不去了」「口令丢了怎么找回」「登录凭证想不起来」。统计 top-1 命中率时，看 `idx.search(q, 1)[0][1].source` 是不是 `account.md#账号与安全`，命中数除以总数。预期规律和第二句一样：和原文共享的字越少，越容易掉。
+
+</details>
+
+**2.** 实现一个最简单的混合检索：`score = 0.5 * tfidf + 0.5 * bm25`（BM25 可以自己用普通数组写，Python 版用 numpy），对比实验 2 的结果。
+
+<details>
+<summary>提示</summary>
+
+BM25 要用和 TF-IDF 同一套切分：Node 版的 `ngrams` 没有 export，先导出它（Python 版是 `_ngrams`）。公式是 `idf × tf × (k1+1) / (tf + k1 × (1 - b + b × 段长 / 平均段长))`，k1 取 1.2、b 取 0.75 就行。关键坑在合分：BM25 没有上限，余弦在 0 到 1 之间，直接 0.5/0.5 相加，结果基本由 BM25 说了算，所以要先各自 min-max 归一化，或者按本章说的改用 RRF。预期结论可能有点反直觉：在实验 2 的同义改写上，混合检索几乎没有帮助，因为 BM25 也是词面匹配，真正的提升要靠一路语义检索。
+
+</details>
+
+**3.** 开放题：如果你要给 webapp 做一个「问代码库问题」的内部工具，你会用 RAG、agentic search，还是两者结合？说说你会怎么处理「代码每天都在变」这件事。
+
+<details>
+<summary>提示</summary>
+
+本章的表已经给了方向：代码库要精确、要最新、要能多轮追查，所以以 agentic search（grep、读文件）为主。RAG 可以只用在自然语言那部分，比如设计文档和 wiki，或者用来先缩小到候选目录，再交给 Agent 去读。如果坚持给代码建索引，就要处理更新：按 commit 增量重建，元数据里记下 commit hash，回答时标明基于哪个版本。否则就是常见坑第 4 条，Agent 会基于旧代码自信地胡说。
+
+</details>
 
 ## 延伸阅读
 
 - Anthropic：Introducing Contextual Retrieval：<https://www.anthropic.com/news/contextual-retrieval>
+- Elasticsearch 的 RRF 文档（公式和 k 的默认值）：<https://www.elastic.co/guide/en/elasticsearch/reference/current/rrf.html>
 - Embeddings（Voyage AI）文档：<https://platform.claude.com/docs/en/build-with-claude/embeddings>
 - 本库：上一章 [RAG 问答机器人](./03-rag-qa-bot.md) · [LLM 是怎么预测下一个 token 的](../p0-core/04-llm-token-prediction.md) · 下一章 [Workflow 和 Agent](./05-workflow-vs-agent.md)
 
