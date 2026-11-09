@@ -506,3 +506,4 @@ Codex（本机 0.153.4）也有 plan 模式，但思路很不一样。从它二�
 - Claude Code 工具参考（EnterPlanMode / ExitPlanMode）：<https://code.claude.com/docs/en/tools-reference>
 - 本系列：[Plan Mode 是怎么实现的](../p3-agent-internals/11-plan-mode.md)、[工具调用权限审批](05-permission.md)、[让 Agent 主动向你提问](10-ask-user-question.md)、[实现 Sub Agent 机制](17-subagent.md)
 - 上一章：[渐进式加载 Skills](20-skill.md)
+- 下一部分：[第 7 部分 · Agent 研发面试](../p7-interview/01-interview-landscape.md)，把主线串成面试准备

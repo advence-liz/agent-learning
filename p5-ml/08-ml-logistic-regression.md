@@ -118,7 +118,7 @@ for _ in range(self.epochs):
 
 **1. sklearn 默认带 L2 正则。** `LogisticRegression(C=1.0)` 的目标函数是 $C\sum \text{BCE} + \frac12\|w\|^2$。这和「平均 BCE + $\frac{1}{2Cn}\|w\|^2$」只差一个正数倍，最优点相同。我在 sklearn 源码 `sklearn/linear_model/_logistic.py` 里核对过，它内部正是 `l2_reg_strength = 1.0 / (C * sw_sum)`。很多人手写的逻辑回归和 sklearn 对不上，就是忘了这一项。
 
-**2. 标准化。** 温度在 50~100，直接跑 GD 会遇到上一章的窄谷问题。我们在内部标准化，训练完再把参数换算回原始尺度。注意正则项罚的是原始尺度的 w，换算到标准化空间后惩罚系数要除以 $\sigma^2$。
+**2. 标准化。** 温度在 50~100，直接跑 GD 会遇到[梯度下降](05-ml-gradient-descent.md)那章讲的窄谷问题。我们在内部标准化，训练完再把参数换算回原始尺度。注意正则项罚的是原始尺度的 w，换算到标准化空间后惩罚系数要除以 $\sigma^2$。
 
 **3. sigmoid 的数值稳定。** $e^{-z}$ 在 z=-1000 时会溢出。代码里按 z 的正负分两支写。
 

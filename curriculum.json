@@ -1,7 +1,7 @@
 [
  {
   "part": "p0-core",
-  "part_name": "核心概念串讲",
+  "part_name": "核心概念",
   "idx": 1,
   "id": "basics/llm-and-agent",
   "title": "LLM 和 Agent 的核心术语和原理",
@@ -28,7 +28,7 @@
  },
  {
   "part": "p0-core",
-  "part_name": "核心概念串讲",
+  "part_name": "核心概念",
   "idx": 2,
   "id": "basics/api-and-apikey",
   "title": "如何调用 LLM 接口",
@@ -47,7 +47,7 @@
  },
  {
   "part": "p0-core",
-  "part_name": "核心概念串讲",
+  "part_name": "核心概念",
   "idx": 3,
   "id": "basics/messages-and-tokens",
   "title": "上下文是什么？token 怎么计费？",
@@ -71,7 +71,7 @@
  },
  {
   "part": "p0-core",
-  "part_name": "核心概念串讲",
+  "part_name": "核心概念",
   "idx": 4,
   "id": "basics/llm-token-prediction",
   "title": "LLM 是怎么预测下一个 token 的",
@@ -354,7 +354,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 1,
   "id": "basics/ai-chatbot",
   "title": "动手实现一个 AI 聊天机器人",
@@ -366,7 +366,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 2,
   "id": "basics/coding-agent",
   "title": "动手实现一个 Coding Agent",
@@ -380,7 +380,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 3,
   "id": "basics/rag-qa-bot",
   "title": "动手实现一个 RAG 问答机器人",
@@ -394,7 +394,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 4,
   "id": "basics/rag-principles",
   "title": "RAG 原理和使用场景",
@@ -406,7 +406,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 5,
   "id": "basics/workflow-vs-agent",
   "title": "Workflow 和 Agent",
@@ -418,7 +418,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 6,
   "id": "basics/agent-sdk",
   "title": "用 Agent SDK 简化开发",
@@ -430,7 +430,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 7,
   "id": "basics/agent-sdk-comparison",
   "title": "其他主流 Agent SDK 对比",
@@ -442,7 +442,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 8,
   "id": "basics/agent-observability",
   "title": "给 Agent 加上可观测性",
@@ -454,7 +454,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 9,
   "id": "basics/streaming-response",
   "title": "详解 LLM API 的流式响应模式",
@@ -468,7 +468,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 10,
   "id": "basics/mcp-tool",
   "title": "动手开发 MCP 工具",
@@ -482,7 +482,7 @@
  },
  {
   "part": "p2-agent-basics",
-  "part_name": "Agent 基础",
+  "part_name": "Agent 开发基础",
   "idx": 11,
   "id": "basics/mcp-protocol",
   "title": "拆解 MCP 通信协议",
@@ -494,7 +494,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 1,
   "id": "claude-code/http-analyzer",
   "title": "Claude Code 抓包分析工具",
@@ -506,7 +506,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 2,
   "id": "claude-code/hi-request",
   "title": "给 Claude Code 发一句 Hi 会发生什么",
@@ -518,7 +518,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 3,
   "id": "claude-code/system-prompt",
   "title": "System Prompt 应该怎么写",
@@ -530,7 +530,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 4,
   "id": "claude-code/file-read-write",
   "title": "文件读写是怎么实现的",
@@ -542,7 +542,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 5,
   "id": "claude-code/context-compaction",
   "title": "如何实现上下文压缩",
@@ -554,7 +554,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 6,
   "id": "claude-code/auto-memory",
   "title": "Claude Code 自动记忆系统",
@@ -568,7 +568,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 7,
   "id": "codex/auto-memory",
   "title": "Codex 自动记忆系统",
@@ -580,7 +580,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 8,
   "id": "basics/mem0-memory",
   "title": "mem0 记忆库的实现思路",
@@ -592,7 +592,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 9,
   "id": "basics/zep-memory",
   "title": "Zep 记忆系统的实现思路",
@@ -604,7 +604,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 10,
   "id": "claude-code/permission-check",
   "title": "Claude Code 的权限检查是怎么实现的",
@@ -616,7 +616,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 11,
   "id": "claude-code/plan-mode",
   "title": "Plan Mode 是怎么实现的",
@@ -628,7 +628,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 12,
   "id": "basics/harness-engineering",
   "title": "Harness Engineering 是什么",
@@ -640,7 +640,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 13,
   "id": "original/agent-build-guide",
   "title": "Agent 构建指南：研发要素全景",
@@ -652,7 +652,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 14,
   "id": "original/agent-eval-guide",
   "title": "Agent 评测实践指南",
@@ -664,7 +664,7 @@
  },
  {
   "part": "p3-agent-internals",
-  "part_name": "拆解工业级 Agent",
+  "part_name": "工业级 Agent：拆解与生产工程",
   "idx": 15,
   "id": "original/agent-security",
   "title": "Agent 安全：提示词注入与「致命三要素」",
@@ -676,7 +676,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 1,
   "id": "coding-agent/cli",
   "title": "Coding Agent 的命令系统",
@@ -688,7 +688,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 2,
   "id": "coding-agent/realtime-output",
   "title": "Agent 循环的逐步输出",
@@ -700,7 +700,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 3,
   "id": "coding-agent/error-handling",
   "title": "Agent 的错误处理与重试",
@@ -712,7 +712,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 4,
   "id": "coding-agent/resume",
   "title": "持久化聊天记录",
@@ -724,7 +724,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 5,
   "id": "coding-agent/permission",
   "title": "对工具调用进行权限审批",
@@ -736,7 +736,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 6,
   "id": "coding-agent/auto-mode",
   "title": "auto 模式自动进行权限审批",
@@ -748,7 +748,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 7,
   "id": "coding-agent/file-edit",
   "title": "可靠的文件编辑工具",
@@ -760,7 +760,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 8,
   "id": "coding-agent/file-mention",
   "title": "用 @ 引用文件",
@@ -772,7 +772,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 9,
   "id": "coding-agent/context-injection",
   "title": "更灵活的上下文注入机制",
@@ -784,7 +784,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 10,
   "id": "coding-agent/ask-user-question",
   "title": "让 Agent 主动向你提问",
@@ -796,7 +796,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 11,
   "id": "coding-agent/task-management",
   "title": "让 Agent 跟踪多步任务",
@@ -808,7 +808,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 12,
   "id": "coding-agent/memory",
   "title": "给 Agent 加上长期记忆",
@@ -822,7 +822,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 13,
   "id": "coding-agent/rewind",
   "title": "支持 rewind 回退对话和代码",
@@ -834,7 +834,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 14,
   "id": "coding-agent/compact",
   "title": "支持 compact 压缩上下文",
@@ -846,7 +846,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 15,
   "id": "coding-agent/mcp",
   "title": "给 Agent 注册 MCP server",
@@ -858,7 +858,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 16,
   "id": "coding-agent/background",
   "title": "让 Agent 在后台运行命令",
@@ -870,7 +870,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 17,
   "id": "coding-agent/subagent",
   "title": "实现 Sub Agent 机制",
@@ -882,7 +882,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 18,
   "id": "coding-agent/monitor",
   "title": "让 Agent 监听外部事件",
@@ -894,7 +894,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 19,
   "id": "coding-agent/image",
   "title": "支持图片输入",
@@ -906,7 +906,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 20,
   "id": "coding-agent/skill",
   "title": "渐进式加载 Skills",
@@ -918,7 +918,7 @@
  },
  {
   "part": "p4-mini-cc",
-  "part_name": "实现 Claude Code",
+  "part_name": "手搓 mini Claude Code",
   "idx": 21,
   "id": "coding-agent/plan",
   "title": "让 Agent 先规划再动手",
@@ -939,7 +939,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 1,
   "id": "basics/pytorch-basics",
   "title": "Tensor 的常用操作",
@@ -968,7 +968,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 2,
   "id": "machine-learning/ml-basics",
   "title": "机器学习的基本概念",
@@ -992,7 +992,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 3,
   "id": "machine-learning/ml-fitting",
   "title": "什么是拟合",
@@ -1012,7 +1012,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 4,
   "id": "machine-learning/ml-least-squares",
   "title": "最小二乘法",
@@ -1024,7 +1024,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 5,
   "id": "machine-learning/ml-gradient-descent",
   "title": "梯度下降",
@@ -1036,7 +1036,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 6,
   "id": "machine-learning/ml-local-global-optima",
   "title": "局部最优与全局最优",
@@ -1048,7 +1048,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 7,
   "id": "machine-learning/ml-overfitting",
   "title": "过拟合与泛化",
@@ -1060,7 +1060,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 8,
   "id": "machine-learning/ml-logistic-regression",
   "title": "二分类问题：逻辑回归",
@@ -1072,7 +1072,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 9,
   "id": "machine-learning/ml-logistic-regression-doodles",
   "title": "实战：逻辑回归识别涂鸦",
@@ -1084,7 +1084,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 10,
   "id": "machine-learning/ml-classification-metrics",
   "title": "分类模型的评估",
@@ -1096,7 +1096,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 11,
   "id": "machine-learning/ml-softmax",
   "title": "多分类问题：Softmax 回归",
@@ -1108,7 +1108,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 12,
   "id": "machine-learning/ml-knn",
   "title": "K 近邻算法",
@@ -1120,7 +1120,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 13,
   "id": "machine-learning/ml-knn-digits",
   "title": "实战：KNN 识别手写数字",
@@ -1132,7 +1132,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 14,
   "id": "machine-learning/ml-decision-tree",
   "title": "决策树：用一连串问题做分类",
@@ -1144,7 +1144,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 15,
   "id": "machine-learning/ml-random-forest",
   "title": "随机森林算法及实战",
@@ -1156,7 +1156,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 16,
   "id": "machine-learning/ml-kmeans",
   "title": "K-Means 聚类算法",
@@ -1168,7 +1168,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 17,
   "id": "machine-learning/ml-kmeans-color-quantization",
   "title": "实战：K-Means 颜色量化",
@@ -1180,7 +1180,7 @@
  },
  {
   "part": "p5-ml",
-  "part_name": "机器学习基础 + 经典 ML 算法",
+  "part_name": "机器学习基础 + 经典算法",
   "idx": 18,
   "id": "machine-learning/ml-simulated-annealing",
   "title": "模拟退火算法",

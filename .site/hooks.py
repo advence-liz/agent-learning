@@ -37,17 +37,11 @@ D2_STYLE = [
 D2_SVG = re.compile(r'(<div class="d2-(?:light|dark)"><svg )([^>]*?viewBox="0 0 ([\d.]+) [\d.]+")')
 D2_MIN_SCALE = 0.75
 
-# 与 tools/build_readme.py 保持一致的学习顺序
-PARTS = [
-    ('p0-core', '0 · 核心概念'),
-    ('p1-tools', '1 · AI 工具使用技巧'),
-    ('p3-agent-internals', '2 · 拆解工业级 Agent'),
-    ('p2-agent-basics', '3 · Agent 开发基础'),
-    ('p4-mini-cc', '4 · 手搓 mini Claude Code'),
-    ('p5-ml', '5 · 机器学习基础（选修）'),
-    ('p6-nn-llm', '6 · 神经网络 + LLM（选修）'),
-    ('p7-interview', '7 · Agent 研发面试'),
-]
+# 部分的顺序和标题来自 tools/parts.py（与 README 共用，唯一来源）
+import sys
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+from parts import ORDER, nav_label  # noqa: E402
+PARTS = [(pid, nav_label(pid)) for pid in ORDER]
 
 
 def on_config(config, **kwargs):

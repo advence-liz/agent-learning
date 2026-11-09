@@ -37,8 +37,8 @@
 grid-columns: 2
 grid-gap: 24
 k0: "第 0 部分 · 核心概念\n循环与停止 · token 成本"
-k3: "第 3 部分 · Agent 开发基础\n工具与 MCP · RAG · 可观测"
-k2: "第 2 部分 · 拆解工业级 Agent\n上下文与记忆 · harness 与权限\n评测 · 安全"
+k2: "第 2 部分 · Agent 开发基础\n工具与 MCP · RAG · 可观测"
+k3: "第 3 部分 · 工业级 Agent\n上下文与记忆 · harness 与权限\n评测 · 安全"
 k4: "第 4 部分 · mini Claude Code\n循环与错误处理 · 多 Agent\n项目深挖的素材"
 ```
 
@@ -58,7 +58,7 @@ k4: "第 4 部分 · mini Claude Code\n循环与错误处理 · 多 Agent\n项�
 | 安全 | [Agent 安全](../p3-agent-internals/15-agent-security.md) | 致命三要素，以及在代码里拆掉其中一条 |
 | SDK 与框架选型 | [Agent SDK](../p2-agent-basics/06-agent-sdk.md)、[SDK 对比](../p2-agent-basics/07-agent-sdk-comparison.md) | 什么时候自己写循环，什么时候上框架 |
 
-你会发现，表里最常出现的是第 2 部分和第 4 部分。原因很简单：面试问的是「你做过什么」，而这两部分一个在拆真实产品，一个在亲手造。
+你会发现，表里最常出现的是第 3 部分和第 4 部分。原因很简单：面试问的是「你做过什么」，而这两部分一个在拆真实产品，一个在亲手造。
 
 ## 动手：把 mini Claude Code 变成你的面试项目
 

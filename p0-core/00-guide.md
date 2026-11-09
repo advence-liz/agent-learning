@@ -13,7 +13,7 @@
 5. **第二类招式：用工具代替自己生成。** 让模型自己写代码造轮子，费 token，也不一定对；给它可靠的工具去调用更划算。这就引出了 Function Calling 和 MCP。
 6. **第三类招式：让结果可验证。** 大仓库里模型很难一次就写对，修一个 bug 可能冒出新 bug。所以需要一套面向 AI 的测试、反馈、修复回路，也就是 Harness Engineering。
 7. **学习顺序：先用工具，再学原理。** 工具用熟了，自然会好奇底层怎么做的，那时再看实现，会发现「竟是这么朴实无华」。
-8. **三大部分里，后两部分互相独立。** 第一部分是概念加工具技巧（必读）；第二部分自己手写一个简化版 Claude Code（偏工程）；第三部分讲训练、微调和数学基础（偏算法）。只关心 Agent 开发就读到第二部分；只关心算法可以跳过第二部分。
+8. **原文分三卷，后两卷互相独立。** 第一卷是概念、工具技巧和拆 Agent（必读）；第二卷自己手写一个简化版 Claude Code（偏工程）；第三卷讲训练、微调和数学基础（偏算法）。只关心 Agent 开发就读到第二卷；只关心算法可以跳过第二卷。本知识库把这三卷细拆成第 0–7 部分（见下图），下文说「第 N 部分」都指本库的编号。
 
 ```d2
 direction: down
@@ -30,29 +30,31 @@ b -> g
 c -> g
 ```
 
-原文的三部分和本知识库目录的对应关系：
+原文三卷和本知识库第 0–7 部分的对应关系（箭头是推荐阅读顺序；第 7 部分面试是本库新增的）：
 
 ```d2
 direction: down
-part1: "第一部分:\n概念 + 工具 + 拆 Agent(必读)" {
-  p0: "p0 核心概念串讲"
-  p1: "p1 AI 工具使用技巧"
-  p2: "p2 Agent 基础"
-  p3: "p3 拆解工业级 Agent"
+part1: "原文第一卷:\n概念 + 工具 + 拆 Agent(必读)" {
+  p0: "0 核心概念"
+  p1: "1 AI 工具使用技巧"
+  p2: "2 Agent 开发基础"
+  p3: "3 工业级 Agent:拆解与生产工程"
   p0 -> p1
   p1 -> p2
   p2 -> p3
 }
-part2: "第二部分:手写\nClaude Code(偏工程)" {
-  p4: "p4 实现 Claude Code"
+part2: "原文第二卷:手写\nClaude Code(偏工程)" {
+  p4: "4 手搓 mini Claude Code"
 }
-part3: "第三部分:\n训练与算法(偏算法)" {
-  p5: "p5 ML 基础 + 经典算法"
-  p6: "p6 神经网络 + LLM 开发"
+part3: "原文第三卷:\n训练与算法(选修)" {
+  p5: "5 ML 基础 + 经典算法"
+  p6: "6 神经网络 + LLM 开发"
   p5 -> p6
 }
+p7: "7 Agent 研发面试(本库新增)"
 part1 -> part2
-part1 -> part3
+part2 -> p7
+part1 -> part3: 选修 {style.stroke-dash: 3}
 ```
 
 ### 📝 作者是怎么讲的
@@ -64,7 +66,7 @@ part1 -> part3
 - **先演示，后讲原理。** 学习顺序那段主张先用工具、再学原理。后半段的「特色」展示，也是先给聊天编辑器、Agent 运行日志、可拖动图、在线 notebook 这些「能看见的效果」，再说背后会讲什么。
 - **用「朴实无华」收束。** 他提前告诉读者，等看到实现会发现「竟是这么朴实无华」。这既降低了心理门槛，也立下了全书承诺：神奇能力的背后都是简单的工程。
 
-> ⚠️ 补充：原文说第二部分用 **pydantic-ai** SDK 实现。本知识库的 `code/mini_cc/` 用的是 **anthropic** 官方 SDK 加可注入的 fake client（见 [STYLE.md](../STYLE.md)「代码目录」一节），所以思路照搬，代码不会和原站一一对应。
+> ⚠️ 补充：原文说第二卷（手写 Claude Code）用 **pydantic-ai** SDK 实现。本知识库的 `code/mini_cc/` 用的是 **anthropic** 官方 SDK 加可注入的 fake client（见 [STYLE.md](../STYLE.md)「代码目录」一节），所以思路照搬，代码不会和原站一一对应。
 
 ## 回到主线
 
@@ -119,5 +121,5 @@ tensor([[ 0.0000, -1.2247],
 - 省上下文：[Sub Agent](../p1-tools/10-sub-agent.md) · [Skills](../p1-tools/12-skills.md) · [上下文压缩](../p3-agent-internals/05-context-compaction.md)
 - 借外力：[动手开发 MCP 工具](../p2-agent-basics/10-mcp-tool.md)
 - 可验证：[用 Hooks 给 Claude Code 加规矩](../p1-tools/08-hooks.md) · [Harness Engineering 是什么](../p3-agent-internals/12-harness-engineering.md)
-- 第二部分起点：[Coding Agent 的命令系统](../p4-mini-cc/01-cli.md)
-- 第三部分起点：[Tensor 的常用操作](../p5-ml/01-pytorch-basics.md)
+- 第 4 部分（原文第二卷）起点：[Coding Agent 的命令系统](../p4-mini-cc/01-cli.md)
+- 选修第 5 部分（原文第三卷）起点：[Tensor 的常用操作](../p5-ml/01-pytorch-basics.md)

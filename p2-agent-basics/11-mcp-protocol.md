@@ -317,6 +317,7 @@ Python 版 server 拒了，而且错误信息不太直观（`Invalid request par
 - MCP 规范（生命周期、传输、tools）：<https://modelcontextprotocol.io/specification/>
 - JSON-RPC 2.0 规范：<https://www.jsonrpc.org/specification>
 - MCP Inspector（官方调试工具）：<https://github.com/modelcontextprotocol/inspector>
-- 本库：上一章 [动手开发 MCP 工具](./10-mcp-tool.md) · [给 Agent 注册 MCP server](../p4-mini-cc/15-mcp.md) · [Claude Code 抓包分析工具](../p3-agent-internals/01-http-analyzer.md)
+- 本库：上一章 [动手开发 MCP 工具](./10-mcp-tool.md) · [给 Agent 注册 MCP server](../p4-mini-cc/15-mcp.md)
+- 下一部分：[第 3 部分 · 工业级 Agent](../p3-agent-internals/01-http-analyzer.md)，带着自己写过的零件，去抓包拆 Claude Code
 
 回到开头的问题：chrome-devtools MCP 连接失败时该看什么？看那几行原始报文：server 进程起来没有、`initialize` 有没有回、回的版本对不对、stdout 里有没有混进一行不是 JSON 的东西。MCP 再复杂，底下也就是一行一行的 JSON。

@@ -98,3 +98,4 @@ tk -> api: "reasoning = think 段, content = 之后部分, finish_reason = stop"
 - [LLM 和 Agent 的核心术语和原理](../p0-core/01-llm-and-agent.md)：Base 和 Instruct 的区别
 - [Tensor 的常用操作](../p5-ml/01-pytorch-basics.md)
 - [动手跑通 LLM 推理的全流程](../p6-nn-llm/05-inference-process.md) · [动手用 LoRA 微调模型](../p6-nn-llm/06-lora-fine-tuning.md)
+- 下一部分：[第 2 部分 · Agent 开发基础](../p2-agent-basics/01-ai-chatbot.md)，从动手写一个聊天机器人开始

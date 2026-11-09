@@ -192,7 +192,7 @@ tools -> llm
 
 LangGraph 不关心你用什么模型，节点就是普通函数。它管的是**状态怎么在节点之间流动**：`Annotated[list, operator.add]`（Node 版是带 `reducer` 的 `Annotation`）声明了「每个节点返回的 messages 要追加，不是覆盖」。
 
-它的价值在 Agent 变复杂之后才显现：你想在「工具执行前」停下来等人审批？加一个中断点。想让「审查」和「修复」两个节点循环直到通过？加一条条件边。想崩溃后从第 7 步恢复？它有 checkpoint 机制。这其实是把上一章 Workflow 和 Agent 的光谱**显式化**了：哪些边是写死的（Workflow），哪些边由模型决定（Agent），图上一目了然。
+它的价值在 Agent 变复杂之后才显现：你想在「工具执行前」停下来等人审批？加一个中断点。想让「审查」和「修复」两个节点循环直到通过？加一条条件边。想崩溃后从第 7 步恢复？它有 checkpoint 机制。这其实是把第 5 章 [Workflow 和 Agent](05-workflow-vs-agent.md) 的光谱**显式化**了：哪些边是写死的（Workflow），哪些边由模型决定（Agent），图上一目了然。
 
 ### OpenAI Agents SDK：handoff 是一等公民
 

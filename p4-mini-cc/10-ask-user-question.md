@@ -166,7 +166,7 @@ l -> m: "下一次请求（同一轮里继续）"
 - **没有 UI 时不报「失败」，而是告诉模型怎么办**：按默认值继续，并明确说出假设。`-p` 非交互模式下就是这样。
 - **结果措辞参考 Claude Code**。你本机会话记录里一条真实的 `AskUserQuestion` 结果是：`Your questions have been answered: "这份说明要解决的是哪种「换 apikey」?"="切到内部 AI Gateway" … You can now continue with these a…`。
 
-输入 schema 约束「1–4 个问题、每题 2–4 个选项」。这里上一章的校验器派上了用场：第 3 章的 `validate.py` 支持 `minItems` / `maxItems`，模型一次塞 5 个问题，会在执行前收到 `InputValidationError: … must have at most 4 items`。Claude Code 的 schema 里能看到同样的限制：`questions: …min(1).max(4).describe("Questions to ask the user (1-4 questions)…")`。
+输入 schema 约束「1–4 个问题、每题 2–4 个选项」。这里第 3 章写的校验器派上了用场：[第 3 章](03-error-handling.md)的 `validate.py` 支持 `minItems` / `maxItems`，模型一次塞 5 个问题，会在执行前收到 `InputValidationError: … must have at most 4 items`。Claude Code 的 schema 里能看到同样的限制：`questions: …min(1).max(4).describe("Questions to ask the user (1-4 questions)…")`。
 
 ### 解析答案
 

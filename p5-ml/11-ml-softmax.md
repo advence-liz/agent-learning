@@ -119,7 +119,7 @@ for _ in range(self.epochs):
 
 ## 每个类别一张模板
 
-和 [上一章涂鸦](09-ml-logistic-regression-doodles.md) 一样，权重可以画回成图，现在是每个类别一张：
+和[涂鸦那一章](09-ml-logistic-regression-doodles.md)一样，权重可以画回成图，现在是每个类别一张：
 
 ![每个类别的权重图](img/11-class-weights.png)
 

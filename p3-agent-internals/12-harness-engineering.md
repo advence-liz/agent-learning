@@ -224,4 +224,4 @@ Anthropic 工程博客里有几篇和 harness 直接相关，我挑出和本章�
 - *Effective harnesses for long-running agents*：https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
 - Claude Code Hooks：https://code.claude.com/docs/en/hooks
 - Claude Code 沙箱：https://code.claude.com/docs/en/sandboxing
-- 本库：[上一章 Plan Mode](11-plan-mode.md)、[LLM 和 Agent 的核心术语](../p0-core/01-llm-and-agent.md)、[Hooks](../p1-tools/08-hooks.md)、[Workflow 和 Agent](../p2-agent-basics/05-workflow-vs-agent.md)、下一部分 [Coding Agent 的命令系统](../p4-mini-cc/01-cli.md)
+- 本库：[上一章 Plan Mode](11-plan-mode.md)、[LLM 和 Agent 的核心术语](../p0-core/01-llm-and-agent.md)、[Hooks](../p1-tools/08-hooks.md)、[Workflow 和 Agent](../p2-agent-basics/05-workflow-vs-agent.md)、下一章 [Agent 构建指南](13-agent-build-guide.md)

@@ -5,15 +5,15 @@
 骨架借鉴 [labuladong 的 AI 开发教程](https://labuladong.online/zh/ai-coding/ai-guide/)（选题、章节划分、「先用起来再讲原理」的讲法）。
 📖 是免费章节的**读书笔记**（请先读原文）；✍️ 是**独立原创课文**：会员章节全部重写（没有使用原站付费内容），另有 5 篇地基章虽然原文免费，也写成了自成一体的课文，原文作为延伸阅读。
 
-## 学习路线（为你调整过的顺序）
+## 学习路线
 
-你已经是 Claude Code 重度用户，所以顺序和原站不同：**先拆你每天在用的东西，再自己造一个**。机器学习部分是选修，和 Agent 主线相互独立。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。
+顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。机器学习（第 5、6 部分）是选修，和 Agent 主线相互独立，放在最后。
 
 ```mermaid
 flowchart LR
   P0["0 核心概念<br/>token · 上下文"] --> P1["1 工具技巧<br/>hooks · subagent · skills"]
-  P1 --> P2["2 拆解工业级 Agent<br/>抓包 · 压缩 · 记忆 · 权限"]
-  P2 --> P3["3 Agent 开发基础<br/>chatbot · RAG · MCP"]
+  P1 --> P2["2 Agent 开发基础<br/>chatbot · RAG · MCP"]
+  P2 --> P3["3 工业级 Agent<br/>拆解 · 构建 · 评测 · 安全"]
   P3 --> P4["4 手搓 mini Claude Code<br/>21 次增量"]
   P4 --> P7["7 Agent 研发面试<br/>考点 · 高频题 · 系统设计"]
   P0 -.选修.-> P5["5 机器学习基础"] --> P6["6 神经网络 + LLM<br/>推理 · LoRA"]
@@ -22,13 +22,13 @@ flowchart LR
 | 部分 | 讲什么 | 建议 |
 |---|---|---|
 | [第 0 部分 · 核心概念](#p0-core) | 主线的起点：token、上下文、API，所有后续章节的地基 | ⭐ 必读，1 天 |
-| [第 1 部分 · AI 工具使用技巧](#p1-tools) | 你天天在用的 Claude Code 能力，这次看清它们怎么实现 | ⭐ 只读付费 5 章 + 两篇模型文件，2 天 |
-| [第 2 部分 · 拆解工业级 Agent](#p3-agent-internals) | 抓包、system prompt、压缩、记忆、权限——Claude Code / Codex 内部 | ⭐⭐ 重点，1 周 |
-| [第 3 部分 · Agent 开发基础](#p2-agent-basics) | 从聊天机器人到 Coding Agent、RAG、MCP，亲手写一遍 | ⭐⭐ 重点，1 周 |
+| [第 1 部分 · AI 工具使用技巧](#p1-tools) | 你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读） | ⭐ 只读付费 5 章，2 天 |
+| [第 2 部分 · Agent 开发基础](#p2-agent-basics) | 从聊天机器人到 Coding Agent、RAG、可观测性、MCP，亲手写一遍 | ⭐⭐ 重点，1 周 |
+| [第 3 部分 · 工业级 Agent：拆解与生产工程](#p3-agent-internals) | 抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后三章讲构建、评测、安全 | ⭐⭐ 重点，1 周 |
 | [第 4 部分 · 手搓 mini Claude Code](#p4-mini-cc) | 一个工程从 0 长到 21 个能力，每章一次增量 | ⭐⭐⭐ 核心项目，2–3 周 |
+| [第 7 部分 · Agent 研发面试](#p7-interview) | 考点地图、高频十题、题库与系统设计示范，每题指回本库章节 | 主线学完后，3–5 天 |
 | [第 5 部分 · 机器学习基础 + 经典算法](#p5-ml) | 想看懂 LLM 训练再来，从拟合、梯度下降讲起 | 选修 |
 | [第 6 部分 · 神经网络 + LLM 开发基础](#p6-nn-llm) | 手写自动求导、优化器、推理全流程、LoRA 微调 | 选修 |
-| [第 7 部分 · Agent 研发面试](#p7-interview) | 考点地图、高频十题、题库与系统设计示范，每题指回本库章节 | 主线学完后，3–5 天 |
 
 ## 目录
 
@@ -48,7 +48,7 @@ flowchart LR
 <a id="p1-tools"></a>
 ### 第 1 部分 · AI 工具使用技巧
 
-你天天在用的 Claude Code 能力，这次看清它们怎么实现。
+你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读）。
 
 - [ ] [用 Codex 还是 Claude Code？](p1-tools/01-tools-landscape.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/basics/tools-landscape/)
 - [ ] [安装使用 Claude Code](p1-tools/02-install-and-use.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/claude-code/install-and-use/)
@@ -65,10 +65,27 @@ flowchart LR
 - [ ] [用 Ollama 在本地运行大模型](p1-tools/13-local-llm-ollama.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/basics/local-llm-ollama/)
 - [ ] [看懂 Hugging Face 和模型文件](p1-tools/14-hugging-face-model-files.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/basics/hugging-face-model-files/)
 
-<a id="p3-agent-internals"></a>
-### 第 2 部分 · 拆解工业级 Agent
+<a id="p2-agent-basics"></a>
+### 第 2 部分 · Agent 开发基础
 
-抓包、system prompt、压缩、记忆、权限——Claude Code / Codex 内部。
+从聊天机器人到 Coding Agent、RAG、可观测性、MCP，亲手写一遍。
+
+- [ ] [动手实现一个 AI 聊天机器人](p2-agent-basics/01-ai-chatbot.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/ai-chatbot/)
+- [ ] [动手实现一个 Coding Agent](p2-agent-basics/02-coding-agent.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/coding-agent/)
+- [ ] [动手实现一个 RAG 问答机器人](p2-agent-basics/03-rag-qa-bot.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/rag-qa-bot/)
+- [ ] [RAG 原理和使用场景](p2-agent-basics/04-rag-principles.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/rag-principles/)
+- [ ] [Workflow 和 Agent](p2-agent-basics/05-workflow-vs-agent.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/workflow-vs-agent/)
+- [ ] [用 Agent SDK 简化开发](p2-agent-basics/06-agent-sdk.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-sdk/)
+- [ ] [其他主流 Agent SDK 对比](p2-agent-basics/07-agent-sdk-comparison.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-sdk-comparison/)
+- [ ] [给 Agent 加上可观测性](p2-agent-basics/08-agent-observability.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-observability/)
+- [ ] [详解 LLM API 的流式响应模式](p2-agent-basics/09-streaming-response.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/streaming-response/)
+- [ ] [动手开发 MCP 工具](p2-agent-basics/10-mcp-tool.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-tool/)
+- [ ] [拆解 MCP 通信协议](p2-agent-basics/11-mcp-protocol.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-protocol/)
+
+<a id="p3-agent-internals"></a>
+### 第 3 部分 · 工业级 Agent：拆解与生产工程
+
+抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后三章讲构建、评测、安全。
 
 - [ ] [Claude Code 抓包分析工具](p3-agent-internals/01-http-analyzer.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/http-analyzer/)
 - [ ] [给 Claude Code 发一句 Hi 会发生什么](p3-agent-internals/02-hi-request.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/hi-request/)
@@ -85,23 +102,6 @@ flowchart LR
 - [ ] [Agent 构建指南：研发要素全景](p3-agent-internals/13-agent-build-guide.md) · ✍️ 原创
 - [ ] [Agent 评测实践指南](p3-agent-internals/14-agent-eval-guide.md) · ✍️ 原创
 - [ ] [Agent 安全：提示词注入与「致命三要素」](p3-agent-internals/15-agent-security.md) · ✍️ 原创
-
-<a id="p2-agent-basics"></a>
-### 第 3 部分 · Agent 开发基础
-
-从聊天机器人到 Coding Agent、RAG、MCP，亲手写一遍。
-
-- [ ] [动手实现一个 AI 聊天机器人](p2-agent-basics/01-ai-chatbot.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/ai-chatbot/)
-- [ ] [动手实现一个 Coding Agent](p2-agent-basics/02-coding-agent.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/coding-agent/)
-- [ ] [动手实现一个 RAG 问答机器人](p2-agent-basics/03-rag-qa-bot.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/rag-qa-bot/)
-- [ ] [RAG 原理和使用场景](p2-agent-basics/04-rag-principles.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/rag-principles/)
-- [ ] [Workflow 和 Agent](p2-agent-basics/05-workflow-vs-agent.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/workflow-vs-agent/)
-- [ ] [用 Agent SDK 简化开发](p2-agent-basics/06-agent-sdk.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-sdk/)
-- [ ] [其他主流 Agent SDK 对比](p2-agent-basics/07-agent-sdk-comparison.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-sdk-comparison/)
-- [ ] [给 Agent 加上可观测性](p2-agent-basics/08-agent-observability.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/agent-observability/)
-- [ ] [详解 LLM API 的流式响应模式](p2-agent-basics/09-streaming-response.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/streaming-response/)
-- [ ] [动手开发 MCP 工具](p2-agent-basics/10-mcp-tool.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-tool/)
-- [ ] [拆解 MCP 通信协议](p2-agent-basics/11-mcp-protocol.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-protocol/)
 
 <a id="p4-mini-cc"></a>
 ### 第 4 部分 · 手搓 mini Claude Code
@@ -129,6 +129,15 @@ flowchart LR
 - [ ] [支持图片输入](p4-mini-cc/19-image.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/image/)
 - [ ] [渐进式加载 Skills](p4-mini-cc/20-skill.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/skill/)
 - [ ] [让 Agent 先规划再动手](p4-mini-cc/21-plan.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/plan/)
+
+<a id="p7-interview"></a>
+### 第 7 部分 · Agent 研发面试
+
+考点地图、高频十题、题库与系统设计示范，每题指回本库章节。
+
+- [ ] [Agent 研发面试考什么，怎么用这个知识库备考](p7-interview/01-interview-landscape.md) · ✍️ 原创
+- [ ] [十道高频题：强回答和弱回答差在哪](p7-interview/02-top-questions.md) · ✍️ 原创
+- [ ] [题库与系统设计：52 组真题和两道完整示范](p7-interview/03-question-bank.md) · ✍️ 原创
 
 <a id="p5-ml"></a>
 ### 第 5 部分 · 机器学习基础 + 经典算法
@@ -166,15 +175,6 @@ flowchart LR
 - [ ] [动手跑通 LLM 推理的全流程](p6-nn-llm/05-inference-process.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/inference-process/)
 - [ ] [动手用 LoRA 微调模型](p6-nn-llm/06-lora-fine-tuning.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/lora-fine-tuning/)
 
-<a id="p7-interview"></a>
-### 第 7 部分 · Agent 研发面试
-
-考点地图、高频十题、题库与系统设计示范，每题指回本库章节。
-
-- [ ] [Agent 研发面试考什么，怎么用这个知识库备考](p7-interview/01-interview-landscape.md) · ✍️ 原创
-- [ ] [十道高频题：强回答和弱回答差在哪](p7-interview/02-top-questions.md) · ✍️ 原创
-- [ ] [题库与系统设计：52 组真题和两道完整示范](p7-interview/03-question-bank.md) · ✍️ 原创
-
 ## 配套代码
 
 第 0–4 部分的代码有 Node（TypeScript）和 Python 两版，逻辑一一对应，正文默认展示 Node 版，代码块上方的标签页可以切到 Python。
@@ -195,6 +195,6 @@ Node 版需要 Node 24 以上，直接运行 `.ts` 文件，没有构建步骤�
 ## 维护
 
 - 网页版预览：`cd .site && uv run mkdocs serve`，打开 http://127.0.0.1:8000（导航按 `curriculum.json` 自动生成，新章节写出来刷新就有；新增**部分目录**时先跑 `python3 tools/build_site.py`）
-- 章节清单的唯一来源是 `curriculum.json`；改完重跑 `python3 tools/build_readme.py`
+- 章节清单的唯一来源是 `curriculum.json`，「部分」的顺序、标题、简介在 `tools/parts.py`；改完重跑 `python3 tools/build_readme.py`，再跑 `python3 tools/check_path.py` 检查章间衔接
 - 写作规范：`STYLE.md`
 - 原站更新了新章节：重新抓 sitemap（`/sitemap.xml` 里 `/zh/ai-coding/` 开头的地址），在 `curriculum.json` 里追加
