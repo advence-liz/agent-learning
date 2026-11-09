@@ -404,4 +404,4 @@ CLAUDE.md 里写「不要外发密钥」够不够？不够。那是上下文里�
 - [OWASP Top 10 for LLM Applications 2026](https://genai.owasp.org/home/resources/owasp-genai-llm-top-10-2026/)
 - [OWASP Top 10 for Agentic Applications for 2026](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)
 - 本库：[权限检查](10-permission-check.md)、[Agent 构建指南·工程化三（沙箱与出网代理）](13-agent-build-guide.md)、[Hooks](../p1-tools/08-hooks.md)、[MCP 协议](../p2-agent-basics/11-mcp-protocol.md)、[Skills](../p1-tools/12-skills.md)、[auto 模式里的注入测试](../p4-mini-cc/06-auto-mode.md)
-- 下一部分：[第 4 部分 · 手搓 mini Claude Code](../p4-mini-cc/01-cli.md)，把拆到的能力一章一章加进自己的 Agent
+- 下一章：[RAG 评测](16-rag-eval.md)，把评测方法落到检索问答上

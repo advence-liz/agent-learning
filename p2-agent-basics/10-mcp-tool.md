@@ -288,7 +288,7 @@ s -> cc: "stderr: 日志（不参与协议）" {style.stroke-dash: 3}
 
 - 你 `~/.claude.json` 里的用户级 MCP：`linear`、`notion` 和团队的发布平台是 `type: http`（远程服务），`chrome-devtools` 是 `type: stdio`（`npx -y chrome-devtools-mcp@latest --browserUrl=http://127.0.0.1:9222`，本地子进程）。本章写的就是后一种。
 - 你的 PreToolUse hook 用 `mcp__deploy__release|mcp__deploy__rollback|...` 这样的名字做 matcher，这些名字就是「`mcp__` + server 名 + `__` + 工具名」的规则。你注册了 `notes` 之后，同样可以写 `mcp__notes__read_note` 的 hook。
-- 关于 token 成本：Claude Code 有工具搜索（tool search）机制，MCP 工具多了以后可以按需加载描述，而不是全部常驻（**推测**：本机没有专门验证当前版本在什么阈值下启用）。不管怎样，你在 CLAUDE.md 里那句「常驻层是稀缺资源」对 MCP 也成立。
+- 关于 token 成本：Claude Code 有工具搜索（tool search）机制，MCP 工具多了以后可以按需加载描述，而不是全部常驻：默认开启，会话开始时只加载工具名，阈值和开关见[工具设计](12-tool-design.md)的「工具多了：只常驻少数，其余按需加载」一节。不管怎样，你在 CLAUDE.md 里那句「常驻层是稀缺资源」对 MCP 也成立。
 
 ## 常见坑
 

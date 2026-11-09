@@ -48,10 +48,10 @@ k4: "第 4 部分 · mini Claude Code\n循环与错误处理 · 多 Agent\n项�
 |---|---|---|
 | Agent 是什么、何时用 workflow | [LLM 和 Agent 的核心术语](../p0-core/01-llm-and-agent.md)、[Workflow 和 Agent](../p2-agent-basics/05-workflow-vs-agent.md) | 「控制流由谁决定」这一条分界线，以及五种 workflow 模式 |
 | 循环、停止条件、错误重试 | [Agent 构建指南](../p3-agent-internals/13-agent-build-guide.md) 的「动手」、[错误处理与重试](../p4-mini-cc/03-error-handling.md) | 三个 break（撞上限收口、软预算、打断后补齐工具结果）在构建指南的「动手」里实现；mini Claude Code 撞上限时目前只发提示、以 `max_iterations` 结束，不收口，可以做构建指南的练习 1 自己补上，再拿来讲项目。错误处理那章能讲的是 API 重试与退避、工具报错回填 |
-| 上下文与 token 成本 | [上下文和 token 计费](../p0-core/03-messages-and-tokens.md)、[上下文压缩](../p3-agent-internals/05-context-compaction.md)、[compact](../p4-mini-cc/14-compact.md) | 压缩前后 messages 长什么样；改前缀为什么会让缓存失效 |
+| 上下文与 token 成本 | [上下文和 token 计费](../p0-core/03-messages-and-tokens.md)、[上下文压缩](../p3-agent-internals/05-context-compaction.md)、[compact](../p4-mini-cc/14-compact.md)、[成本控制与模型路由](../p3-agent-internals/17-cost-and-routing.md) | 压缩前后 messages 长什么样；改前缀为什么会让缓存失效 |
 | 记忆 | [Claude Code 自动记忆](../p3-agent-internals/06-auto-memory.md)、[mem0](../p3-agent-internals/08-mem0-memory.md)、[Zep](../p3-agent-internals/09-zep-memory.md)、[长期记忆](../p4-mini-cc/12-memory.md) | 三种记忆方案的取舍：文件、抽取合并、时序图谱 |
 | RAG 与检索 | [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md)、[RAG 原理](../p2-agent-basics/04-rag-principles.md) | 什么时候用向量检索，什么时候让 agent 自己 grep |
-| 工具与 MCP | [MCP 工具](../p2-agent-basics/10-mcp-tool.md)、[MCP 协议](../p2-agent-basics/11-mcp-protocol.md)、[注册 MCP server](../p4-mini-cc/15-mcp.md)、[Skills](../p4-mini-cc/20-skill.md) | 亲手写过一个 MCP server；渐进式加载为什么省上下文 |
+| 工具与 MCP | [工具设计](../p2-agent-basics/12-tool-design.md)、[MCP 工具](../p2-agent-basics/10-mcp-tool.md)、[MCP 协议](../p2-agent-basics/11-mcp-protocol.md)、[注册 MCP server](../p4-mini-cc/15-mcp.md)、[Skills](../p4-mini-cc/20-skill.md) | 亲手写过一个 MCP server；渐进式加载为什么省上下文 |
 | 多 Agent | [Sub Agent](../p1-tools/10-sub-agent.md)、[Fork Agent](../p1-tools/11-fork-agent.md)、[实现 Sub Agent](../p4-mini-cc/17-subagent.md) | 子 agent 只回传摘要，换来干净的主上下文 |
 | Harness、权限 | [Harness Engineering](../p3-agent-internals/12-harness-engineering.md)、[权限检查](../p3-agent-internals/10-permission-check.md)、[权限审批](../p4-mini-cc/05-permission.md) | 软约束和硬约束：能写成代码闸门的，就不靠提示词 |
 | 评测与可观测 | [Agent 评测实践指南](../p3-agent-internals/14-agent-eval-guide.md)、[可观测性](../p2-agent-basics/08-agent-observability.md) | pass^k、能力集和回归集、门禁挂在哪 |

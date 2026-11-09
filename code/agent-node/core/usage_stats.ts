@@ -18,16 +18,16 @@ export interface Price {
   cache_read: number;
 }
 
-// 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
-// cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+// 单位：美元 / 百万 token。来源：官方定价页 platform.claude.com/docs/en/about-claude/pricing（2026-11-09 查），第一方 API 标价。
+// cache_read 一列：Opus 5.5 / Sonnet 5.5 是 0.05× 输入价，Haiku 5.5 是 0.1×，都取自定价页；Opus 5 按「≈0.1× 输入价」推算，标 *。
 // 缓存写入：5 分钟 TTL = 1.25× 输入价，1 小时 TTL = 2× 输入价（skill: shared/prompt-caching.md）。
 export const PRICES: Record<string, Price> = {
   "claude-opus-5-5":   { input: 4.0, output: 20.0, cache_read: 0.2 },
   "claude-opus-5":     { input: 5.0, output: 25.0, cache_read: 0.5 },   // *
-  "claude-sonnet-5-5": { input: 2.0, output: 10.0, cache_read: 0.2 },
-  "claude-haiku-5-5":  { input: 0.1, output: 0.5,  cache_read: 0.01 },  // * 且只适用于 ≤100K 的提示
+  "claude-sonnet-5-5": { input: 2.0, output: 10.0, cache_read: 0.1 },
+  "claude-haiku-5-5":  { input: 0.1, output: 0.5,  cache_read: 0.01 },  // 只适用于 ≤100K 的提示
 };
-export const PRICE_DATE = "2026-10-06";
+export const PRICE_DATE = "2026-11-09";
 const WRITE_5M = 1.25;
 const WRITE_1H = 2.0;
 
@@ -149,7 +149,7 @@ const comma = (n: number, w: number) => n.toLocaleString("en-US").padStart(w); /
 const pct = (x: number, w: number) => `${(x * 100).toFixed(1)}%`.padStart(w); //  {:w.1%}
 
 export function render(rep: Report): string {
-  const lines = [`价格表：claude-api skill，第一方 API 标价，cached ${PRICE_DATE}（Vertex 等合作方渠道另计价）`];
+  const lines = [`价格表：官方定价页，第一方 API 标价，查于 ${PRICE_DATE}（Vertex 等合作方渠道另计价）`];
   const hdr =
     "model".padEnd(18) + "请求".padStart(7) + "未缓存输入".padStart(12) + "缓存读".padStart(14) + "写5m".padStart(11) +
     "写1h".padStart(12) + "输出".padStart(11) + "命中率".padStart(8) + "实际$".padStart(10) + "无缓存$".padStart(10);

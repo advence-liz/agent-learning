@@ -246,4 +246,4 @@ c."L3 只在模型决定要看时进来"
 - 官方 Skills：<https://code.claude.com/docs/en/skills>（frontmatter 全字段、预算、压缩后的行为、`context: fork`）
 - 官方 Prompt caching：Invoking skills and commands：<https://code.claude.com/docs/en/prompt-caching>
 - Skill authoring best practices：<https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>
-- 本库：[Hooks](08-hooks.md)、[Sub Agent](10-sub-agent.md)、[mini Claude Code：Skill](../p4-mini-cc/20-skill.md)、[MCP 工具](../p2-agent-basics/10-mcp-tool.md)
+- 本库：[Hooks](08-hooks.md)、[Sub Agent](10-sub-agent.md)、[mini Claude Code：Skill](../p4-mini-cc/20-skill.md)、[MCP 工具](../p2-agent-basics/10-mcp-tool.md)、[工具设计](../p2-agent-basics/12-tool-design.md)（工具定义的按需加载，和 skill 的渐进式披露是同一个思路）

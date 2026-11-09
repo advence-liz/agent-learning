@@ -353,6 +353,17 @@
   "kind": "note"
  },
  {
+  "part": "p1-tools",
+  "part_name": "AI 工具使用技巧",
+  "idx": 15,
+  "id": "original/open-models-cc-switch",
+  "title": "用 CC Switch 和 cc-connect 让 Claude Code 跑开源模型",
+  "free": true,
+  "src": "",
+  "out": "p1-tools/15-open-models-cc-switch.md",
+  "kind": "lesson"
+ },
+ {
   "part": "p2-agent-basics",
   "part_name": "Agent 开发基础",
   "idx": 1,
@@ -490,6 +501,17 @@
   "src": "https://labuladong.online/zh/ai-coding/basics/mcp-protocol/",
   "out": "p2-agent-basics/11-mcp-protocol.md",
   "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p2-agent-basics",
+  "part_name": "Agent 开发基础",
+  "idx": 12,
+  "id": "original/tool-design",
+  "title": "工具设计：写给模型用的接口",
+  "free": true,
+  "src": "",
+  "out": "p2-agent-basics/12-tool-design.md",
   "kind": "lesson"
  },
  {
@@ -672,6 +694,28 @@
   "src": "",
   "out": "p3-agent-internals/15-agent-security.md",
   "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p3-agent-internals",
+  "part_name": "工业级 Agent：拆解与生产工程",
+  "idx": 16,
+  "id": "original/rag-eval",
+  "title": "RAG 评测：检索找没找到，回答有没有编",
+  "free": true,
+  "src": "",
+  "out": "p3-agent-internals/16-rag-eval.md",
+  "kind": "lesson"
+ },
+ {
+  "part": "p3-agent-internals",
+  "part_name": "工业级 Agent：拆解与生产工程",
+  "idx": 17,
+  "id": "original/cost-and-routing",
+  "title": "成本控制与模型路由",
+  "free": true,
+  "src": "",
+  "out": "p3-agent-internals/17-cost-and-routing.md",
   "kind": "lesson"
  },
  {

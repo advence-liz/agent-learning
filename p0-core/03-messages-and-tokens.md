@@ -57,7 +57,7 @@ API 按 token 收费。输入和输出分开定价，输出贵得多：`claude-o
 ```d2
 direction: right
 p: 这次请求的全部输入
-r: "cache_read_input_tokens\n命中缓存的旧前缀\nOpus 5.5：0.05× 输入价"
+r: "cache_read_input_tokens\n命中缓存的旧前缀\nOpus / Sonnet 5.5：0.05× 输入价"
 w: "cache_creation_input_tokens\n本次新写入缓存的部分\n5 分钟 TTL 1.25× · 1 小时 TTL 2×"
 n: "input_tokens\n最后一个缓存断点之后的尾巴\n1×"
 o: "output_tokens\n模型生成的（含思考）\nOpus 5.5：5× 输入价"
@@ -80,7 +80,7 @@ p -> n
 
 缓存还有几条细则（核对自 `claude-api` skill）：
 
-- **写入要加价**。5 分钟 TTL 是输入价的 1.25 倍，1 小时 TTL 是 2 倍，写进去的内容要靠后面的命中来摊平。按 5 分钟 TTL、命中价 0.1× 算，同一前缀用 2 次就回本（1.25 + 0.1 = 1.35，不开缓存是 2）；1 小时 TTL 要用 3 次（2 + 0.2 = 2.2 < 3）。在 Opus 5.5 上命中价只有 0.05×，回本更快。
+- **写入要加价**。5 分钟 TTL 是输入价的 1.25 倍，1 小时 TTL 是 2 倍，写进去的内容要靠后面的命中来摊平。按 5 分钟 TTL、命中价 0.1× 算，同一前缀用 2 次就回本（1.25 + 0.1 = 1.35，不开缓存是 2）；1 小时 TTL 要用 3 次（2 + 0.2 = 2.2 < 3）。在 Opus 5.5 和 Sonnet 5.5 上命中价只有 0.05×，回本更快。
 - **两种开法**。一种是在某个 content block 上放 `cache_control` 显式断点，一种是在请求顶层放 `cache_control: {type: "ephemeral"}` 开**自动缓存**：服务端把断点放在最后一个可缓存块上，随着对话增长自动前移。一个请求最多 4 个断点。
 - **太短不缓存，而且不报错**。最小可缓存长度随模型不同，在 512 到 4096 token 之间（skill 记载 Opus 5.5 / Sonnet 5.5 / Haiku 5.5 是 512，并注明以官方文档为准）。不够长的前缀只会静默地显示 `cache_creation_input_tokens: 0`。
 - **中途插指令别改 system**。新一代模型支持在 `messages` 里追加一条 `role: "system"` 消息。这样能下达新指令，又不破坏前缀。
@@ -99,10 +99,10 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
     $ S=~/.claude/projects/-Users-me-work-webapp/<session-id>
     $ node core/usage_stats.ts $S.jsonl $S/subagents/*.jsonl
     扫描 7 个文件（只读 usage 字段）
-    价格表：claude-api skill，第一方 API 标价，cached 2026-10-06（Vertex 等合作方渠道另计价）
+    价格表：官方定价页，第一方 API 标价，查于 2026-11-09（Vertex 等合作方渠道另计价）
     model                  请求       未缓存输入           缓存读        写5m         写1h         输出     命中率       实际$      无缓存$
-    claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    237.13   1910.65
-    合计（有价目的模型）：实际 ≈ $237.13，若无缓存 ≈ $1910.65，缓存省了 87.6%
+    claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    143.45   1910.65
+    合计（有价目的模型）：实际 ≈ $143.45，若无缓存 ≈ $1910.65，缓存省了 92.5%
     去重掉的重复行：2456；解析失败行：0
     ```
 
@@ -112,10 +112,10 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
     $ S=~/.claude/projects/-Users-me-work-webapp/<session-id>
     $ uv run python -m core.usage_stats $S.jsonl $S/subagents/*.jsonl
     扫描 7 个文件（只读 usage 字段）
-    价格表：claude-api skill，第一方 API 标价，cached 2026-10-06（Vertex 等合作方渠道另计价）
+    价格表：官方定价页，第一方 API 标价，查于 2026-11-09（Vertex 等合作方渠道另计价）
     model                  请求       未缓存输入           缓存读        写5m         写1h         输出     命中率       实际$      无缓存$
-    claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    237.13   1910.65
-    合计（有价目的模型）：实际 ≈ $237.13，若无缓存 ≈ $1910.65，缓存省了 87.6%
+    claude-sonnet-5-5    2025       4,050   936,809,389  5,487,054   5,000,585  1,604,497   98.9%    143.45   1910.65
+    合计（有价目的模型）：实际 ≈ $143.45，若无缓存 ≈ $1910.65，缓存省了 92.5%
     去重掉的重复行：2456；解析失败行：0
     ```
 
@@ -124,13 +124,13 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
 === "Node"
 
     ```ts
-    // 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
-    // cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+    // 单位：美元 / 百万 token。来源：官方定价页 platform.claude.com/docs/en/about-claude/pricing（2026-11-09 查），第一方 API 标价。
+    // cache_read 一列：Opus 5.5 / Sonnet 5.5 是 0.05× 输入价，Haiku 5.5 是 0.1×，都取自定价页；Opus 5 按「≈0.1× 输入价」推算，标 *。
     export const PRICES: Record<string, Price> = {
       "claude-opus-5-5":   { input: 4.0, output: 20.0, cache_read: 0.2 },
       "claude-opus-5":     { input: 5.0, output: 25.0, cache_read: 0.5 },   // *
-      "claude-sonnet-5-5": { input: 2.0, output: 10.0, cache_read: 0.2 },
-      "claude-haiku-5-5":  { input: 0.1, output: 0.5,  cache_read: 0.01 },  // * 且只适用于 ≤100K 的提示
+      "claude-sonnet-5-5": { input: 2.0, output: 10.0, cache_read: 0.1 },
+      "claude-haiku-5-5":  { input: 0.1, output: 0.5,  cache_read: 0.01 },  // 只适用于 ≤100K 的提示
     };
     const WRITE_5M = 1.25;
     const WRITE_1H = 2.0;
@@ -139,13 +139,13 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
 === "Python"
 
     ```python
-    # 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
-    # cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+    # 单位：美元 / 百万 token。来源：官方定价页 platform.claude.com/docs/en/about-claude/pricing（2026-11-09 查），第一方 API 标价。
+    # cache_read 一列：Opus 5.5 / Sonnet 5.5 是 0.05× 输入价，Haiku 5.5 是 0.1×，都取自定价页；Opus 5 按「≈0.1× 输入价」推算，标 *。
     PRICES: dict[str, dict[str, float]] = {
         "claude-opus-5-5":   {"input": 4.00, "output": 20.00, "cache_read": 0.20},
         "claude-opus-5":     {"input": 5.00, "output": 25.00, "cache_read": 0.50},   # *
-        "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.20},
-        "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # * 且只适用于 ≤100K 的提示
+        "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.10},
+        "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # 只适用于 ≤100K 的提示
     }
     WRITE_5M, WRITE_1H = 1.25, 2.0
     ```
@@ -173,15 +173,15 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
         continue
     ```
 
-这一步去重很关键。同一个会话不去重会数出 4481 次「请求」，估算费用变成 $545.02，是去重后的 2.3 倍，因为有 2456 行是同一次响应的重复记录。我验证过，同一个 `message.id` 的多行 `usage` 完全相同，所以按 id 只取一次就对了。另外，`model` 为 `<synthetic>` 的记录是 Claude Code 在本地合成的消息，没有打 API，要跳过。
+这一步去重很关键。同一个会话不去重会数出 4481 次「请求」，费用也跟着被高估一倍多，因为有 2456 行是同一次响应的重复记录。我验证过，同一个 `message.id` 的多行 `usage` 完全相同，所以按 id 只取一次就对了。另外，`model` 为 `<synthetic>` 的记录是 Claude Code 在本地合成的消息，没有打 API，要跳过。
 
 写入还要分 TTL 来算。新版记录的 `usage.cache_creation` 里带有 `ephemeral_5m_input_tokens` 和 `ephemeral_1h_input_tokens` 两个拆分；老记录没有这个拆分，脚本就按默认的 5 分钟来算。
 
 读这张表能得到三个结论：
 
 - **命中率 98.9%**。Claude Code 的前缀极其稳定，46 万 token 的上下文里，每轮真正新写入的只有几千。
-- **缓存省了 87.6%**。不开缓存的话，这个会话按标价要 $1910；实际是 $237。
-- **剩下的钱主要花在「读缓存」上**。拆开算：缓存读 $187.36，占 79%；两种写入合计 $33.7；输出只有 $16。即便单价打到一折，一个 46 万 token 的上下文被读两千次，依然是大头。这就是为什么长会话该压缩、新任务该开新会话：省下的不只是窗口，还有那 79%。
+- **缓存省了 92.5%**。不开缓存的话，这个会话按标价要 $1910；实际是 $143。
+- **剩下的钱主要花在「读缓存」上**。拆开算：缓存读 $93.68，占 65%；两种写入合计 $33.7；输出只有 $16。即便单价只有输入价的 1/20，一个 46 万 token 的上下文被读两千次，依然是大头。这就是为什么长会话该压缩、新任务该开新会话：省下的不只是窗口，还有那 65%。
 
 还有一个实测观察：这个会话主线程的缓存写入里，1 小时 TTL 和 5 分钟 TTL 都有（约 500 万 vs 432 万）；6 个 subagent 的写入则**全是 5 分钟 TTL**。
 
@@ -210,7 +210,7 @@ Claude Code 把每次 API 响应的 `usage` 原样写进了会话 jsonl（存储
 4. **以为加了 `cache_control` 就一定缓存**。前缀不够最小长度时，静默不缓存。
 5. **中途改工具列表**。tools 排在最前面，改了它，后面所有内容都要重算。
 
-> ⚠️ 价格与口径说明：表中 Opus 5.5 / Sonnet 5.5 的缓存读价 $0.20 取自 `claude-api` skill 的原文；Opus 5 和 Haiku 5.5 的缓存读价是按 skill 里「≈0.1× 输入价」这条一般规则推算的，脚本里标了 `*`。Haiku 5.5 的 $0.10 / $0.50 只适用于 ≤100K token 的提示，超过后是 $0.50 / $2.50。第三方的对照：DeepSeek 英文定价页（2026-10-21 查）的标价是输入未命中 $0.15、命中 $0.003、输出 $0.60 每百万 token（非高峰时段），命中价约为未命中的 1/50；高峰时段（UTC 01–04、06–10）价格翻倍。
+> ⚠️ 价格与口径说明：表中价格取自官方定价页（2026-11-09 查）：Opus 5.5 / Sonnet 5.5 的缓存读价是输入价的 0.05 倍（$0.20 / $0.10），Haiku 5.5 是 0.1 倍（$0.01）；Opus 5 的缓存读价按「≈0.1× 输入价」推算，脚本里标了 `*`。上面的会话账单是 2026-10 在本机只读跑出的 token 数，按这份价格表重算了金额。Haiku 5.5 的 $0.10 / $0.50 只适用于 ≤100K token 的提示，超过后是 $0.50 / $2.50。第三方的对照：DeepSeek 英文定价页（2026-10-21 查）的标价是输入未命中 $0.15、命中 $0.003、输出 $0.60 每百万 token（非高峰时段），命中价约为未命中的 1/50；高峰时段（UTC 01–04、06–10）价格翻倍。
 
 ## 练习
 
@@ -248,6 +248,7 @@ system 位于前缀最前面（只排在 tools 之后），每轮内容都不同
 - 下一篇：[LLM 是怎么预测下一个 token 的](./04-llm-token-prediction.md)（KV cache 才是 Prompt Cache 的真身）
 - [LLM 和 Agent 的核心术语和原理](./01-llm-and-agent.md)
 - [AI 编程的基本常识](../p1-tools/05-ai-tips.md)
+- [成本控制与模型路由](../p3-agent-internals/17-cost-and-routing.md)（agent 循环里怎么保住缓存命中率，缓存、截断、路由叠加能省多少）
 - [动手实现一个 AI 聊天机器人](../p2-agent-basics/01-ai-chatbot.md)
 - [给 Claude Code 发一句 Hi 会发生什么](../p3-agent-internals/02-hi-request.md)
 - [如何实现上下文压缩](../p3-agent-internals/05-context-compaction.md)

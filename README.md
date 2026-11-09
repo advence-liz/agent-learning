@@ -22,9 +22,9 @@ flowchart LR
 | 部分 | 讲什么 | 建议 |
 |---|---|---|
 | [第 0 部分 · 核心概念](#p0-core) | 主线的起点：token、上下文、API，所有后续章节的地基 | ⭐ 必读，1 天 |
-| [第 1 部分 · AI 工具使用技巧](#p1-tools) | 你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读） | ⭐ 08–12 五篇原创必读，01–07 笔记速读（07 必读），13–14 选读；2 天 |
-| [第 2 部分 · Agent 开发基础](#p2-agent-basics) | 从聊天机器人到 Coding Agent、RAG、可观测性、MCP，亲手写一遍 | ⭐⭐ 重点，1 周 |
-| [第 3 部分 · 工业级 Agent：拆解与生产工程](#p3-agent-internals) | 抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后三章讲构建、评测、安全 | ⭐⭐ 重点，1 周 |
+| [第 1 部分 · AI 工具使用技巧](#p1-tools) | 你天天在用的 Claude Code 能力：hooks、subagent、skills；末三章是本地模型和开源模型接入（选读） | ⭐ 08–12 五篇原创必读，01–07 笔记速读（07 必读），13–15 选读；2 天 |
+| [第 2 部分 · Agent 开发基础](#p2-agent-basics) | 从聊天机器人到 Coding Agent、RAG、可观测性、MCP、工具设计，亲手写一遍 | ⭐⭐ 重点，1 周 |
+| [第 3 部分 · 工业级 Agent：拆解与生产工程](#p3-agent-internals) | 抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后五章讲构建、评测、安全、RAG 评测、成本 | ⭐⭐ 重点，1 周 |
 | [第 4 部分 · 手搓 mini Claude Code](#p4-mini-cc) | 一个工程从 0 长到 21 个能力，每章一次增量 | ⭐⭐⭐ 核心项目，2–3 周 |
 | [第 7 部分 · Agent 研发面试](#p7-interview) | 考点地图、高频十题、题库与系统设计示范，每题指回本库章节 | 主线学完后，3–5 天 |
 | [第 5 部分 · 机器学习基础 + 经典算法](#p5-ml) | 想看懂 LLM 训练再来，从拟合、梯度下降讲起 | 选修 |
@@ -48,7 +48,7 @@ flowchart LR
 <a id="p1-tools"></a>
 ### 第 1 部分 · AI 工具使用技巧
 
-你天天在用的 Claude Code 能力：hooks、subagent、skills；末两章是本地模型（选读）。
+你天天在用的 Claude Code 能力：hooks、subagent、skills；末三章是本地模型和开源模型接入（选读）。
 
 - [ ] [用 Codex 还是 Claude Code？](p1-tools/01-tools-landscape.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/basics/tools-landscape/)
 - [ ] [安装使用 Claude Code](p1-tools/02-install-and-use.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/claude-code/install-and-use/)
@@ -64,11 +64,12 @@ flowchart LR
 - [ ] [用 Skills 定制你的 AI 工作流](p1-tools/12-skills.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/skills/)
 - [ ] [用 Ollama 在本地运行大模型](p1-tools/13-local-llm-ollama.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/basics/local-llm-ollama/)
 - [ ] [看懂 Hugging Face 和模型文件](p1-tools/14-hugging-face-model-files.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/basics/hugging-face-model-files/)
+- [ ] [用 CC Switch 和 cc-connect 让 Claude Code 跑开源模型](p1-tools/15-open-models-cc-switch.md) · ✍️ 原创
 
 <a id="p2-agent-basics"></a>
 ### 第 2 部分 · Agent 开发基础
 
-从聊天机器人到 Coding Agent、RAG、可观测性、MCP，亲手写一遍。
+从聊天机器人到 Coding Agent、RAG、可观测性、MCP、工具设计，亲手写一遍。
 
 - [ ] [动手实现一个 AI 聊天机器人](p2-agent-basics/01-ai-chatbot.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/ai-chatbot/)
 - [ ] [动手实现一个 Coding Agent](p2-agent-basics/02-coding-agent.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/coding-agent/)
@@ -81,11 +82,12 @@ flowchart LR
 - [ ] [详解 LLM API 的流式响应模式](p2-agent-basics/09-streaming-response.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/streaming-response/)
 - [ ] [动手开发 MCP 工具](p2-agent-basics/10-mcp-tool.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-tool/)
 - [ ] [拆解 MCP 通信协议](p2-agent-basics/11-mcp-protocol.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/basics/mcp-protocol/)
+- [ ] [工具设计：写给模型用的接口](p2-agent-basics/12-tool-design.md) · ✍️ 原创
 
 <a id="p3-agent-internals"></a>
 ### 第 3 部分 · 工业级 Agent：拆解与生产工程
 
-抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后三章讲构建、评测、安全。
+抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后五章讲构建、评测、安全、RAG 评测、成本。
 
 - [ ] [Claude Code 抓包分析工具](p3-agent-internals/01-http-analyzer.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/http-analyzer/)
 - [ ] [给 Claude Code 发一句 Hi 会发生什么](p3-agent-internals/02-hi-request.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/claude-code/hi-request/)
@@ -102,6 +104,8 @@ flowchart LR
 - [ ] [Agent 构建指南：研发要素全景](p3-agent-internals/13-agent-build-guide.md) · ✍️ 原创
 - [ ] [Agent 评测实践指南](p3-agent-internals/14-agent-eval-guide.md) · ✍️ 原创
 - [ ] [Agent 安全：提示词注入与「致命三要素」](p3-agent-internals/15-agent-security.md) · ✍️ 原创
+- [ ] [RAG 评测：检索找没找到，回答有没有编](p3-agent-internals/16-rag-eval.md) · ✍️ 原创
+- [ ] [成本控制与模型路由](p3-agent-internals/17-cost-and-routing.md) · ✍️ 原创
 
 <a id="p4-mini-cc"></a>
 ### 第 4 部分 · 手搓 mini Claude Code

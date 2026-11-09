@@ -29,12 +29,12 @@
 | 你的 Recall@5 是怎么做到的，怎么防过拟合 | L3 | [评测实践指南](../p3-agent-internals/14-agent-eval-guide.md) + 你的项目 |
 | 幻觉的成因和缓解方法；怎么做引用溯源 | L2 | 成因本库未系统展开，见 [Why Language Models Hallucinate](https://arxiv.org/abs/2509.04664)；[token 预测](../p0-core/04-llm-token-prediction.md)的「第三步」只解释了其中一点：逐 token 抽样，一步抽歪，后面就顺着歪掉的前缀往下写。引用溯源的最小做法见 [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md)的「拼 prompt」：只按资料回答并标出处编号 |
 | 怎么防提示词注入；怎么给 DELETE 这类危险操作加护栏 | L2 | [Agent 安全](../p3-agent-internals/15-agent-security.md)、[权限检查](../p3-agent-internals/10-permission-check.md) |
-| 注册了 30 个工具后准确率下降，怎么办；什么样的工具定义算好 | L3 | [十题 · 3](02-top-questions.md) |
+| 注册了 30 个工具后准确率下降，怎么办；什么样的工具定义算好 | L3 | [十题 · 3](02-top-questions.md)、[工具设计](../p2-agent-basics/12-tool-design.md) |
 | 外部工具出错或超时，怎么容错和恢复 | L2 | [错误处理与重试](../p4-mini-cc/03-error-handling.md) |
 | 死循环怎么检测和恢复；怎么限制工具调用次数 | L2 | [十题 · 2](02-top-questions.md)、[Agent 构建指南](../p3-agent-internals/13-agent-build-guide.md) |
 | 调工具时 temperature 怎么设 | L1 | [调用 LLM 接口](../p0-core/02-api-and-apikey.md) |
 | 怎么评估 Agent 质量；LLM 评委上线前怎么用人工标注校准 | L3 | [评测实践指南](../p3-agent-internals/14-agent-eval-guide.md) |
-| token 用量暴涨怎么排查；一次对话花了 10 万 token，怎么控成本 | L2 | [token 计费](../p0-core/03-messages-and-tokens.md)、[可观测性](../p2-agent-basics/08-agent-observability.md) |
+| token 用量暴涨怎么排查；一次对话花了 10 万 token，怎么控成本 | L2 | [token 计费](../p0-core/03-messages-and-tokens.md)、[可观测性](../p2-agent-basics/08-agent-observability.md)、[成本控制与模型路由](../p3-agent-internals/17-cost-and-routing.md) |
 | 什么时候该拆多 agent；agent 之间冲突怎么解决 | L2 | [Sub Agent](../p1-tools/10-sub-agent.md)、[十题 · 7](02-top-questions.md) |
 | LangGraph 的 state、条件边、人在环中；和自己写循环怎么选 | L2 | [SDK 对比](../p2-agent-basics/07-agent-sdk-comparison.md) |
 | 什么是 SDD（规格驱动开发） | L2 | 本库未展开，见延伸阅读 |
@@ -66,7 +66,7 @@
 | 用 numpy 手写多头注意力 | L2 | [token 预测](../p0-core/04-llm-token-prediction.md)的「动手」用 numpy 写了一层单头因果注意力（`TinyAttention`，打分在 `code/agent/core/next_token.py` 的 `_logits_last`）。本库只写到单头，多头（拆头、各自算注意力、拼接再投影）需要自己扩展 |
 | LeetCode：合并有序数组、判断链表有环、编辑距离 | L1 | 国内面试基本必考一道，单独刷 |
 | 调试题：这个 agent 在某些输入上无限循环，找原因并修好 | L2 | [十题 · 2](02-top-questions.md)；练习读 trace |
-| Take-home：给 50 篇 Markdown，搭问答系统和 20 题评测集，报告 recall@5 和 faithfulness | L2 | [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md) 加一份评测集 |
+| Take-home：给 50 篇 Markdown，搭问答系统和 20 题评测集，报告 recall@5 和 faithfulness | L2 | [RAG 问答机器人](../p2-agent-basics/03-rag-qa-bot.md) 搭系统，[RAG 评测](../p3-agent-internals/16-rag-eval.md) 建评测集、算 recall@k 和 faithfulness |
 | Take-home：多跳文档问答加引用追踪，或者带准确率评测的代码审查 agent | L2 | 同上，重点是评测和 README |
 | 实操类编码：内存数据库、多阶段题 | L2 | 工程基本功 |
 

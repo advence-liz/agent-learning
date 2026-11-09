@@ -261,7 +261,7 @@ got = continue_from_prefix(model, pcache, suffix_ids)      # 每个问题只算�
 
 第一轮写入 78033 个 token 的前缀；之后每一轮都**读**回上一轮的全部前缀，只**写**新增的那一截（733、3056……）。这和第 [6b] 段的 `prefill_prefix` + `continue_from_prefix` 是同一个形状。
 
-按 `claude-api` skill 里的计费规则：缓存写入是基础输入价的 1.25 倍（5 分钟 TTL）或 2 倍（1 小时 TTL），读取约 0.1 倍，Opus 5.5 上是 0.05 倍（$0.20/MTok）；Opus 5.5 / Sonnet 5.5 的最小可缓存前缀是 512 token。Anthropic 没有公开服务端缓存的具体内部结构，但从它的行为——**严格前缀匹配**、前缀任何一个字节变了后面全部失效——看，缓存的就是前缀算过一遍之后的中间状态，和我们本地复用 KV cache 是一回事（这是推测，依据是行为一致）。
+按 `claude-api` skill 里的计费规则：缓存写入是基础输入价的 1.25 倍（5 分钟 TTL）或 2 倍（1 小时 TTL），读取约 0.1 倍，Opus 5.5 和 Sonnet 5.5 上是 0.05 倍（$0.20 / $0.10 每 MTok）；Opus 5.5 / Sonnet 5.5 的最小可缓存前缀是 512 token。Anthropic 没有公开服务端缓存的具体内部结构，但从它的行为——**严格前缀匹配**、前缀任何一个字节变了后面全部失效——看，缓存的就是前缀算过一遍之后的中间状态，和我们本地复用 KV cache 是一回事（这是推测，依据是行为一致）。
 
 这对你的配置有直接含义：渲染顺序是 tools → system → messages，`CLAUDE.md`、skill 列表、`inject-guardrails.sh` 通过 SessionStart 注入的护栏，都出现在会话很靠前的位置（具体落在 system 还是第一条 message 里，可以用 [抓包工具](../p3-agent-internals/01-http-analyzer.md) 自己看），后面每一轮都是在它们之上追加。**它们只要每次都一模一样，就只在第一轮付 1.25 倍，之后都是一折甚至更低**；如果哪天你在注入内容里加了时间戳或随机 ID，每一轮都会从那里开始重新写缓存。
 

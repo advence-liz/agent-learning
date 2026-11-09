@@ -15,16 +15,16 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# 单位：美元 / 百万 token。来源：claude-api skill「Current Models」表（cached: 2026-10-06），第一方 API 标价。
-# cache_read 一列：Opus 5.5 / Sonnet 5.5 的 $0.20 是 skill 里写明的；其余按 skill 的一般规则「≈0.1× 输入价」推算，标 *。
+# 单位：美元 / 百万 token。来源：官方定价页 platform.claude.com/docs/en/about-claude/pricing（2026-11-09 查），第一方 API 标价。
+# cache_read 一列：Opus 5.5 / Sonnet 5.5 是 0.05× 输入价，Haiku 5.5 是 0.1×，都取自定价页；Opus 5 按「≈0.1× 输入价」推算，标 *。
 # 缓存写入：5 分钟 TTL = 1.25× 输入价，1 小时 TTL = 2× 输入价（skill: shared/prompt-caching.md）。
 PRICES: dict[str, dict[str, float]] = {
     "claude-opus-5-5":   {"input": 4.00, "output": 20.00, "cache_read": 0.20},
     "claude-opus-5":     {"input": 5.00, "output": 25.00, "cache_read": 0.50},   # *
-    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.20},
-    "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # * 且只适用于 ≤100K 的提示
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.10},
+    "claude-haiku-5-5":  {"input": 0.10, "output": 0.50,  "cache_read": 0.01},   # 只适用于 ≤100K 的提示
 }
-PRICE_DATE = "2026-10-06"
+PRICE_DATE = "2026-11-09"
 WRITE_5M, WRITE_1H = 1.25, 2.0
 
 
@@ -113,7 +113,7 @@ def default_session() -> Path:
 
 
 def render(rep: Report) -> str:
-    lines = [f"价格表：claude-api skill，第一方 API 标价，cached {PRICE_DATE}（Vertex 等合作方渠道另计价）"]
+    lines = [f"价格表：官方定价页，第一方 API 标价，查于 {PRICE_DATE}（Vertex 等合作方渠道另计价）"]
     hdr = f"{'model':18}{'请求':>7}{'未缓存输入':>12}{'缓存读':>14}{'写5m':>11}{'写1h':>12}{'输出':>11}{'命中率':>8}{'实际$':>10}{'无缓存$':>10}"
     lines.append(hdr)
     grand = [0.0, 0.0]

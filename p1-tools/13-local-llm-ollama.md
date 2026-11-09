@@ -99,3 +99,4 @@ reg -> w: ollama pull
 - [看懂 Hugging Face 和模型文件](./14-hugging-face-model-files.md)：GGUF、Q4_K_M 是什么
 - [安装使用 Claude Code](./02-install-and-use.md) · [安装使用 Codex](./03-install-and-use.md)
 - [动手跑通 LLM 推理的全流程](../p6-nn-llm/05-inference-process.md)
+- [用 CC Switch 和 cc-connect 让 Claude Code 跑开源模型](./15-open-models-cc-switch.md)：同一个「换后端」机制，换成云上的开源模型网关，以及长期用要补的那几个变量
