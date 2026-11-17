@@ -125,7 +125,7 @@ logits = model(input_ids).logits   # (1, 37, 49152)
 
 你可能会问：前面 36 个位置的分数算出来有什么用？
 
-推理时确实用不上，白算了（下面的 KV cache 会解决「白算」的问题）。但训练时它们全都有用：每个位置都在预测自己的下一个 token，一条长度 37 的序列一次提供 36 个训练信号。这就是 [LLM 是怎么预测下一个 token 的](../p0-core/04-llm-token-prediction.md) 讲的 next-token prediction，第 6 章 LoRA 的 loss 就是这么算的。
+在这个生成调用里只用最后位置的 logits；一些实现可以只对最后位置做词表输出投影，减少其余位置的输出开销。这与 KV cache 是两项优化：KV cache 复用历史注意力的 K、V，并不会自动消除 prefill 里多余位置的 logits。训练时，多位置预测则能提供多个监督信号（具体哪些位置计入 loss 还取决于 mask），见 [LLM 是怎么预测下一个 token 的](../p0-core/04-llm-token-prediction.md)及 [LoRA 微调](06-lora-fine-tuning.md)。
 
 ## 从分数到一个 token：采样
 
@@ -215,7 +215,9 @@ for _ in range(max_new_tokens - 1):
     nxt = sampler(out.logits[:, -1, :])
 ```
 
-第 [5] 段验证了三种实现（无 cache、有 cache、`model.generate`）的 greedy 输出逐 token 相同。第 [5b] 段是收益：生成 200 个 token，无 cache 10.9 秒，有 cache 1.9 秒，快 5.9 倍，而且生成越长差距越大——无 cache 的总计算量随长度平方增长，有 cache 是线性的。
+第 [5] 段验证了三种实现（无 cache、有 cache、`model.generate`）的 greedy 输出逐 token 相同。第 [5b] 段的实测是：生成 200 个 token，无 cache 10.9 秒，有 cache 1.9 秒，快 5.9 倍。这是该模型、硬件与长度下的结果，不是通用复杂度结论。
+
+要区分「每步」与「累计」：固定模型维度，标准全注意力在有 cache 时，每步的新 query 仍需读全部历史 K、V，注意力开销随当前序列长度线性增长。前缀长 P、生成 N 个 token，decode 注意力累计约为 $O(NP+N^2)$，**不是总计算量线性**；初始 prefill 还另有开销。缓存省掉了历史位置的重复投影和重复前向，不会让历史注意力计算消失。参见 [Transformers · Caching](https://huggingface.co/docs/transformers/v4.57.0/en/cache_explanation)。
 
 KV cache 的代价是内存。第 [5] 段：44 个 token 的 cache 占 1980 KiB，算一下就是 30 层 × (K+V) × 3 个 kv 头 × 64 维 × 4 字节 = 每个 token 45 KiB。这个模型用了 GQA（grouped-query attention）：9 个 query 头共享 3 组 K、V，cache 直接省了三分之二。上下文窗口做到 1M token 的模型，KV cache 是服务端最主要的显存开销之一。
 

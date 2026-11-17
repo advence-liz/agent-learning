@@ -7,7 +7,7 @@
 
 ## 学习路线
 
-顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。机器学习（第 5、6 部分）是选修，和 Agent 主线相互独立，放在最后。
+顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。目录与网站导航统一按 0–7 编号展示，面试部分放最后。机器学习（第 5、6 部分）对应用主线是选修，可以跳到第 7 部分；目标 JD 涉及训练时再补齐。第 7 部分按岗位地图、模型与训练、Agent 机制、生产工程、系统设计、项目与模拟六个主题贯通备考；JD 证据收在导读参考区，不独立成章。
 
 ```mermaid
 flowchart LR
@@ -26,9 +26,9 @@ flowchart LR
 | [第 2 部分 · Agent 开发基础](#p2-agent-basics) | 从聊天机器人到 Coding Agent、RAG、可观测性、MCP、工具设计，亲手写一遍 | ⭐⭐ 重点，1 周 |
 | [第 3 部分 · 工业级 Agent：拆解与生产工程](#p3-agent-internals) | 抓包拆 Claude Code / Codex 的 prompt、压缩、记忆、权限；最后五章讲构建、评测、安全、RAG 评测、成本 | ⭐⭐ 重点，1 周 |
 | [第 4 部分 · 手搓 mini Claude Code](#p4-mini-cc) | 一个工程从 0 长到 21 个能力，每章一次增量 | ⭐⭐⭐ 核心项目，2–3 周 |
-| [第 7 部分 · Agent 研发面试](#p7-interview) | 考点地图、高频十题、题库与系统设计示范，每题指回本库章节 | 主线学完后，3–5 天 |
 | [第 5 部分 · 机器学习基础 + 经典算法](#p5-ml) | 想看懂 LLM 训练再来，从拟合、梯度下降讲起 | 选修 |
 | [第 6 部分 · 神经网络 + LLM 开发基础](#p6-nn-llm) | 手写自动求导、优化器、推理全流程、LoRA 微调 | 选修 |
+| [第 7 部分 · Agent 研发面试](#p7-interview) | 岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟 | 主线学完后按目标岗位准备 |
 
 ## 目录
 
@@ -134,15 +134,6 @@ flowchart LR
 - [ ] [渐进式加载 Skills](p4-mini-cc/20-skill.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/skill/)
 - [ ] [让 Agent 先规划再动手](p4-mini-cc/21-plan.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/coding-agent/plan/)
 
-<a id="p7-interview"></a>
-### 第 7 部分 · Agent 研发面试
-
-考点地图、高频十题、题库与系统设计示范，每题指回本库章节。
-
-- [ ] [Agent 研发面试考什么，怎么用这个知识库备考](p7-interview/01-interview-landscape.md) · ✍️ 原创
-- [ ] [十道高频题：强回答和弱回答差在哪](p7-interview/02-top-questions.md) · ✍️ 原创
-- [ ] [题库与系统设计：52 组真题和两道完整示范](p7-interview/03-question-bank.md) · ✍️ 原创
-
 <a id="p5-ml"></a>
 ### 第 5 部分 · 机器学习基础 + 经典算法
 
@@ -178,6 +169,18 @@ flowchart LR
 - [ ] [优化器：Momentum 和 Adam](p6-nn-llm/04-ml-optimizers.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/machine-learning/ml-optimizers/)
 - [ ] [动手跑通 LLM 推理的全流程](p6-nn-llm/05-inference-process.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/inference-process/)
 - [ ] [动手用 LoRA 微调模型](p6-nn-llm/06-lora-fine-tuning.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/ai-coding/llm/lora-fine-tuning/)
+
+<a id="p7-interview"></a>
+### 第 7 部分 · Agent 研发面试
+
+岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟。
+
+- [ ] [岗位与备考地图：先确定深度，再沿六章建立证据](p7-interview/01-interview-landscape.md) · ✍️ 原创
+- [ ] [模型原理与训练：从 token 预测到预训练、后训练](p7-interview/02-model-fundamentals.md) · ✍️ 原创
+- [ ] [Agent 核心机制：从循环、工具到 RAG、评测与安全](p7-interview/03-agent-mechanisms.md) · ✍️ 原创
+- [ ] [全栈与生产工程：把 Agent 交付成可靠产品](p7-interview/04-production-engineering.md) · ✍️ 原创
+- [ ] [系统设计：把模型、Agent 与生产约束组合成方案](p7-interview/05-system-design.md) · ✍️ 原创
+- [ ] [项目深挖与模拟面试：把知识变成可核查的证据](p7-interview/06-project-and-mock.md) · ✍️ 原创
 
 ## 配套代码
 

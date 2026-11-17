@@ -1,0 +1,41 @@
+"""目录按编号展示，推荐路线保留主线 / 选修分流。运行：python3 -m unittest discover -s tools -p 'test_*.py'"""
+import importlib.util
+from pathlib import Path
+import unittest
+
+from parts import ORDER, PARTS
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class NavigationTests(unittest.TestCase):
+    def test_parts_display_in_numeric_order(self):
+        self.assertEqual([p[1] for p in PARTS], list(range(8)))
+        self.assertEqual(ORDER[-1], 'p7-interview')
+
+    def test_recommended_main_track_can_skip_electives(self):
+        self.assertEqual([p[0] for p in PARTS if p[-1] == 'main'], [
+            'p0-core', 'p1-tools', 'p2-agent-basics', 'p3-agent-internals',
+            'p4-mini-cc', 'p7-interview',
+        ])
+
+    def test_site_nav_matches_numeric_order(self):
+        spec = importlib.util.spec_from_file_location('site_hooks', ROOT / '.site/hooks.py')
+        hooks = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(hooks)
+        config = hooks.on_config({})
+        labels = [next(iter(group)) for group in config['nav'][1:]]
+        self.assertEqual([int(label.split(' · ')[0]) for label in labels], list(range(8)))
+        self.assertTrue(all(next(iter(group.values())) for group in config['nav']))
+
+    def test_readme_sections_match_display_order(self):
+        text = (ROOT / 'README.md').read_text()
+        offsets = [text.index(f'<a id="{pid}"></a>') for pid in [
+            'p0-core', 'p1-tools', 'p2-agent-basics', 'p3-agent-internals',
+            'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview',
+        ]]
+        self.assertEqual(offsets, sorted(offsets))
+
+
+if __name__ == '__main__':
+    unittest.main()
