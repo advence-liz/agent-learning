@@ -1,0 +1,32 @@
+{
+  "name": "interview-agent-lab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings src examples scripts tests",
+    "example:1": "node examples/01-loop.ts",
+    "example:2": "node examples/02-errors.ts",
+    "example:3": "node examples/03-grounding.ts",
+    "example:4": "node examples/04-recovery.ts",
+    "example:5": "node examples/05-approval-cancel.ts",
+    "example:6": "node examples/06-evaluation.ts",
+    "demo": "node src/cli.ts demo",
+    "start": "node src/server.ts",
+    "eval": "node src/eval.ts",
+    "live:smoke": "node scripts/live-smoke.ts"
+  },
+  "dependencies": {
+    "openai": "7.59.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "oxlint": "1.94.0",
+    "typescript": "5.9.3"
+  }
+}

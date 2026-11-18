@@ -10,6 +10,18 @@
 
 下面题目结合公开面经线索和教学设计，不保证特定公司实际问过。L2 表示组合基础能力，L3 表示需要更多约束与取舍，不对应确定面试轮次。
 
+## 先把一个小系统跑通，再解释每一层为什么存在
+
+配套 [Research Desk 完整实战](../code/interview-node/README.md)把“本地知识库研究 → 引用草稿 → 人工审批 → 保存报告”做成可运行闭环。先 `npm run demo --prefix code/interview-node` 看结果，再读 [HTTP 入口](../code/interview-node/src/server.ts)、[任务与事务](../code/interview-node/src/store.ts)、[单轮循环](../code/interview-node/src/agent.ts)。
+
+用下面三条反问检验自己是否真的能设计，而不只是会画框：
+
+- **删掉模型到审批之间的边界会怎样？** 模型将可能直接触发副作用；当前工具只能提交草稿。
+- **删掉 owner 与租约的提交条件会怎样？** 旧 worker 的晚到响应可能覆盖取消或接管后的状态。
+- **把 SQLite 换成 PostgreSQL 要保留什么？** 幂等键、原子 claim、并发上限、fencing、事件序号与报告事务，而不只是换连接串。
+
+它是单 Agent、内置教学文档与本机数据库，不含多 Agent、向量摄取、浏览器 UI 或模型训练。下面的大系统题仍需补容量、质量和生产约束，不能把教学实现换个名字就说成企业平台。
+
 ## 系统设计题
 
 | 题目 | 难度 | 答题主线 |

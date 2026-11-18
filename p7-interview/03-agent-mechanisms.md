@@ -19,6 +19,20 @@
 
 参考答法只是示范。真正面试时，把里面的例子换成你自己项目里的，效果会好得多。
 
+## 先跑三个递进例子，让后面的追问有代码可指
+
+在仓库根执行（Node 24+，先 `npm ci --prefix code/interview-node`）：
+
+| 例子 | 命令 | 读完要能解释 |
+|---|---|---|
+| [最小循环](../code/interview-node/examples/01-loop.ts) | `npm run example:1 --prefix code/interview-node` | 谁执行函数，tool_call_id 怎么关联下一轮 observation |
+| [错误恢复](../code/interview-node/examples/02-errors.ts) | `npm run example:2 --prefix code/interview-node` | 为什么坏参数返回 tool 消息，而不是让整个宿主崩掉 |
+| [检索、引用与权限](../code/interview-node/examples/03-grounding.ts) | `npm run example:3 --prefix code/interview-node` | 为什么搜索前过滤租户，为什么未读文档不能作引用 |
+
+第一例的真实离线输出依次为 `tool: search`、`tool: read_document`、`tool: submit_answer`；模型是确定性 fake，工具是真实函数。第二例使用构造响应回放，证明纠错通道存在，不证明模型一定能纠错。第三例仅检查授权、已读与逐字摘录，**不能因此声称语义 faithfulness 已经解决**。
+
+最终项目复用的 [advance](../code/interview-node/src/agent.ts)补上轮数、累计 token、上下文字节、超时、有限重试和完整工具消息保存。[完整运行指南](../code/interview-node/README.md)说明 fake 与真实 DeepSeek 的切换；后面每道题都可以回到这些文件指认机制，而不只背一句定义。
+
 ## 1. 讲一下 ReAct agent 的原理
 
 !!! failure "弱回答"

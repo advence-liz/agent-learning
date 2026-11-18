@@ -10,6 +10,20 @@
 
 本章是**根据 JD 能力要求推导的备考题与设计示范，不是真实面经**。岗位深度在[备考地图](01-interview-landscape.md)，这里补四条边界：前后端事件契约、任务与副作用、推理资源、交付验收。设计示范不代表 mini Claude Code 已实现这些生产能力。
 
+## 把故障题落到可运行的恢复、审批与取消实验
+
+[Research Desk](../code/interview-node/README.md)提供本章设计的一个**本机教学实现**，不是宣称已经生产部署：
+
+| 实验 | 命令（仓库根） | 看哪段代码与证据 |
+|---|---|---|
+| 跨进程接续 | `npm run example:4 --prefix code/interview-node` | [04-recovery.ts](../code/interview-node/examples/04-recovery.ts)启动两个进程，第二个从 SQLite 继续，不重复已提交的 search 轮次 |
+| 审批与取消 | `npm run example:5 --prefix code/interview-node` | [05-approval-cancel.ts](../code/interview-node/examples/05-approval-cancel.ts)验证未审批无报告、重复审批一份、取消不能审批 |
+| HTTP / SSE | `npm start --prefix code/interview-node` | [server.ts](../code/interview-node/src/server.ts)将任务与连接分离，按 seq 重放事件，不输出模型 token 流 |
+
+[Store](../code/interview-node/src/store.ts)用事务原子 claim、owner token 和租约有效期约束提交；[Runtime](../code/interview-node/src/runtime.ts)每轮保存检查点、续租并传播取消。强杀后未提交的一轮可能重跑并再次计费；同库报告与终态原子提交，不等于外部发信、支付 exactly-once。
+
+默认 fake 模型、教学身份、loopback 服务。共享 SQLite 文件验证本机多进程机制，**不是跨 pod 的共享存储方案**；没有浏览器 UI、生产鉴权和云运维。先把这些边界讲清，再回答后面的生产设计题。
+
 ## 先把「业务任务」与「连接」分开
 
 ```d2

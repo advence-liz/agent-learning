@@ -23,6 +23,20 @@
 
 本章负责岗位判断与能力矩阵，不讲另一套答案。模型、Agent、生产三章负责主题原理与追问；系统设计负责组合；最后一章负责验收。原有面经题按主题归位，新增练习是教学推导，**不冒充企业真题，也不宣称统计意义上的“最高频”**。
 
+## 不想只背答案，就沿一套 Node / TypeScript 项目亲手验证
+
+配套的 [Research Desk 六阶实战](../code/interview-node/README.md)从最小工具循环开始，逐步增加错误恢复、检索引用、跨进程恢复、审批取消与评测，最后组装成完整的本地知识库研究服务。**同一套模块逐步加能力，不是六份互不相关的 Demo。**
+
+原版保留用于手写机制；另有独立的 [Node 工程化版本](../code/interview-platform-node/README.md)，实际接入 Fastify/OpenAPI、LangChain/LangGraph、PostgreSQL checkpointer、统一模型网关、Langfuse 与 S3。先用原版理解循环，再用新版练组件集成、跨进程恢复和副作用收口；新版需要本机 Docker，默认不调用真实模型。
+
+```sh
+npm ci --prefix code/interview-node
+npm run example:1 --prefix code/interview-node
+npm run demo --prefix code/interview-node
+```
+
+需要 Node 24+。默认离线 fake 模型，显式 `--live` 才使用 DeepSeek。机制实操回到[Agent 核心机制](03-agent-mechanisms.md)，状态与故障回到[生产工程](04-production-engineering.md)，最终验收回到[项目与模拟](06-project-and-mock.md)。它覆盖应用/Harness 与服务工程，不替代模型训练或分布式推理实验。
+
 ## 同样叫 Agent，交付物可能是产品、Harness，也可能是模型
 
 | 岗位方向 | 主要交付物 | 应准备的证据 |
@@ -61,7 +75,7 @@
 | RAG：摄取、切块、embedding、混合检索、rerank、引用、更新 / ACL | 核心 | 核心 | 按 JD | [RAG 原理](../p2-agent-basics/04-rag-principles.md)、[RAG 评测](../p3-agent-internals/16-rag-eval.md)、[全栈与部署](04-production-engineering.md)；企业摄取与权限平台仍需项目实战 |
 | 评测与实验：基线、数据切分、切片、评委校准、消融、置信度 | 核心 | 核心 | 核心 | [评测指南](../p3-agent-internals/14-agent-eval-guide.md)、[训练数据与泛化](02-model-fundamentals.md)；小样本结果不作强统计结论 |
 | 数据闭环：轨迹、偏好、合成、去重、授权、版本与泄漏 | 核心 / 按 JD | 理解 | 核心 | [预训练与后训练](02-model-fundamentals.md)；覆盖设计与检查点，非完整标注平台 |
-| Web：SSE / WebSocket、增量解析、断线恢复、取消、React 状态与性能 | 按 JD | 核心 | 按 JD | [流式响应](../p2-agent-basics/09-streaming-response.md)、[全栈与部署](04-production-engineering.md)；后者是设计与故障验收，不是完整 Web 项目 |
+| Web：SSE / WebSocket、增量解析、断线恢复、取消、React 状态与性能 | 按 JD | 核心 | 按 JD | [流式响应](../p2-agent-basics/09-streaming-response.md)、[全栈与部署](04-production-engineering.md)；含本机 HTTP/SSE 实作与故障验收，尚无浏览器 UI |
 | 后端：API、数据库 / 索引 / 事务、缓存、幂等、队列、并发与恢复 | 核心 | 核心 | 理解 / 按 JD | [错误重试](../p4-mini-cc/03-error-handling.md)、[全栈与部署](04-production-engineering.md)；数据库内核、语言运行时与网络基础须另按岗位补 |
 | 生产：可观测、SLO、成本、CI/CD、灰度、容器、密钥与回滚 | 核心 | 核心 | 理解 / 按 JD | [可观测性](../p2-agent-basics/08-agent-observability.md)、[成本路由](../p3-agent-internals/17-cost-and-routing.md)、[全栈与部署](04-production-engineering.md)；未做完整云部署实验 |
 | 推理：prefill / decode、TTFT / TPOT、量化、batch、vLLM 与 GPU 显存 | 理解 | 理解 / 按 JD | 核心 / 按 JD | [推理全流程](../p6-nn-llm/05-inference-process.md)、[全栈与部署](04-production-engineering.md)；多 GPU 调优需实测 |
