@@ -60,6 +60,18 @@ class InterviewStructureTests(unittest.TestCase):
             references = set(re.findall(r'\[\^([^]]+)\]', body))
             self.assertEqual(references, definitions, name)
 
+    def test_node_practice_is_integrated_into_existing_topics(self):
+        for name, targets in {
+            '01-interview-landscape.md': ['../code/interview-node/README.md', '../code/interview-platform-node/README.md'],
+            '03-agent-mechanisms.md': ['../code/interview-node/examples/01-loop.ts', '../code/interview-node/examples/03-grounding.ts'],
+            '04-production-engineering.md': ['../code/interview-node/examples/04-recovery.ts', '../code/interview-node/examples/05-approval-cancel.ts'],
+            '05-system-design.md': ['../code/interview-node/src/server.ts'],
+            '06-project-and-mock.md': ['../code/interview-node/README.md', 'npm run live:smoke'],
+        }.items():
+            text = (ROOT / 'p7-interview' / name).read_text()
+            for target in targets:
+                self.assertIn(target, text, name)
+
     def test_old_public_urls_keep_migration_pages(self):
         for name in ('02-top-questions.md', '03-question-bank.md'):
             text = (ROOT / 'p7-interview' / name).read_text()

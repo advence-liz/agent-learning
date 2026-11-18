@@ -8,6 +8,39 @@
 
 每个结论都给证据：哪段代码负责、在哪种输入下失败、怎么测出改进、用了什么基线。读过 LoRA 不等于做过后训练，画过 outbox 不等于上线过任务系统；明确说出没做过什么，比用术语填满简历更可信。
 
+## 先做一条 Node / TypeScript 闭环，再积累自己的项目证据
+
+如果你想先做一个体量更小、便于面试逐层追问的项目，从 [Research Desk 六阶实战](../code/interview-node/README.md)开始；已有 mini Claude Code 则继续本章后面的项目改造。两个方向二选一做深，不需要为了简历同时堆两套。
+
+```sh
+npm ci --prefix code/interview-node
+npm run example:1 --prefix code/interview-node
+# 按 README 继续 example:2 到 example:6
+npm run demo --prefix code/interview-node
+npm run eval --prefix code/interview-node
+npm test --prefix code/interview-node
+npm run typecheck --prefix code/interview-node
+```
+
+最终项目已提供工具循环、参数与引用校验、租户过滤、SQLite 检查点、租约接管、取消、审批幂等、HTTP/SSE 和离线回归。**fake 验证工程机制，不证明模型质量。** 当前 shell 设置好 `DEEPSEEK_API_KEY` 后，以下命令才真正联网、消耗 token：
+
+```sh
+npm run live:smoke --prefix code/interview-node -- --allow-live
+```
+
+2026-11-18 通过真实 DeepSeek 验证了 HTTP 创建 → SSE 事件 → 带引用草稿 → 审批 → 读取报告，3 次请求，输入 2,355、输出 325 tokens；重复审批只有一份报告。完整的验证记录和局限只在[实战 README](../code/interview-node/README.md)维护；这一个样例不能写成“准确率 100%”。
+
+完成后的面试验收不问“跑过没有”，而问能否现场展示：
+
+| 必须展示的证据 | 操作与合格标准 |
+|---|---|
+| 一次失败恢复 | `example:2` 展示类型错误回填；解释回放与真实模型自纠错的区别 |
+| 一次跨进程恢复 | `example:4` 展示两个真实进程接续；解释检查点前崩溃为什么可能重付模型费用 |
+| 一次权限 / 副作用边界 | `example:3`、`example:5` 展示跨租户拒绝、未审批无报告、重复审批仅一份 |
+| 一项你自己的改进 | 扩充真实任务评测或替换一层实现，保留改前改后的同口径结果与失败样本 |
+
+不要把教学身份称为生产鉴权，不要把逐字引用存在称为语义正确，不要把这个项目写成“自己从零独立设计”——注明教程基础与自己实现的改动，证据更可信。
+
 ## 动手：把 mini Claude Code 变成你的面试项目
 
 面试最怕的是项目讲不深。你已经跟着第 4 部分做过一个 mini Claude Code，它天然就是一个好项目：从 0 长到 21 个能力，每一步都有代码和测试。

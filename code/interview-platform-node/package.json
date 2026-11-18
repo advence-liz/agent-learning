@@ -1,0 +1,50 @@
+{
+  "name": "interview-agent-platform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/*.test.ts",
+    "test:integration": "node --test --test-concurrency=1 integration/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings src tests integration scripts",
+    "start": "node scripts/launch.ts server",
+    "gateway": "node scripts/launch.ts gateway",
+    "worker": "node scripts/launch.ts worker",
+    "infra:up": "node scripts/infra.ts up",
+    "infra:check": "node scripts/infra.ts check",
+    "infra:observability": "node scripts/infra.ts observability",
+    "migrate": "node scripts/launch.ts migrate",
+    "seed": "node scripts/launch.ts seed",
+    "prompt:seed": "node scripts/launch.ts prompt-seed",
+    "demo": "node scripts/launch.ts demo",
+    "eval": "node scripts/launch.ts evaluate"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1171.0",
+    "@fastify/swagger": "9.9.5",
+    "@langchain/core": "1.4.1",
+    "@langchain/langgraph": "1.7.5",
+    "@langchain/langgraph-checkpoint-postgres": "1.1.4",
+    "@langchain/openai": "1.8.4",
+    "@langfuse/otel": "6.1.1",
+    "@langfuse/tracing": "6.1.1",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/resources": "2.9.0",
+    "@opentelemetry/sdk-node": "0.220.0",
+    "@opentelemetry/sdk-trace-base": "2.9.0",
+    "fastify": "5.12.8",
+    "langchain": "1.6.6",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/pg": "8.15.6",
+    "oxlint": "1.94.0",
+    "typescript": "5.9.3"
+  }
+}
