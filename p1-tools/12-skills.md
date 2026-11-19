@@ -68,6 +68,40 @@ c."L3 只在模型决定要看时进来"
 
 **回到主线**：上下文是有限的，每个 token 都会参与下一个 token 的预测。Skill 用一张很小的目录换来了一个很大的能力库：平时只付目录的钱，用到哪一本才把哪一本拿上桌。说穿了，它就是「先往 system 区放一份清单，等模型点名了，再往 messages 末尾追加一条消息」。
 
+<a id="skill-readiness"></a>
+
+## 能找到说明书，不等于能执行流程
+
+你可能会问：模型看见了 skill 名字，为什么照着做时还会报「文件不存在」「命令找不到」或者要求审批？
+
+因为**目录可见、文件安装、正文加载、依赖可用、执行授权，是五件不同的事**。三层披露讲的是「哪些文字进上下文」，不是「执行条件已经备齐」。
+
+| 要核对的事 | 它能证明什么 | 它不能证明什么 |
+|---|---|---|
+| 目录可见 | 当前 agent 的 listing 有名字，可能还有描述 | 模型已经读过正文，或另一个 agent 也能找到它 |
+| 文件安装 | 执行端能访问 `SKILL.md` 及所需附录、脚本 | 正文已进上下文；脚本依赖已装好 |
+| 正文加载 | 当前上下文已拿到流程指令 | 指令提到的 CLI、包、MCP 工具或凭据可用 |
+| 依赖可用 | 当前执行环境具备相应解释器、包、工具连接及所需认证 | 当前操作已经获得许可 |
+| 执行授权 | 具体工具调用获准执行 | 依赖一定可用，或能越过文件系统、网络沙箱 |
+
+比如一个原创的 `csv-audit` skill：目录里写「检查 CSV 列名」，正文让模型读取 `references/columns.md`，再执行 `scripts/check_csv.py`。只把正文贴给另一个 agent，既没有把这两个文件复制过去，也没有给它安装 Python；文件齐了，也不代表它获准读任意数据文件。
+
+官方 Agent Skills [格式规范](https://agentskills.io/specification)用 `compatibility` 描述系统包、网络等环境要求；Claude Code 的 [frontmatter 说明](https://code.claude.com/docs/en/skills#frontmatter-reference)明确说，它接受这个字段，但不据此执行操作。所以写上依赖要求，不等于宿主会自动安装、验证依赖或配好认证。**Skill 打包的是指令和可选资源，不是一个自动备齐的运行环境。**
+
+### 换上下文，不等于换机器
+
+[Sub Agent](10-sub-agent.md)已经讲过父子对话的交接，这里只补 skill 的边界：
+
+- **普通子 agent** 不继承主会话已经调用的 skill 正文。官方 [sub-agents 文档](https://code.claude.com/docs/en/sub-agents)里的 `skills` 字段是在启动时注入指定 skill 的**全文**，不是只给目录；它控制预加载，不是可访问 skill 的白名单。未预加载的 skill，仍可能通过子 agent 自己的 `Skill` 工具发现、调用，取决于该执行端的配置。
+- **skill 的 `context: fork`** 把 skill 正文当作任务交给独立子 agent，不继承当前对话历史。它不是 [Fork Agent](11-fork-agent.md)里完整继承历史的那种 fork，也不承诺新容器、新解释器或独立凭据。
+- **运行环境隔离要另看配置。** worktree 隔开的是仓库工作副本，不会自动隔开系统依赖、网络或凭据；[sandbox](https://code.claude.com/docs/en/sandboxing)才是在其覆盖的命令范围内施加操作系统级文件、网络约束。不能因为两个 messages 数组互不相见，就以为它们改不到同一个文件。
+
+### `allowed-tools` 是预授权，不是白名单
+
+Claude Code 官方 [Pre-approve tools for a skill](https://code.claude.com/docs/en/skills#pre-approve-tools-for-a-skill)说得很明确：`allowed-tools` 让列出的工具在调用 skill 的当前轮免确认，**其他工具仍然可调用，照常走权限判断**。下一条用户消息到来时，这次授权清除；正文还在，不代表授权也还在。
+
+所以 `allowed-tools: Read` 不能解释成「这个 skill 只能读」。它不会安装缺失工具、提供凭据，也不会解除沙箱约束。Agent Skills 格式规范还把这个字段标为实验性，宿主支持可能不同；移植到自己的加载器时，不能只因同名字段能解析，就认定权限语义也相同。mini-cc 的实现边界见 [渐进式加载 Skills](../p4-mini-cc/20-skill.md#mini-cc-skill-boundaries)。
+
 ## 先跑起来：一个一百多行的 skill 加载器
 
 [`code/agent-node/skills_demo/skill_loader.ts`](../code/agent-node/skills_demo/skill_loader.ts)（Python 版 [`skill_loader.py`](../code/agent/skills_demo/skill_loader.py)）把上面三层实现了一遍，`skills_demo/skills/` 下放了两个示例 skill：
@@ -197,7 +231,7 @@ c."L3 只在模型决定要看时进来"
 
 - **43 倍。** 这是渐进式披露在你机器上的实测收益：如果把所有正文都写进 CLAUDE.md，常驻层要大 43 倍。这正是你 CLAUDE.md 原则 2「多步流程一律进 skill；常驻层只回答『走哪条轨』」能成立的原因。
 - **12,999 字符的 description 会不会超预算？** 预算是「上下文窗口的 1%」，所以答案取决于你当前模型的窗口有多大。它的单位我按「字符」理解，因为用来覆盖它的环境变量 `SLASH_COMMAND_TOOL_CHAR_BUDGET` 是一个字符数，但这一点属于**推测**。最可靠的办法是在会话里看 `/context` 的 Skills 一行，或者跑 `/doctor` 看 listing 的估算成本。你的 description 普遍很长：`doc-narrative` 的 description 就把整套方法论压缩了进去。窗口小的模型上，最先被擦掉描述的会是那些不常用的 skill。
-- **你的研发平台系列 skill 用了 `allowed-tools`。** 注意它的语义：它只是在**调用 skill 的那一轮**里免除权限确认，「The grant clears when you send your next message」。它不是这个 skill 的工具白名单，也不会限制模型使用别的工具。
+- **给 skill 写了 `allowed-tools`，却仍然看到其他工具调用？** 这不是白名单失效，它本来就是当前轮的预授权；完整边界见[前面的说明](#allowed-tools)。
 - **命名规范。** 你 CLAUDE.md 里规定「带项目前缀 `<project>-<能力>`」，这对 L1 也有好处：名字永远不会被预算砍掉，即使描述被擦掉了，`webapp-` 这个前缀也还能给模型一点提示。
 
 我的观点：**description 是整个 skill 里最值钱的一段文字，要当成检索用的 query 来写，而不是当成摘要来写。** 把用户真正会说的话放在最前面，比如「写周报」「查日志」「这个 bug 帮我看下」，因为模型拿来匹配的是用户的原话。文档在排障一节也是这么建议的：把关键用例放在最前面，因为每条描述最多只保留 1,536 字符。
@@ -243,7 +277,9 @@ c."L3 只在模型决定要看时进来"
 
 ## 延伸阅读
 
-- 官方 Skills：<https://code.claude.com/docs/en/skills>（frontmatter 全字段、预算、压缩后的行为、`context: fork`）
+- 官方 Skills：<https://code.claude.com/docs/en/skills>（frontmatter 全字段、预算、压缩后的行为、`context: fork`；本文新增边界于 2026-11-19 按公开文档核对，不代表所有宿主实现）
+- Agent Skills 格式规范：<https://agentskills.io/specification>（资源目录、`compatibility`、实验性的 `allowed-tools`）
+- 官方 Subagents：<https://code.claude.com/docs/en/sub-agents>（`skills` 全文预加载、非继承、worktree）；官方 Sandboxing：<https://code.claude.com/docs/en/sandboxing>（命令的操作系统级边界）
 - 官方 Prompt caching：Invoking skills and commands：<https://code.claude.com/docs/en/prompt-caching>
 - Skill authoring best practices：<https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>
 - 本库：[Hooks](08-hooks.md)、[Sub Agent](10-sub-agent.md)、[mini Claude Code：Skill](../p4-mini-cc/20-skill.md)、[MCP 工具](../p2-agent-basics/10-mcp-tool.md)、[工具设计](../p2-agent-basics/12-tool-design.md)（工具定义的按需加载，和 skill 的渐进式披露是同一个思路）

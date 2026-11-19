@@ -293,9 +293,9 @@ p -> x: 拒绝 {target-arrowhead.shape: cross}
 - **高风险动作要人确认，而且是异步的。** Agent 弹出确认卡后立即结束本轮，用户的回答作为新输入进来，带上卡片 ID 对应到具体请求。不要让一轮在原地同步等用户，否则长时间占着执行权。需要长时间等待时，可以参考 Temporal 的 Signal：等待期间不占计算资源。
 - **列出已知残留风险。** 域名白名单不可能堵住所有外泄路径。上线时写清已知的残留风险和对应的监测手段，比宣称「绝对安全」可靠。
 
-## 工程化四：前端拿到的是三类帧，各有自己的可靠性约定
+## 工程化四：前端拿到的是四类帧，各有自己的可靠性约定
 
-做过前端的人对这一块最熟。[流式响应](../p2-agent-basics/09-streaming-response.md)讲了怎么流，生产里还要把帧分类、约定好每类的投递语义：
+做过前端的人对这一块最熟。[流式响应](../p2-agent-basics/09-streaming-response.md)讲了怎么流，生产里还要把帧分类、约定好每类的投递语义。下面是一种可选的产品协议设计，不是通用标准：
 
 | 帧类别 | 例子 | 投递约定 | 前端怎么处理 |
 |---|---|---|---|
@@ -306,12 +306,133 @@ p -> x: 拒绝 {target-arrowhead.shape: cross}
 
 几条约定：
 
-- **轮号是唯一时钟。** 每条用户输入由服务端分配递增轮号，下行帧都带上它；出现更大的轮号，旧一轮就不会再续写。
+- **轮号区分执行代次，不代替事件排序。** 本例由服务端为每次触发执行的输入分配递增轮号，下行帧带上它；切换到新轮后，旧轮的迟到片段不能再续写当前回复。轮内排序和重连补发另用事件序号，不能只靠轮号。
 - **能力协商代替服务端开关。** 客户端在会话开始时声明自己支持的协议能力，服务端按声明决定下发什么格式。如果按账号或环境开关切换协议，未升级的客户端可能无法渲染新格式。
 - **续传靠持久化 + 游标。** 客户端重连时带上「收到哪了」，服务端只补差量。游标的形式各家不同：Cloudflare Agents 存 SQLite 按整轮重放，OpenHands 按时间戳补发，LangGraph 用 `Last-Event-ID`，Vercel 的 resumable-stream 按字符偏移。
 - **快照优于逐条重放。** 如果前端只会追加渲染，整批重放旧片段会重复显示。更稳的是持久化「这一轮到目前为止的完整文本 + 序号」快照，重连时一次给出，前端整体替换。
 - **多端一致。** 同一会话可能同时开在多台设备上：一端的输入要同步给其他端，一端的停止要能停到其他端正在跑的轮。所以输出先发到共享频道，再由各连接所在的实例转发。
-- **冷热分层与单写者。** 实时数据先写热存储（快，有过期时间），由唯一的写入方异步投影到冷存储（全，长期保存）。代价是历史接口的数据会稍晚于实时推送，界面以实时推送为准，稍后再从历史补齐。
+- **冷热分层与单写者。** 一种可选设计是：实时数据先写热存储，由单写者异步投影到冷历史。只有可重放的持久日志及归档确认能兜底时，才允许热数据过期；Redis TTL 本身不保证归档成功。实时推送可以暂时领先历史接口，但缺口不能靠「稍后刷新」无限掩盖，见下面的水位边界。
+
+### 用户管归属，会话管连续性，轮次和事件管执行过程
+
+你可能会问：前端左侧的会话列表，和右侧的消息历史，不都是查聊天记录吗？不是：前者回答「我有哪些对话」，后者回答「这一段对话里发生过什么」。先把身份分开，才知道索引该怎么建。
+
+下面是**独立构造的可选产品模型，不是框架标准**。像文件柜：用户有若干文件夹（会话），每次办事是一轮，轮内的收据是一条条事件；比喻的边界是，会话可共享，后台也能发起轮次，并不总是一个用户独占一个文件夹。
+
+```d2
+direction: down
+u: "用户 user_id\n身份与访问权限"
+s: "会话 session_id\n标题、归属、生命周期"
+t: "轮次 turn_id\n一次输入触发的执行\n可含多圈模型与工具调用"
+e: "事件 event_id + seq\n轮内文本片段、工具结果、状态变化"
+m: "消息 message_id\n可展示 / 可组装上下文的完整内容"
+u -> s: "拥有或被授权访问多个"
+s -> t: "包含多轮，服务端分配轮号"
+t -> e: "产生多条，按会话序号排序"
+e -> m: "部分事件聚合成消息"
+```
+
+图中 `seq` 是本例选择的**会话内**递增事件序号，不是时间戳，也不是轮号。一轮可以多次调模型；一条消息可以由多个片段聚合；心跳、审批状态等事件则未必成为发给模型的消息。会话归属也不等于授权：知道 `session_id` 的人不自动获得访问权。
+
+| 读入口 | 索引里放什么（可选） | 不该混进来的职责 |
+|---|---|---|
+| 用户的会话列表 | `session_id`，按最近活动排序；标题等元数据另存 | 不扫描全部消息来生成侧栏；列表缓存不是权限依据 |
+| 会话内消息索引 | `message_id`，按稳定的消息序号排序；正文另存 | 不是会话列表，也不是 token 片段日志或全文搜索索引 |
+| 事件续传 | `event_id`，按事件 `seq` 排序，并说明可回放窗口 | 不是模型历史；不能把所有事件原样塞进 messages |
+
+[你的聊天记录存在哪](../p1-tools/07-session-storage.md)讲本地工具怎么落文件，[持久化聊天记录](../p4-mini-cc/04-resume.md)实现 JSONL 的追加与恢复；这里补的是多用户产品的实体和读入口，不替换那两章的实现。
+
+### Redis ZSet 可以做有序目录，但不是完整会话系统
+
+有序集合（Sorted Set，常写 ZSet）像「带排序号的目录」：member 放稳定 ID，score 放排序值，正文不塞进 member。下面全是虚构 key 和数字，**只是一种可选教学设计，不表示 Redis 或任何框架推荐此布局**；小系统也可以直接用数据库索引。
+
+| 虚构 key | member / score | 想解决的问题 |
+|---|---|---|
+| `lesson:user:reader-a:sessions` | `chat-p` / 最近活动值 `30` | 列会话；活动变化时更新同一个 member 的 score |
+| `lesson:session:chat-p:messages` | `msg-a` / 稳定消息序号 `1` | 翻消息；后续修正文不改变它的排序位置 |
+| `lesson:session:chat-p:events` | `evt-a` / 稳定事件序号 `1` | 补发事件；与消息索引分开维护 |
+
+Redis 官方明确：同一个 member 只保留一份，普通 `ZADD` 再写会更新 score；同分值按 member 字节序排列，**不是按写入先后**。因此不要把整段 JSON 当 member：内容一改，它就变成另一个成员；也不要把 `ZADD` 的成员去重误认为工具副作用只执行一次。[ZADD 文档](https://redis.io/docs/latest/commands/zadd/)
+
+<details>
+<summary>离线跑一下：更新会话排序，重投消息不增加条数，按稳定序号翻页</summary>
+
+把下面代码单独保存为 `zset_demo.ts` 或 `zset_demo.py`，分别用 `node zset_demo.ts` / `python3 zset_demo.py` 运行。**这是 Map / dict 对 ZSet 部分语义的离线模拟，不连接 Redis、不调用模型**；只演示固定 ASCII ID、唯一整数 score、无删除的消息分页，不验证 Redis 协议、TTL 或多实例原子性。
+
+=== "Node"
+
+    ```ts
+    import assert from "node:assert/strict";
+
+    const sessions = new Map([["chat-p", 10], ["chat-q", 20]]);
+    sessions.set("chat-p", 30); // 对应同 member 更新 score
+    const recent = [...sessions].sort((a, b) => b[1] - a[1]);
+    assert.equal(sessions.size, 2);
+    assert.equal(recent[0][0], "chat-p");
+
+    const messages = new Map([["msg-a", 1], ["msg-b", 2], ["msg-c", 3]]);
+    messages.set("msg-b", 2); // 重投仍沿用原 ID 和原序号
+    function page(after: number, through: number, size: number) {
+      return [...messages].filter(([, n]) => n > after && n <= through)
+        .sort((a, b) => a[1] - b[1]).slice(0, size);
+    }
+    const through = 3; // 首次读取时固定的上界
+    const first = page(0, through, 2);
+    messages.set("msg-d", 4); // 翻页期间追加，不进入本次快照范围
+    const second = page(first.at(-1)![1], through, 2);
+    assert.deepEqual(first.map(([id]) => id), ["msg-a", "msg-b"]);
+    assert.deepEqual(second.map(([id]) => id), ["msg-c"]);
+    assert.equal(messages.size, 4);
+    console.log("recent=chat-p,chat-q; pages=msg-a,msg-b|msg-c; unique=4");
+    ```
+
+=== "Python"
+
+    ```python
+    sessions = {"chat-p": 10, "chat-q": 20}
+    sessions["chat-p"] = 30  # 对应同 member 更新 score
+    recent = sorted(sessions, key=sessions.get, reverse=True)
+    assert len(sessions) == 2
+    assert recent[0] == "chat-p"
+
+    messages = {"msg-a": 1, "msg-b": 2, "msg-c": 3}
+    messages["msg-b"] = 2  # 重投仍沿用原 ID 和原序号
+
+    def page(after, through, size):
+        rows = ((mid, n) for mid, n in messages.items() if after < n <= through)
+        return sorted(rows, key=lambda row: row[1])[:size]
+
+    through = 3  # 首次读取时固定的上界
+    first = page(0, through, 2)
+    messages["msg-d"] = 4  # 翻页期间追加，不进入本次快照范围
+    second = page(first[-1][1], through, 2)
+    assert [mid for mid, _ in first] == ["msg-a", "msg-b"]
+    assert [mid for mid, _ in second] == ["msg-c"]
+    assert len(messages) == 4
+    print("recent=chat-p,chat-q; pages=msg-a,msg-b|msg-c; unique=4")
+    ```
+
+两版离线模拟的真实输出相同：
+
+```text
+recent=chat-p,chat-q; pages=msg-a,msg-b|msg-c; unique=4
+```
+
+</details>
+
+你可能会问：换成 Redis 命令不就做完了吗？还有这几条边界，必须由应用明确：
+
+| 边界 | 本例采用的规则与限制 |
+|---|---|
+| 消息分页 | 稳定且唯一的序号作 score，下一页查询 `(last_seq, through]`，对应 Redis 6.2+ 的 `ZRANGE … BYSCORE LIMIT 0 page_size`；左括号表示排他下界。序号要由持久化协调者分配，重试复用，不能每次接收都重新编号 |
+| 同分与动态列表 | 时间戳可能同分，只拿 score 当游标会漏掉同分成员；完整游标需处理 `(score, member)` 的顺序，不能假装一次排他 score 查询就够。最近活动还会改变会话排序：本例只演示首屏，不保证会话列表跨页快照；严格不漏需固定列表快照或查数据库，前端 ID 去重只能消重复、不能补漏 |
+| 去重与一致性 | 稳定 ID 只解决集合内重复。正文、索引、归档任务须有原子提交或可恢复投影；读到悬空 ID 要补取 / 修复，不能无声丢掉。乱序的旧活动值不能覆盖新值；事件序号和消息序号也不能混用 |
+| TTL（存活时间） | `EXPIRE` 设置的是整 key 的期限，不是逐个 ZSet 成员；`ZADD` 不会自动续期。滚动 TTL 要显式刷新；活跃 key 中旧成员不会因此自动清理。列表、索引、正文的过期时间可能不一致，缓存 miss 应走鉴权后的冷历史查询，而不是判成「没有会话」 |
+| 冷历史与续传窗口 | 维护「已连续归档到哪个 seq」的水位；未归档部分必须仍可从持久日志重放，确认后才能裁热数据。冷数据到水位为止，热数据补其后，并按稳定 ID 合并。游标早于保留窗口时明确要求重新同步（如快照加水位），不能返回空页冒充已追平 |
+
+上面的分页还假设没有历史删除、回填或重排；固定上界只能挡住之后的追加，不是数据库快照隔离。score 使用双精度浮点数，整数需限制在精确范围内（Redis 为 ±2^53；Node 例子宜不超过 `Number.MAX_SAFE_INTEGER`），不要把巨大 ID 或「纳秒时间戳乘倍数」硬塞进去。
+
+事实边界：排序、范围语法、深 offset 要遍历而可能退化到 O(N)，依据 [ZRANGE 官方文档](https://redis.io/docs/latest/commands/zrange/)；整 key 过期与原地修改不刷新期限，依据 [EXPIRE 官方文档](https://redis.io/docs/latest/commands/expire/)。实体关系、key 布局、游标策略与归档水位都是本章教学设计；离线模拟不证明真实 Redis 的持久性或冷热一致性。
 
 ## 治理：行为会在不改代码时变化
 
@@ -336,6 +457,21 @@ p -> x: 拒绝 {target-arrowhead.shape: cross}
 6. **生产化**：单会话串行与幂等、中途输入策略、取消通道、人工确认、交互协议与续传、冷热存储、开关与灰度。完成标准：多实例压测下无并发写和重复执行，断线重连不重复、不丢内容，每个开关都有回滚预案。
 
 [第 4 部分的 mini Claude Code](../p4-mini-cc/01-cli.md) 基本就是在单进程里把阶段 2～5 走一遍；阶段 6 的大部分问题，只有多实例部署之后才会真正出现。
+
+### 采用框架省的是机制，不是业务责任
+
+你可能会问：用了框架，这张全景图是不是能删掉大半？能复用机制，但不能把「有历史存储」直接等同于「用户能安全地找回所有会话」。[主流 Agent SDK 对比](../p2-agent-basics/07-agent-sdk-comparison.md)负责选型；这里看采用之后谁负责什么。
+
+以 **LangGraph 开源库的 persistence** 和 **OpenAI Agents SDK Python 的 Sessions** 为例。下面是基于官方文档的责任拆分，不是所有框架的统一能力表，也不包含托管平台可能额外提供的账户、部署和运维服务：
+
+| 能力 | 框架提供 | 需要适配 | 业务负责 |
+|---|---|---|---|
+| 跨次运行延续历史 | OpenAI Agents SDK Session 在运行前读取历史、运行后保存新 items | 选择并配置持久后端，将业务会话映射到 Session ID；转换消息格式 | 会话归属、访问授权、标题和列表；不把客户端任意 ID 直接送进存储 |
+| 状态恢复 | LangGraph checkpointer 按 `thread_id` 保存和读取图状态检查点（checkpoint） | 接持久 checkpointer，定义业务会话 / 任务与 thread 的映射 | 判定恢复权限、轮次边界与外部副作用如何对账；checkpoint 不是完整产品消息历史 |
+| 产品历史与续传 | 可以利用框架持久状态或历史接口作为数据来源 | 将框架 items / 状态投影为产品消息、事件和游标 | 分页一致性、去重、保留窗口、冷历史、删除与审计规则 |
+| 并发与上线验收 | 可复用所选框架明确支持的运行机制，不能从「有持久化」推导出串行 | 核对版本、后端与部署模式，接入超时、取消、监控并做故障测试 | 单写者或冲突策略、幂等副作用、容量和数据生命周期 |
+
+事实边界（公开官方文档核对）：[LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence)说明 thread 与 checkpointer；[OpenAI Agents SDK Sessions](https://openai.github.io/openai-agents-python/sessions/)说明自动历史管理，并明确会话 ID 不能替代认证与授权。**这里未安装、未运行这两个框架**，不据此保证特定后端的性能、隔离级别或故障恢复效果；映射关系和责任划分是本章建议，具体 API 以采用版本为准。
 
 <details>
 <summary>上线前检查清单（展开）</summary>
@@ -386,7 +522,7 @@ p -> x: 拒绝 {target-arrowhead.shape: cross}
 
 ## 动手：给循环写好三个 break
 
-全景图里的模块大多要一整套基础设施才能演示，只有「内核一」能用几十行代码讲清楚。这一节在[第 2 部分 Coding Agent](../p2-agent-basics/02-coding-agent.md) 那一章的 `runAgent` 上加三件事：撞迭代上限时收口、软预算到点时不再开新一圈、被打断时补齐半截工具调用。全部跑离线 fake 模型，不需要 API key。
+全景图里的模块大多要一整套基础设施才能演示；「工程化四」用离线模拟看了索引，这一节再把「内核一」的停止机制写成可跑代码。在[第 2 部分 Coding Agent](../p2-agent-basics/02-coding-agent.md) 那一章的 `runAgent` 上加三件事：撞迭代上限时收口、软预算到点时不再开新一圈、被打断时补齐半截工具调用。全部跑离线 fake 模型，不需要 API key。
 
 先看效果。场景一，模型一直想再搜一次日志，迭代上限设成 3 圈：
 

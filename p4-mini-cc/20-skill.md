@@ -155,7 +155,9 @@ m -> l: "Read(references/ui-checklist.md)（第 3 层，模型自己决定）"
 
 ### 1. 发现与目录：`mini_cc/skills.py`（Node 版 `mini_cc/skills.ts`）
 
-skill 放在 `<home>/skills/<name>/SKILL.md`（用户级）和 `<cwd>/.mini_cc/skills/<name>/SKILL.md`（项目级，同名覆盖用户级），frontmatter 读 `name`、`description`、`disable-model-invocation`。和 Claude Code 的 `~/.claude/skills/` 是同一个格式，你的 skill 拷过来就能用（`!`cmd`` 和参数语法是子集）。
+skill 放在 `<home>/skills/<name>/SKILL.md`（用户级）和 `<cwd>/.mini_cc/skills/<name>/SKILL.md`（项目级，同名覆盖用户级），frontmatter 读 `name`、`description`、`disable-model-invocation`。这是借鉴 Claude Code 的**教学子集**，不是兼容实现：拷贝一个只用这些字段、且资源和依赖齐全的 skill 可以复用；不能保证任意 Claude Code skill 拷过来就能用。
+
+五项边界在[用 Skills 定制你的 AI 工作流](../p1-tools/12-skills.md#skill-readiness)里有完整对照，落到本章就是：`listing` 只生成目录；`load_skills` 读取已安装文件，不负责安装；`render_body` 渲染正文，不会安装包、连接 MCP 或提供凭据；后续工具调用再走权限检查。还有一个特别要注意的例外：**本实现的预处理命令直接启动 shell，不经过 `PermissionManager`**，不能把「加载说明书」当成纯读操作。
 
 目录生成：
 
@@ -357,10 +359,13 @@ skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精�
     193 passed in 13.32s
     ```
 
+<a id="mini-cc-skill-boundaries"></a>
+
 ## 和真实 Claude Code 的差异
 
 - **目录的位置**：Claude Code 的目录是一个 `skill_listing` 类型的附件（你本机 jsonl 里有，字段 `content / skillCount / names`），mini-cc 放在 system。两者都是会话内稳定、不破坏缓存。
-- **frontmatter**：Claude Code 还支持 `when_to_use`、`allowed-tools`、`model`、`context: fork`（在 sub agent 里跑）等字段；mini-cc 只认三个。`model` 字段在 Claude Code 里会让那一轮换模型，缓存读不到，这是它唯一会破坏缓存的地方（[Skills 那章](../p1-tools/12-skills.md)）。
+- **frontmatter**：Claude Code 还支持 `when_to_use`、`allowed-tools`、`model`、`context: fork`（在子 agent 里跑）等字段；mini-cc 只认上面三个，**Node / Python 两版都没有实现 `allowed-tools` 的权限效果，也没有接上子 agent 的 skill 预加载**。解析器能读到字段，不等于运行时会使用它。`model` 字段在 Claude Code 里会让那一轮换模型，缓存读不到（[Skills 那章](../p1-tools/12-skills.md)）。
+- **权限语义**：官方 `allowed-tools` 是当前轮的免确认预授权，不是「只许这些工具」。本章不实现它；练习 1 另取名 `tool-allowlist`，做的是自定义的收紧权限实验，不能当作 Claude Code 官方行为。
 - **插件**：Claude Code 的 skill 可以来自插件（你这个会话里有 `team-flow:*` 这样带命名空间的 skill）。mini-cc 只有两个目录。
 - **项目级 skill 的命令**：mini-cc 加载项目级 skill 时直接执行 `` !`cmd` ``，没有像第 15 章的项目 `.mcp.json` 那样先问你（练习 2）。
 
@@ -380,12 +385,14 @@ skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精�
 
 ## 练习
 
-**1.** 支持 `allowed-tools` 字段：skill 加载后，这一轮里模型只能用列出的工具。用第 5 章的 `extra_checks` 实现，想想 skill 运行结束的边界在哪里。
+**1.** 设计一个**自定义教学字段** `tool-allowlist`：skill 加载后，当前轮后续工具调用只能使用列出的工具。它不是 Claude Code 的 `allowed-tools`（后者是免确认预授权），也不是当前 mini-cc 已有功能。用[权限审批](05-permission.md)的 `extra_checks` / `extraChecks` 实现，想想临时限制何时清除。
 
 <details>
 <summary>提示</summary>
 
-`skills.py` 的 `_frontmatter` 已经能读到字段，给 `Skill` 加一个 `allowed_tools`。`SkillTool.run` 只拿得到 `ctx`，所以先在 App 里把 `PermissionManager` 放进 `ctx.extras`（第 10 章的 `ask_user` 就是这么挂的），加载成功后往 `extra_checks` 里挂一个 check：工具名不在列表里就返回 `Decision("deny", ...)`，理由写清楚是哪个 skill 限制的（参考 `subagent.py` 的 `_read_only_check`）。难点是边界：skill 没有「结束」事件，最自然的边界是这一轮结束，在 `turn_end` 钩子里把这个 check 摘掉。测试：加载一个 `allowed-tools: Read` 的 skill，剧本里接着调 Write，断言被拒；下一轮再调 Write，恢复正常的权限判断。
+给 `Skill` 加 `toolAllowlist`（Python 版 `tool_allowlist`），仅支持精确工具名，先别模拟官方参数匹配语法。`SkillTool.run` 只拿得到 `ctx`，可在 App 里把当前 agent 的 `PermissionManager` 放进 `ctx.extras`，加载成功后挂一个 check：工具名不在列表里就返回 `Decision("deny", ...)`；在本轮结束的 `finally` 中移除自己挂的 check，异常或取消也不能留下限制。`/skill-name` 入口要复用同一逻辑，不能只拦模型调用入口。
+
+测试至少包括：`tool-allowlist: Read` 加载后 Write 被拒，下一轮恢复原有权限判断；原有 deny 不因清理而消失；异常路径也会清理。若一轮加载多个 skill，先明确采用交集等合并策略，不能后一个悄悄放宽前一个。这个练习只限制后续工具调用，**管不到渲染时已直接执行的 `` !`cmd` ``**，有 Bash 的白名单也不等于操作系统沙箱。若要实现官方 `allowed-tools`，则应另写测试证明「未列出的工具仍走普通权限检查，而非直接拒绝」。
 
 </details>
 
@@ -398,7 +405,9 @@ skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精�
 
 </details>
 
-**3.** 开放题：Claude Code 的 skill 可以设 `context: fork`，在一个 sub agent 里执行，只把结果带回来。把第 17 章和本章接起来：什么样的 skill 适合 fork？它和「正文进主上下文」相比，各自省了什么、丢了什么？
+**3.** 开放题：Claude Code 的 skill 可以设 `context: fork`，在一个子 agent 里执行，只把结果带回来。把[实现 Sub Agent 机制](17-subagent.md)和本章接起来：什么样的 skill 适合交出去？它和「正文进主上下文」相比，各自省了什么、丢了什么？
+
+先守住边界：官方这里说的是**上下文隔离**，不继承当前对话历史，不是复制完整历史的 fork，也不是新建沙箱。本仓库当前的 `run_subagent` / `runSubagent` 没有为子 agent 配置 `SkillRuntime`；这道题需要你设计如何显式传入任务正文、挂接所需 skill 能力，而不是假定主会话加载过就会继承。父子若仍使用同一 cwd 和主机，脚本、包、凭据与文件权限也不会因新建 messages 自动隔离。
 
 <details>
 <summary>提示</summary>
@@ -409,7 +418,8 @@ skill 正文是第 14 章「不该交给摘要」的那一类东西：它是精�
 
 ## 延伸阅读
 
-- Claude Code skills 文档：<https://code.claude.com/docs/en/skills>
+- Claude Code skills 文档：<https://code.claude.com/docs/en/skills>（2026-11-19 核对 `Pre-approve tools for a skill`、`Run skills in a subagent`；官方语义不等于本章教学子集）
+- Claude Code sub-agents 文档：<https://code.claude.com/docs/en/sub-agents>（`skills` 全文预加载与不继承父会话已调用 skill）；Agent Skills 规范：<https://agentskills.io/specification>（依赖声明与宿主实现边界）
 - Agent Skills 格式说明（Anthropic）：<https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills>
 - 本系列：[用 Skills 定制你的 AI 工作流](../p1-tools/12-skills.md)、[Coding Agent 的命令系统](01-cli.md)、[支持 compact 压缩上下文](14-compact.md)
 - 上一章：[支持图片输入](19-image.md)；下一章：[让 Agent 先规划再动手](21-plan.md)
