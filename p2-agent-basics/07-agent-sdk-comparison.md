@@ -2,7 +2,7 @@
 
 > 对应原站：[其他主流 Agent SDK 对比](https://labuladong.online/zh/ai-coding/basics/agent-sdk-comparison/)（会员内容；本章为独立原创重写）
 
-> **一句话结论**：所有 Agent SDK 的内核都是第 2 章那个「模型 + 工具 + 循环」，差别在于**它们替你多做了哪一块**：Claude Agent SDK 送你一整套 Claude Code 的工具和上下文管理；Pydantic AI 送你类型安全；LangGraph 送你一张显式的状态图；OpenAI Agents SDK 送你 handoff（智能体之间交接）。选 SDK，先想清楚你最缺哪一块。
+> **一句话结论**：Agent SDK 围绕的内核还是 [Coding Agent](02-coding-agent.md) 那个「模型 + 工具 + 循环」，选型看**它替你多做哪一块，以及你要控制到哪一层**。LangChain、LangGraph、DeepAgents 还可以上下组合，不必当成三个平级选项；框架省掉的是通用机制，不是你的业务系统。
 
 上一章我们用 Claude Agent SDK 把 Coding Agent 缩成了几十行。可你刷技术圈，满屏都是 LangGraph、Pydantic AI、OpenAI Agents SDK、CrewAI……
 
@@ -244,6 +244,24 @@ LangGraph 不关心你用什么模型，节点就是普通函数。它管的是*
 
 CrewAI 走的是「角色扮演 + 协作」路线：定义研究员、写手、审稿人等角色，让它们按流程协作。我没有在本机验证它的 API，这里只说定位，不给代码。
 
+## LangChain、LangGraph、DeepAgents：不是三个平级选项
+
+你可能会问：LangGraph 已经能跑 Agent，为什么还有 LangChain 和 DeepAgents？**它们主要差在抽象层，不是三个互斥的品牌选项。** 就像网络请求原语、请求 Hook 和带缓存策略的封装，越往上默认替你做的事越多。不过这个类比只说明封装关系，不意味着每个项目都必须装齐三层。
+
+下面依据官方 overview 核对，只讨论开源库 / SDK，不把托管服务的能力算进来；这部分没有在本机新增运行实验。
+
+| 层次 | 你主要在描述什么 | 替你接好的部分 | 什么时候值得选 |
+|---|---|---|---|
+| LangGraph：底层编排与运行时 | 状态、节点、边 | 状态流转，以及 checkpoint、中断等运行机制 | 你需要亲自控制流程；图机制沿用前面的例子，不再展开 |
+| LangChain：模型 / 工具接口与高层 Agent 抽象 | 模型、工具、提示词、中间件 | 用 `createAgent`（Python：`create_agent`）组装模型—工具循环，Agent 底下用 LangGraph 运行 | 想快速搭一个工具调用 Agent，再逐项定制循环周围的策略 |
+| DeepAgents（官方写作 Deep Agents）：更完整的 Agent harness | 任务、工具，以及可配置的上下文和执行环境 | 在 LangChain 构件和 LangGraph 运行时上组合文件系统上下文、子 agent、摘要等能力，并提供可选的任务规划 | 多步骤任务已经需要这些配套，不想逐项拼装；不是为了换个名字再套一层 |
+
+**组合关系说穿了就是：DeepAgents 建在 LangChain 构件和 LangGraph 运行时之上；LangChain 的高层 Agent 又建在 LangGraph 上。** 反过来不强制成立：LangGraph 可以脱离 LangChain 使用，LangChain Agent 也不要求你先手写一张图。选上层入口，不等于底下的运行时消失了。
+
+举个独立构造的例子：做一个「桌游规则助手」，只需查规则、回答问题，LangChain 的模型和工具抽象就够用了；如果流程必须固定为「检索 → 检查引用 → 不合格则重试」，可用 LangGraph 明确控制；如果变成整理多份规则材料、维护中间笔记、分派独立核对任务，再考虑 DeepAgents 的整套 harness。这是选型推演，不是运行结果，也不是说前一层绝对做不到后一层的事。
+
+你可能会问：那用 DeepAgents，是不是业务系统也搭好了？**没有。框架里的任务清单不是业务任务库，文件系统接口也不自动等于持久、安全的文件服务。** 你仍要选配存储与执行 backend，落实用户鉴权、数据隔离、业务校验和外部写入的幂等；运行时能恢复，不代表业务副作用天然只执行一次。相关边界见 [Agent 构建指南](../p3-agent-internals/13-agent-build-guide.md)，harness 本身的含义见 [Harness Engineering](../p3-agent-internals/12-harness-engineering.md)。
+
 ## 对比表
 
 | | Claude Agent SDK | Pydantic AI | LangGraph | OpenAI Agents SDK |
@@ -313,7 +331,7 @@ Node 版：`Report` 加 `files_changed: z.array(z.string())`，`model` 的 `doGe
 
 - Pydantic AI：<https://ai.pydantic.dev/>（`FunctionModel` / `TestModel` 见其 testing 文档）
 - Vercel AI SDK：<https://ai-sdk.dev/>（`MockLanguageModelV4` 见其 testing 文档）
-- LangGraph：<https://langchain-ai.github.io/langgraph/>（JS 版：<https://langchain-ai.github.io/langgraphjs/>）
+- LangChain / LangGraph / DeepAgents 的分层依据（官方 overview，本文仅核对文档，未新增本机 API 实验）：[LangChain · JS](https://docs.langchain.com/oss/javascript/langchain/overview) / [Python](https://docs.langchain.com/oss/python/langchain/overview)、[LangGraph · Python](https://docs.langchain.com/oss/python/langgraph/overview)、[Deep Agents · JS](https://docs.langchain.com/oss/javascript/deepagents/overview) / [Python](https://docs.langchain.com/oss/python/deepagents/overview)。用于核对抽象与组合关系，不作为具体版本默认配置或业务可靠性的保证。
 - OpenAI Agents SDK：<https://openai.github.io/openai-agents-python/>（quickstart、handoffs）
 - 本库：上一章 [用 Agent SDK 简化开发](./06-agent-sdk.md) · [Workflow 和 Agent](./05-workflow-vs-agent.md) · 下一章 [给 Agent 加上可观测性](./08-agent-observability.md)
 

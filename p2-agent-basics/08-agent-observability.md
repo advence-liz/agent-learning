@@ -218,6 +218,161 @@ Node 没有 `with`，所以 `tracer.span(name, opts, fn)` 换成「把要执行�
 
 **回到主线**：可观测性不改变上下文本身，但它让「上下文的成本」变得可见。`agent.request.messages` 和 `gen_ai.usage.input_tokens` 这两条曲线，就是你决定什么时候该压缩、该开 subagent、该截断工具输出的依据。
 
+## Prompt 不能只记 label，要记这次真正用到的 version
+
+你可能会问：两次 trace 的代码、模型都一样，回答却变了，接下来查什么？还要查 prompt。`production` 这样的标签（label）像书签，版本（version）才是书的具体印次；书签挪了，昨天读过的那一页不会跟着变。
+
+这个类比也有边界：固定 prompt 不等于复现整个 Agent。模型、工具定义、渲染变量和运行配置也会改变结果。
+
+```d2
+direction: down
+l: "请求 label\n例如 production"
+p: "解析为具体 version\n冻结本次运行的 prompt 快照"
+r: "一次运行\n用快照渲染，每次 chat 复用"
+t: "trace / chat span\n记录实际 prompt 身份"
+e: "eval 记录\n关联 run / trace 与实际版本"
+l -> p: 运行开始时解析
+p -> r: 传入快照
+r -> t: 记录实际使用者
+t -> e: 按 ID 关联评分
+```
+
+图里「运行开始解析一次，运行中固定版本」是**本章的教学设计**，不是平台自动替你保证的事务。这里的运行指一次完整 Agent 调用；跨进程恢复时也要保存版本引用，不能重新解析 label。多个 prompt 则各存一份引用，不要拿根 span 上一个版本冒充所有 chat 的版本。
+
+以 Langfuse 为例，以下是公开官方文档明确的行为（2026-11-19 核对）：
+
+| 机制 | 对接时意味着什么 |
+|---|---|
+| [version 不可变，label 可以移动](https://langfuse.com/docs/prompt-management/data-model) | 部署或回滚可以移动 `production`；历史运行仍归属当时取回的具体版本 |
+| [按 label 或 version 拉取](https://langfuse.com/docs/prompt-management/features/prompt-version-control) | Node 用 `langfuse.prompt.get("card", { label: "production" })`，Python 用 `langfuse.get_prompt("card", label="production")`；两者都能改为传具体 `version`，但不能同时传 label 和 version。未指定时取 `production`；没有该标签且未配置 fallback 时会报 404，不会自动改取 `latest` |
+| [把拉取到的 prompt 对象传给 generation](https://langfuse.com/docs/prompt-management/features/link-to-traces) | Node 在 generation 上用 `updateActiveObservation({ prompt }, { asType: "generation" })`；Python 在 generation 上用 `prompt=prompt`。只写普通 metadata 不等于建立平台的 prompt 关联 |
+
+说白了，接线分成两件事：**用哪个对象渲染，就把哪个对象关联到对应的模型调用；评测结果再指回这次运行，而不是评分时重新查 label。** 运行记录保留请求 label、实际 prompt 名称与版本、模型与配置快照；eval 记录保留 run / trace ID、用例与评分器版本。label 只解释「当时想选谁」，具体 version 才解释「真正用了谁」。怎么选用例、评分和做发布门禁，统一看 [Agent 评测实践指南](../p3-agent-internals/14-agent-eval-guide.md)，这里不重讲闭环。
+
+### 两种缓存不是一回事，回滚也不能假装瞬时生效
+
+| 缓存 | 缓存什么、发生在哪 | 应该看什么 |
+|---|---|---|
+| Prompt 拉取缓存 | 应用 SDK 缓存从管理平台拿到的模板与配置，减少拉取请求 | 拉取耗时、实际返回版本；平台或 SDK 支持时再记命中状态 |
+| 模型 prompt cache | 模型服务复用匹配输入前缀的计算，不是缓存模板，也不是缓存最终回答 | 模型响应里的缓存 token 用量；计费见[成本控制与模型路由](../p3-agent-internals/17-cost-and-routing.md) |
+
+[Langfuse 缓存文档](https://langfuse.com/docs/prompt-management/features/caching)说明：默认客户端 TTL 为 60 秒，过期后可先返回旧值、后台刷新（stale-while-revalidate）；本地没有缓存且 API 不可用时，才用调用方提供的 fallback。模型侧缓存的前缀复用机制可对照 [OpenAI 官方说明](https://developers.openai.com/api/docs/guides/prompt-caching)。所以「模板取自缓存」既不证明模型缓存命中，也不证明拿到了标签最新指向的版本。
+
+- **回滚是移动 label，不是改写历史。** 各实例可能暂时返回不同版本。教学设计里，已开始的运行继续用快照；新运行按实际返回版本记账。要求立即阻止旧版本继续执行时，需要额外的发布闸门或取消机制，不能只靠改标签。
+- **旧缓存不等于本地 fallback。** 旧缓存仍有真实的受管版本，就归到那个版本；本地兜底要有独立标识和内容摘要，不能冒充原先想取的版本。Langfuse [明确不为 fallback 建立 prompt 关联](https://langfuse.com/docs/prompt-management/features/link-to-traces)，应用侧仍要记录兜底来源、原因，并在评测里单独切片。
+- **不要把所有失败都归给候选 prompt。** 评测要求精确候选版本时，拿到别的版本或本地兜底应标「候选未执行」，不能算候选通过；若本来测的就是降级路径，则按那条用例的判据评分。模板拉取失败和模型调用后换模型也是两种 fallback：后者另记调用尝试与实际模型，不能改写 prompt 的归属。
+
+### 离线接一遍：label 移动了，旧运行仍指向旧版本
+
+把下面代码分别保存为 `prompt-wire.ts` / `prompt_wire.py` 后用 Node 24 / Python 运行。它们是**自包含的教学适配层，不是 Langfuse SDK 实现**：字典代替平台、列表代替 trace 后端、函数代替模型，没有网络请求，也不模拟 TTL。prompt 内容、ID 和版本均为原创虚构数据。
+
+=== "Node"
+
+    ```ts
+    import assert from "node:assert/strict";
+    type Prompt = Readonly<{ version: number | null; body: string; key: string }>;
+    const versions = new Map([[4, "OK"], [5, "OK\n"]]);
+    let production = 4;
+    function resolve(offline = false): Prompt {
+      const version = offline ? null : production;
+      return Object.freeze({ version, body: version === null ? "OK" : versions.get(version)!,
+        key: version === null ? "local:card-b1" : `card@${version}` });
+    }
+    // 实际 SDK 接入时，把同一个 prompt 对象传给渲染器与 generation。
+    function run(id: string, p: Prompt) {
+      let output = "";
+      const chats = [1, 2].map(() => {
+        output = p.body.trim(); // 每次离线 fake 调用都用固定快照
+        return { prompt_key: p.key, model: "fake-only" };
+      });
+      const trace = { run_id: id, trace_id: `trace-${id}`, requested_label: "production",
+        prompt_key: p.key, version: p.version,
+        prompt_link: p.version === null ? null : p.key, chats };
+      return { trace, output };
+    }
+    const pinned = resolve();
+    production = 5; // 模拟标签在旧运行完成前移动
+    const a = run("a", pinned), b = run("b", resolve());
+    production = 4; // 模拟回滚；此示例不模拟缓存传播
+    const c = run("c", resolve()), d = run("d", resolve(true));
+    assert.equal(a.trace.version, 4);
+    assert.equal(b.trace.version, 5);
+    assert.equal(c.trace.version, 4);
+    assert.equal(d.trace.version, null);
+    assert.equal(d.trace.prompt_link, null);
+    for (const r of [a, b, c, d]) {
+      assert(r.trace.chats.every(s => s.prompt_key === r.trace.prompt_key));
+      const evaluation = { run_id: r.trace.run_id, trace_id: r.trace.trace_id,
+        case_id: "card-case", grader: "exact-v1", prompt_key: r.trace.prompt_key,
+        passed: r.output === "OK" };
+      assert.equal(evaluation.trace_id, `trace-${evaluation.run_id}`);
+      assert.equal(evaluation.prompt_key, r.trace.prompt_key);
+      assert(evaluation.passed);
+      console.log(`${evaluation.run_id} ${evaluation.prompt_key} eval=pass`);
+    }
+    console.log("离线断言通过：固定版本 / 回滚 / 本地兜底 / 评分关联");
+    ```
+
+=== "Python"
+
+    ```python
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class Prompt:
+        version: int | None
+        body: str
+        key: str
+
+    versions = {4: "OK", 5: "OK\n"}
+    production = 4
+
+    def resolve(offline=False):
+        version = None if offline else production
+        return Prompt(version, "OK" if version is None else versions[version],
+                      "local:card-b1" if version is None else f"card@{version}")
+
+    def run(id, p):
+        chats, output = [], ""
+        for _ in range(2):
+            output = p.body.strip()  # 每次离线 fake 调用都用固定快照
+            chats.append({"prompt_key": p.key, "model": "fake-only"})
+        trace = {"run_id": id, "trace_id": f"trace-{id}", "requested_label": "production",
+                 "prompt_key": p.key, "version": p.version,
+                 "prompt_link": None if p.version is None else p.key, "chats": chats}
+        return trace, output
+
+    pinned = resolve()
+    production = 5
+    a, b = run("a", pinned), run("b", resolve())
+    production = 4
+    c, d = run("c", resolve()), run("d", resolve(True))
+    assert (a[0]["version"], b[0]["version"], c[0]["version"]) == (4, 5, 4)
+    assert d[0]["version"] is None and d[0]["prompt_link"] is None
+    for trace, output in (a, b, c, d):
+        assert all(s["prompt_key"] == trace["prompt_key"] for s in trace["chats"])
+        evaluation = {"run_id": trace["run_id"], "trace_id": trace["trace_id"],
+                      "case_id": "card-case", "grader": "exact-v1",
+                      "prompt_key": trace["prompt_key"], "passed": output == "OK"}
+        assert evaluation["trace_id"] == f"trace-{evaluation['run_id']}"
+        assert evaluation["prompt_key"] == trace["prompt_key"]
+        assert evaluation["passed"]
+        print(f"{evaluation['run_id']} {evaluation['prompt_key']} eval=pass")
+    print("离线断言通过：固定版本 / 回滚 / 本地兜底 / 评分关联")
+    ```
+
+两版离线实跑输出相同（fake 模型只去掉模板两端空白；`pass` 是接线测试，不代表 prompt 质量）：
+
+```text
+a card@4 eval=pass
+b card@5 eval=pass
+c card@4 eval=pass
+d local:card-b1 eval=pass
+离线断言通过：固定版本 / 回滚 / 本地兜底 / 评分关联
+```
+
+这里 `prompt_link` 只是教学字段，不是 OTLP 或 Langfuse 的标准字段。为了聚焦，示例只锁定模板、没实现变量编译或本地内容摘要；真实接入要按前文补上配置快照与兜底标识校验，默认不把完整 prompt 或用户变量写进 span。
+
 ## 对照你的环境
 
 - Claude Code 自己支持 OpenTelemetry：设 `CLAUDE_CODE_ENABLE_TELEMETRY=1`，再配 `OTEL_METRICS_EXPORTER` / `OTEL_LOGS_EXPORTER`，就会导出 `claude_code.token.usage`、`claude_code.cost.usage` 等指标和 `claude_code.api_request`、`claude_code.tool_result` 等事件；trace 导出是 beta，还需要 `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`（见官方 Monitoring 文档）。你在 webapp 里接过 Datadog，Datadog 能收 OTLP，所以理论上能把你自己的 Claude Code 用量也接进去。
