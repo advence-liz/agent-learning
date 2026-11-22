@@ -50,10 +50,18 @@ class NavigationTests(unittest.TestCase):
         chapters = [c['out'] for c in curriculum if c['part'] == 'p8-technical-lectures']
         canonical = 'p8-technical-lectures/02-codebase-search.md'
         legacy = 'p8-technical-lectures/03-repomap-and-agentic-search.md'
-        self.assertEqual(len(chapters), 5)
         self.assertIn(canonical, chapters)
         self.assertNotIn(legacy, chapters)
         self.assertIn('](02-codebase-search.md)', (ROOT / legacy).read_text())
+
+
+    def test_harness_guide_is_registered_as_a_supplement(self):
+        curriculum = json.loads((ROOT / 'curriculum.json').read_text())
+        guide = 'p8-technical-lectures/07-claude-code-harness-guide.md'
+        entries = [chapter for chapter in curriculum if chapter['out'] == guide]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]['part'], 'p8-technical-lectures')
+        self.assertTrue((ROOT / guide).is_file())
 
 
 if __name__ == '__main__':

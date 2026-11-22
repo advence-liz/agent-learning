@@ -193,6 +193,7 @@ flowchart LR
 - [ ] [LLM 发展过程中的质疑与成长](p8-technical-lectures/04-llm-development.md) · ✍️ 原创
 - [ ] [Agent 的前世今生：自己行动，还是替人行动？](p8-technical-lectures/05-agent-etymology.md) · ✍️ 原创
 - [ ] [大模型的能力边界：论文、评测与现实各能说明什么？](p8-technical-lectures/06-llm-capability-boundaries.md) · ✍️ 原创
+- [ ] [Claude Code Harness 搭建指南（详实版）](p8-technical-lectures/07-claude-code-harness-guide.md) · ✍️ 原创
 
 ## 配套代码
 
