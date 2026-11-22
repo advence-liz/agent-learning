@@ -41,7 +41,7 @@ class NavigationTests(unittest.TestCase):
 
         group = ROOT / 'p8-technical-lectures'
         chapters = list(group.glob('*.md'))
-        self.assertEqual(len(chapters), 4)
+        self.assertEqual(len(chapters), 6)
         self.assertTrue(set(chapters) <= {Path(p) for p in check_publish.files()})
 
 
