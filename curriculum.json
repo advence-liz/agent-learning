@@ -1399,5 +1399,53 @@
   "out": "p7-interview/06-project-and-mock.md",
   "src_headings": [],
   "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 1,
+  "id": "original/agent-runtime-map",
+  "title": "Agent 运行线路图",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/01-agent-runtime-map.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 2,
+  "id": "original/codebase-search",
+  "title": "代码库检索入门：Coding Agent 如何在大仓库里找到对的代码",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/02-codebase-search.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 3,
+  "id": "original/repomap-and-agentic-search",
+  "title": "代码库感知原理讲义：RepoMap（AST + PageRank）与 Agentic Search",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/03-repomap-and-agentic-search.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 4,
+  "id": "original/llm-development",
+  "title": "LLM 发展过程中的质疑与成长",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/04-llm-development.md",
+  "src_headings": [],
+  "kind": "lesson"
  }
 ]

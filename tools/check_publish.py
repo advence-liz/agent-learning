@@ -14,8 +14,7 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONTENT_DIRS = ['p0-core', 'p1-tools', 'p2-agent-basics', 'p3-agent-internals',
-                'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview']
+from parts import ORDER
 ALLOW_FILE = os.path.join(ROOT, 'publish', 'allow.txt')
 
 # 明显是示例用的假值：命中 BLOCK 规则但不算泄露
@@ -73,7 +72,7 @@ AUTO_REWRITTEN = {'local-paths'}
 def files():
     yield os.path.join(ROOT, 'README.md')
     yield os.path.join(ROOT, 'STYLE.md')
-    for d in CONTENT_DIRS:
+    for d in ORDER:
         base = os.path.join(ROOT, d)
         for dirpath, _, names in os.walk(base):
             for n in sorted(names):

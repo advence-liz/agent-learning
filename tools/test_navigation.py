@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class NavigationTests(unittest.TestCase):
     def test_parts_display_in_numeric_order(self):
-        self.assertEqual([p[1] for p in PARTS], list(range(8)))
-        self.assertEqual(ORDER[-1], 'p7-interview')
+        self.assertEqual([p[1] for p in PARTS], list(range(9)))
+        self.assertEqual(ORDER[-1], 'p8-technical-lectures')
 
     def test_recommended_main_track_can_skip_electives(self):
         self.assertEqual([p[0] for p in PARTS if p[-1] == 'main'], [
@@ -25,16 +25,24 @@ class NavigationTests(unittest.TestCase):
         spec.loader.exec_module(hooks)
         config = hooks.on_config({})
         labels = [next(iter(group)) for group in config['nav'][1:]]
-        self.assertEqual([int(label.split(' · ')[0]) for label in labels], list(range(8)))
+        self.assertEqual([int(label.split(' · ')[0]) for label in labels], list(range(9)))
         self.assertTrue(all(next(iter(group.values())) for group in config['nav']))
 
     def test_readme_sections_match_display_order(self):
         text = (ROOT / 'README.md').read_text()
         offsets = [text.index(f'<a id="{pid}"></a>') for pid in [
             'p0-core', 'p1-tools', 'p2-agent-basics', 'p3-agent-internals',
-            'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview',
+            'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview', 'p8-technical-lectures',
         ]]
         self.assertEqual(offsets, sorted(offsets))
+
+    def test_technical_lectures_are_in_publish_scan(self):
+        import check_publish
+
+        group = ROOT / 'p8-technical-lectures'
+        chapters = list(group.glob('*.md'))
+        self.assertEqual(len(chapters), 4)
+        self.assertTrue(set(chapters) <= {Path(p) for p in check_publish.files()})
 
 
 if __name__ == '__main__':

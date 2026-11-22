@@ -7,7 +7,7 @@
 
 ## 学习路线
 
-顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。目录与网站导航统一按 0–7 编号展示，面试部分放最后。机器学习（第 5、6 部分）对应用主线是选修，可以跳到第 7 部分；目标 JD 涉及训练时再补齐。第 7 部分按岗位地图、模型与训练、Agent 机制、生产工程、系统设计、项目与模拟六个主题贯通备考；JD 证据收在导读参考区，不独立成章。
+顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。目录与网站导航按编号展示；第 8 部分是独立补充讲义，可按兴趣选读。机器学习（第 5、6 部分）对应用主线是选修，可以跳到第 7 部分；目标 JD 涉及训练时再补齐。第 7 部分按岗位地图、模型与训练、Agent 机制、生产工程、系统设计、项目与模拟六个主题贯通备考；JD 证据收在导读参考区，不独立成章。
 
 ```mermaid
 flowchart LR
@@ -29,6 +29,7 @@ flowchart LR
 | [第 5 部分 · 机器学习基础 + 经典算法](#p5-ml) | 想看懂 LLM 训练再来，从拟合、梯度下降讲起 | 选修 |
 | [第 6 部分 · 神经网络 + LLM 开发基础](#p6-nn-llm) | 手写自动求导、优化器、推理全流程、LoRA 微调 | 选修 |
 | [第 7 部分 · Agent 研发面试](#p7-interview) | 岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟 | 主线学完后按目标岗位准备 |
+| [第 8 部分 · 技术讲义与科普](#p8-technical-lectures) | 用运行线路图理解 Agent，从代码库检索入门走到 RepoMap 原理，再回看 LLM 发展史 | 按兴趣选读 |
 
 ## 目录
 
@@ -181,6 +182,16 @@ flowchart LR
 - [ ] [全栈与生产工程：把 Agent 交付成可靠产品](p7-interview/04-production-engineering.md) · ✍️ 原创
 - [ ] [系统设计：把模型、Agent 与生产约束组合成方案](p7-interview/05-system-design.md) · ✍️ 原创
 - [ ] [项目深挖与模拟面试：把知识变成可核查的证据](p7-interview/06-project-and-mock.md) · ✍️ 原创
+
+<a id="p8-technical-lectures"></a>
+### 第 8 部分 · 技术讲义与科普
+
+用运行线路图理解 Agent，从代码库检索入门走到 RepoMap 原理，再回看 LLM 发展史。
+
+- [ ] [Agent 运行线路图](p8-technical-lectures/01-agent-runtime-map.md) · ✍️ 原创
+- [ ] [代码库检索入门：Coding Agent 如何在大仓库里找到对的代码](p8-technical-lectures/02-codebase-search.md) · ✍️ 原创
+- [ ] [代码库感知原理讲义：RepoMap（AST + PageRank）与 Agentic Search](p8-technical-lectures/03-repomap-and-agentic-search.md) · ✍️ 原创
+- [ ] [LLM 发展过程中的质疑与成长](p8-technical-lectures/04-llm-development.md) · ✍️ 原创
 
 ## 配套代码
 
