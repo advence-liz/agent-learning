@@ -1,5 +1,6 @@
 """目录按编号展示，推荐路线保留主线 / 选修分流。运行：python3 -m unittest discover -s tools -p 'test_*.py'"""
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -41,8 +42,18 @@ class NavigationTests(unittest.TestCase):
 
         group = ROOT / 'p8-technical-lectures'
         chapters = list(group.glob('*.md'))
-        self.assertEqual(len(chapters), 6)
         self.assertTrue(set(chapters) <= {Path(p) for p in check_publish.files()})
+
+
+    def test_technical_lectures_list_one_codebase_search_chapter(self):
+        curriculum = json.loads((ROOT / 'curriculum.json').read_text())
+        chapters = [c['out'] for c in curriculum if c['part'] == 'p8-technical-lectures']
+        canonical = 'p8-technical-lectures/02-codebase-search.md'
+        legacy = 'p8-technical-lectures/03-repomap-and-agentic-search.md'
+        self.assertEqual(len(chapters), 5)
+        self.assertIn(canonical, chapters)
+        self.assertNotIn(legacy, chapters)
+        self.assertIn('](02-codebase-search.md)', (ROOT / legacy).read_text())
 
 
 if __name__ == '__main__':

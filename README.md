@@ -189,8 +189,7 @@ flowchart LR
 用运行线路图理解 Agent，从代码库检索入门走到 RepoMap 原理，再回看 LLM 发展史。
 
 - [ ] [Agent 运行线路图](p8-technical-lectures/01-agent-runtime-map.md) · ✍️ 原创
-- [ ] [代码库检索入门：Coding Agent 如何在大仓库里找到对的代码](p8-technical-lectures/02-codebase-search.md) · ✍️ 原创
-- [ ] [代码库感知原理讲义：RepoMap（AST + PageRank）与 Agentic Search](p8-technical-lectures/03-repomap-and-agentic-search.md) · ✍️ 原创
+- [ ] [代码库检索：向量检索、RepoMap 与 Agentic Search](p8-technical-lectures/02-codebase-search.md) · ✍️ 原创
 - [ ] [LLM 发展过程中的质疑与成长](p8-technical-lectures/04-llm-development.md) · ✍️ 原创
 - [ ] [Agent 的前世今生：自己行动，还是替人行动？](p8-technical-lectures/05-agent-etymology.md) · ✍️ 原创
 - [ ] [大模型的能力边界：论文、评测与现实各能说明什么？](p8-technical-lectures/06-llm-capability-boundaries.md) · ✍️ 原创
