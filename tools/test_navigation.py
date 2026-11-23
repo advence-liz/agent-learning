@@ -69,11 +69,33 @@ class NavigationTests(unittest.TestCase):
         chapters = [c['out'] for c in curriculum if c['part'] == 'p8-technical-lectures']
         history = 'p8-technical-lectures/08-ai-history.md'
         business = 'p8-technical-lectures/09-ai-business-adoption.md'
-        self.assertEqual(chapters[0], history)
+        self.assertEqual(chapters[0], 'p8-technical-lectures/00-reading-guide.md')
+        self.assertEqual(chapters[1], history)
         industry = 'p8-technical-lectures/10-ai-industry-watch.md'
         for page in (history, industry, business):
             self.assertEqual(chapters.count(page), 1)
             self.assertTrue((ROOT / page).is_file())
+
+    def test_supplement_groups_match_site_and_readme(self):
+        spec = importlib.util.spec_from_file_location('site_hooks', ROOT / '.site/hooks.py')
+        hooks = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(hooks)
+        items = next(iter(hooks.on_config({})['nav'][-1].values()))
+        prefix = 'p8-technical-lectures/'
+        expected = {
+            '认识 AI 与 Agent': ['08-ai-history.md', '04-llm-development.md', '05-agent-etymology.md'],
+            '拆开 Agent 看它怎么工作': ['01-agent-runtime-map.md', '02-codebase-search.md', '07-claude-code-harness-guide.md'],
+            '判断进展和落地价值': ['06-llm-capability-boundaries.md', '10-ai-industry-watch.md', '09-ai-business-adoption.md'],
+        }
+        self.assertEqual(list(items[0].values()), [prefix + '00-reading-guide.md'])
+        self.assertEqual([next(iter(group)) for group in items[1:]], list(expected))
+        readme = (ROOT / 'README.md').read_text().split(f'<a id="{prefix.rstrip("/")}"></a>')[1].split('\n## ')[0]
+        for group, (title, files) in zip(items[1:], expected.items()):
+            paths = [prefix + name for name in files]
+            self.assertEqual([next(iter(chapter.values())) for chapter in group[title]], paths)
+            body = readme.split(f'#### {title}\n', 1)[1].split('\n#### ', 1)[0]
+            offsets = [body.index(f']({path})') for path in paths]
+            self.assertEqual(offsets, sorted(offsets))
 
 
 if __name__ == '__main__':

@@ -8,6 +8,8 @@
 推荐路线另由 track 表示：主线 0→1→2→3→4→7，选修 5→6；第 8 部分是独立补充，不影响原有学习路线。
 """
 
+from itertools import groupby
+
 # (id, 显示编号, 标题, 一句话简介, 建议, track)
 PARTS = [
     ('p0-core', 0, '核心概念',
@@ -27,11 +29,17 @@ PARTS = [
     ('p7-interview', 7, 'Agent 研发面试',
      '岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟', '主线学完后按目标岗位准备', 'main'),
     ('p8-technical-lectures', 8, '技术讲义与科普',
-     '从 AI 简史和 Agent 原理出发，再看行业成果、代表应用与业务落地', '按兴趣选读', 'supplement'),
+     '三条选读路线：历史与概念、Agent 工程、行业证据与业务落地', '组内递进，组间可跳读', 'supplement'),
 ]
 
 ORDER = [p[0] for p in PARTS]
 BY_ID = {p[0]: p for p in PARTS}
+
+
+def chapter_groups(curriculum, pid):
+    """Yield contiguous sections in curriculum order; unlabelled entries stay at part level."""
+    chapters = (c for c in curriculum if c['part'] == pid)
+    return groupby(chapters, key=lambda c: c.get('section'))
 
 
 def label(pid):

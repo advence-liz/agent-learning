@@ -1,57 +1,32 @@
 # Claude Code Harness 搭建指南（详实版）
 
-**先在一个小项目里建立运行边界，再把可复用的配置打包。** 上下文告诉模型应该做什么；Skills、Subagents 和 MCP 扩展能力；Hooks 与权限在运行时执行规则；插件负责分发。本文保留逐层配置、进阶细节和端到端示例。想先理解软约束和硬约束的区别，可以从[《Harness Engineering 是什么》](../p3-agent-internals/12-harness-engineering.md)读起。
+**先用一个小项目验证运行边界，再把可复用的配置打包。** 规则能指导模型，Skills 和工具能扩大它的能力，但「真不允许」要靠运行时检查，合并仍由独立 CI 把关。
 
-> **使用边界：** 示例面向虚构项目。复制前检查工具版本、权限和依赖。Hooks 是本地运行时检查，不代替沙箱、服务端授权或独立 CI 门禁。原稿提到的「原图」指其评析的旧架构示意，下面的勘误已列明具体问题，本章不转载该图。
+- [**让模型知道什么**](#claudemd)：项目说明和记忆是上下文，不是权限设置。
+- [**让它能做什么**](#skills)：Skills、子 agent 与 MCP 提供可复用做法、分工和工具。
+- [**把必须做的检查交给程序**](#hooks)：Hooks 负责匹配事件的检查，[权限](#permissionssettingsjson)负责工具调用边界。
+- [**跑通以后再分发**](#plugins-marketplace)：项目内验证完，再打包给团队复用。
 
-## Harness = 用四个问题分清配置的职责
+> 示例面向虚构项目。复制前检查本机版本、权限和依赖；Hooks 不代替沙箱、服务端鉴权或独立 CI。原稿所评析的旧架构图不转载，见后文勘误。
 
+## 四类配置各管一件事，不是四个固定步骤 { #harness }
 
+```d2
+direction: down
+project: Claude Code 项目配置
+context: "上下文\n项目说明与记忆"
+capability: "能力与编排\n技能 · 分工 · 工具"
+gate: "运行时护栏\n权限与事件检查"
+package: "分发\n插件与市场"
+project -> context: 指导模型
+project -> capability: 提供入口
+project -> gate: 约束动作
+project -> package: 打包复用
+```
 
-<div>
-<span>结论先行</span>
-        任何一个 Claude Code 项目的 harness，本质上只需要回答四个 MECE（相互独立、完全穷尽）的问题：① Claude 知道什么（Context）② Claude 会做什么（Capability）③ 按什么顺序做（Orchestration）④ 什么必须发生、什么绝不允许（Enforcement）。原图的五个"核心组件"只回答了①②③，④完全空缺——而④恰恰是本指南篇幅最长、demo 最多的部分，因为它是全文唯一"不讲道理、直接拦截"的一层。
-</div>
+**读图：** 四支是配置职责，不是每次任务都会从头跑过四站。比如，写一条项目规则不会自动阻止命令；要拦截还得配工具权限或匹配的 Hook。
 
-<p>下面四条是支撑上面结论的一级论点，也对应左侧导航的四个分组，按这个顺序读下去，由浅入深：</p>
-
-<ul>
-<li><b>论点 1 · Context 层回答"知道什么"</b>——CLAUDE.md、Auto Memory、路径限定规则。特点：占用上下文、按作用域加载，但本质是"写给 Claude 看的说明书"，模型仍可能因权衡而偏离。</li>
-<li><b>论点 2 · Capability + Orchestration 层回答"会做什么、按什么顺序"</b>——Skills 沉淀重复任务，Subagents 隔离上下文分工，Slash Commands 给固定流程一个触发入口。三者共同点：都要 Claude"愿意"去调用，本质仍是"建议"。</li>
-<li><b>论点 3 · Enforcement 层回答"必须发生 / 绝不允许"</b>——Hooks 与 Permissions，是整套系统里唯一不依赖模型意愿、能物理拦截工具调用的一层。本指南会给出完整可运行的脚本。</li>
-<li><b>论点 4 · Distribution 层回答"怎么规模化"</b>——Plugins + Marketplace，把前三层打包分发给团队，是最后一步，不是第一步。</li>
-</ul>
-
-<div>
-<div>
-<div><div>① Context 层</div><div>Claude 每次会话开始时知道什么</div></div>
-<span>CLAUDE.md · Auto Memory</span>
-</div>
-<div>↓ 会话启动时加载</div>
-<div>
-<div><div>② Capability 层</div><div>Claude 具备哪些可调用的能力</div></div>
-<span>Skills · Subagents · MCP Tools</span>
-</div>
-<div>↓ 按需被发现 / 被调用</div>
-<div>
-<div><div>Orchestration 层</div><div>按什么顺序、由谁来做</div></div>
-<span>Slash Commands · Subagent 派发</span>
-</div>
-<div>↓ 每一次 tool call 都要经过这里 ↓</div>
-<div>
-<div><div>③ Enforcement 层</div><div>由运行时在事件上执行的检查</div></div>
-<span>Hooks · Permissions</span>
-</div>
-<div>↓ 团队协作时</div>
-<div>
-<div><div>④ Distribution 层</div><div>这套配置怎么在团队里复用</div></div>
-<span>Plugins · Marketplace</span>
-</div>
-</div>
-
-<div>
-<b>怎么读这份指南：</b>每一节都固定按"结论 → Level 1 基础 → Level 2 进阶 → Level 3 高阶/坑 → 实操 Demo"的顺序展开，由浅入深。赶时间只看每节的结论框和 Demo 就能跑起来；要抠细节再展开 Level 2、Level 3。
-</div>
+[《Agent 运行线路图》](01-agent-runtime-map.md#runtime-layers)讲通用分工；[《Harness Engineering 是什么》](../p3-agent-internals/12-harness-engineering.md)讲软硬约束；本篇提供 Claude Code 的配置示例。想直接验证行为，可先读[测试失败的端到端 Demo](#demo-agent)，再按需看各节进阶细节。
 
 ## CLAUDE.md
 

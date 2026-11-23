@@ -1404,11 +1404,11 @@
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
   "idx": 1,
-  "id": "original/ai-history",
-  "title": "AI 发展简史：从手写规则到能调用工具的系统",
+  "id": "original/technical-lectures-reading-guide",
+  "title": "科普导读：按你想回答的问题选读",
   "free": true,
   "src": "",
-  "out": "p8-technical-lectures/08-ai-history.md",
+  "out": "p8-technical-lectures/00-reading-guide.md",
   "src_headings": [],
   "kind": "lesson"
  },
@@ -1416,61 +1416,66 @@
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
   "idx": 2,
-  "id": "original/agent-runtime-map",
-  "title": "Agent 运行线路图",
+  "id": "original/ai-history",
+  "title": "AI 发展简史：从手写规则到能调用工具的系统",
   "free": true,
   "src": "",
-  "out": "p8-technical-lectures/01-agent-runtime-map.md",
+  "out": "p8-technical-lectures/08-ai-history.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "认识 AI 与 Agent"
  },
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
   "idx": 3,
-  "id": "original/codebase-search",
-  "title": "代码库检索：向量检索、RepoMap 与 Agentic Search",
-  "free": true,
-  "src": "",
-  "out": "p8-technical-lectures/02-codebase-search.md",
-  "src_headings": [],
-  "kind": "lesson"
- },
- {
-  "part": "p8-technical-lectures",
-  "part_name": "技术讲义与科普",
-  "idx": 4,
   "id": "original/llm-development",
   "title": "LLM 发展过程中的质疑与成长",
   "free": true,
   "src": "",
   "out": "p8-technical-lectures/04-llm-development.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "认识 AI 与 Agent"
  },
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 5,
+  "idx": 4,
   "id": "original/agent-etymology",
   "title": "Agent 的前世今生：自己行动，还是替人行动？",
   "free": true,
   "src": "",
   "out": "p8-technical-lectures/05-agent-etymology.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "认识 AI 与 Agent"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 5,
+  "id": "original/agent-runtime-map",
+  "title": "Agent 运行线路图",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/01-agent-runtime-map.md",
+  "src_headings": [],
+  "kind": "lesson",
+  "section": "拆开 Agent 看它怎么工作"
  },
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
   "idx": 6,
-  "id": "original/llm-capability-boundaries",
-  "title": "大模型的能力边界：论文、评测与现实各能说明什么？",
+  "id": "original/codebase-search",
+  "title": "代码库检索：向量检索、RepoMap 与 Agentic Search",
   "free": true,
   "src": "",
-  "out": "p8-technical-lectures/06-llm-capability-boundaries.md",
+  "out": "p8-technical-lectures/02-codebase-search.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "拆开 Agent 看它怎么工作"
  },
  {
   "part": "p8-technical-lectures",
@@ -1482,30 +1487,46 @@
   "src": "",
   "out": "p8-technical-lectures/07-claude-code-harness-guide.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "拆开 Agent 看它怎么工作"
  },
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
   "idx": 8,
+  "id": "original/llm-capability-boundaries",
+  "title": "大模型的能力边界：论文、评测与现实各能说明什么？",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/06-llm-capability-boundaries.md",
+  "src_headings": [],
+  "kind": "lesson",
+  "section": "判断进展和落地价值"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 9,
   "id": "original/ai-industry-watch",
   "title": "AI 行业进展与代表应用：2026 年 11 月观察",
   "free": true,
   "src": "",
   "out": "p8-technical-lectures/10-ai-industry-watch.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "判断进展和落地价值"
  },
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 9,
+  "idx": 10,
   "id": "original/ai-business-adoption",
   "title": "AI 怎么从试用走到业务流程：验效果、算成本、管执行",
   "free": true,
   "src": "",
   "out": "p8-technical-lectures/09-ai-business-adoption.md",
   "src_headings": [],
-  "kind": "lesson"
+  "kind": "lesson",
+  "section": "判断进展和落地价值"
  }
 ]

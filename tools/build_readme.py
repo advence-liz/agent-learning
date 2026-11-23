@@ -5,7 +5,7 @@ cur = json.load(open(os.path.join(ROOT, 'curriculum.json')))
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from parts import PARTS as _PARTS, ORDER, label  # 部分元数据的唯一来源
+from parts import PARTS as _PARTS, ORDER, chapter_groups, label  # 部分元数据的唯一来源
 PARTS = {pid: (label(pid), desc, advice) for pid, _, _, desc, advice, _ in _PARTS}
 
 def status(c):
@@ -55,9 +55,14 @@ for p in ORDER:
     w('')
     if p == 'p0-core':
         w(f'- [ ] [本章导读](p0-core/00-guide.md) · 📖 笔记 · [原文](https://labuladong.online/zh/ai-coding/ai-guide/)')
-    for c in [c for c in cur if c['part'] == p]:
-        src = f" · [原文]({c['src']})" if c['src'] else ''  # 补充章节没有对应原站文章
-        w(f"- [ ] [{c['title']}]({c['out']}) · {status(c)}{src}")
+    for section, chapters in chapter_groups(cur, p):
+        if section:
+            w('')
+            w(f'#### {section}')
+            w('')
+        for c in chapters:
+            src = f" · [原文]({c['src']})" if c['src'] else ''  # 补充章节没有对应原站文章
+            w(f"- [ ] [{c['title']}]({c['out']}) · {status(c)}{src}")
 w('')
 w('## 配套代码')
 w('')

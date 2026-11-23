@@ -29,7 +29,7 @@ flowchart LR
 | [第 5 部分 · 机器学习基础 + 经典算法](#p5-ml) | 想看懂 LLM 训练再来，从拟合、梯度下降讲起 | 选修 |
 | [第 6 部分 · 神经网络 + LLM 开发基础](#p6-nn-llm) | 手写自动求导、优化器、推理全流程、LoRA 微调 | 选修 |
 | [第 7 部分 · Agent 研发面试](#p7-interview) | 岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟 | 主线学完后按目标岗位准备 |
-| [第 8 部分 · 技术讲义与科普](#p8-technical-lectures) | 从 AI 简史和 Agent 原理出发，再看行业成果、代表应用与业务落地 | 按兴趣选读 |
+| [第 8 部分 · 技术讲义与科普](#p8-technical-lectures) | 三条选读路线：历史与概念、Agent 工程、行业证据与业务落地 | 组内递进，组间可跳读 |
 
 ## 目录
 
@@ -186,15 +186,25 @@ flowchart LR
 <a id="p8-technical-lectures"></a>
 ### 第 8 部分 · 技术讲义与科普
 
-从 AI 简史和 Agent 原理出发，再看行业成果、代表应用与业务落地。
+三条选读路线：历史与概念、Agent 工程、行业证据与业务落地。
+
+- [ ] [科普导读：按你想回答的问题选读](p8-technical-lectures/00-reading-guide.md) · ✍️ 原创
+
+#### 认识 AI 与 Agent
 
 - [ ] [AI 发展简史：从手写规则到能调用工具的系统](p8-technical-lectures/08-ai-history.md) · ✍️ 原创
-- [ ] [Agent 运行线路图](p8-technical-lectures/01-agent-runtime-map.md) · ✍️ 原创
-- [ ] [代码库检索：向量检索、RepoMap 与 Agentic Search](p8-technical-lectures/02-codebase-search.md) · ✍️ 原创
 - [ ] [LLM 发展过程中的质疑与成长](p8-technical-lectures/04-llm-development.md) · ✍️ 原创
 - [ ] [Agent 的前世今生：自己行动，还是替人行动？](p8-technical-lectures/05-agent-etymology.md) · ✍️ 原创
-- [ ] [大模型的能力边界：论文、评测与现实各能说明什么？](p8-technical-lectures/06-llm-capability-boundaries.md) · ✍️ 原创
+
+#### 拆开 Agent 看它怎么工作
+
+- [ ] [Agent 运行线路图](p8-technical-lectures/01-agent-runtime-map.md) · ✍️ 原创
+- [ ] [代码库检索：向量检索、RepoMap 与 Agentic Search](p8-technical-lectures/02-codebase-search.md) · ✍️ 原创
 - [ ] [Claude Code Harness 搭建指南（详实版）](p8-technical-lectures/07-claude-code-harness-guide.md) · ✍️ 原创
+
+#### 判断进展和落地价值
+
+- [ ] [大模型的能力边界：论文、评测与现实各能说明什么？](p8-technical-lectures/06-llm-capability-boundaries.md) · ✍️ 原创
 - [ ] [AI 行业进展与代表应用：2026 年 11 月观察](p8-technical-lectures/10-ai-industry-watch.md) · ✍️ 原创
 - [ ] [AI 怎么从试用走到业务流程：验效果、算成本、管执行](p8-technical-lectures/09-ai-business-adoption.md) · ✍️ 原创
 

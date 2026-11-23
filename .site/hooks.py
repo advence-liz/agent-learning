@@ -40,20 +40,27 @@ D2_MIN_SCALE = 0.75
 # 部分的顺序和标题来自 tools/parts.py（与 README 共用，唯一来源）
 import sys
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
-from parts import ORDER, nav_label  # noqa: E402
+from parts import ORDER, chapter_groups, nav_label  # noqa: E402
 PARTS = [(pid, nav_label(pid)) for pid in ORDER]
 
 
 def on_config(config, **kwargs):
-    cur = json.load(open(os.path.join(ROOT, 'curriculum.json')))
+    with open(os.path.join(ROOT, 'curriculum.json'), encoding='utf-8') as curriculum:
+        cur = json.load(curriculum)
     nav = [{'首页': 'index.md'}]
     for part, name in PARTS:
         items = []
         if part == 'p0-core' and os.path.exists(os.path.join(ROOT, 'p0-core/00-guide.md')):
             items.append({'本章导读': 'p0-core/00-guide.md'})
-        for c in cur:
-            if c['part'] == part and os.path.exists(os.path.join(ROOT, c['out'])):
-                items.append({('📖 ' if c['kind'] == 'note' else '') + c['title']: c['out']})
+        for section, chapters in chapter_groups(cur, part):
+            pages = [
+                {('📖 ' if c['kind'] == 'note' else '') + c['title']: c['out']}
+                for c in chapters if os.path.exists(os.path.join(ROOT, c['out']))
+            ]
+            if section and pages:
+                items.append({section: pages})
+            else:
+                items.extend(pages)
         if items:
             nav.append({name: items})
     config['nav'] = nav
