@@ -46,7 +46,8 @@ for p in ORDER:
     for section, chapters in chapter_groups(cur, p):
         if section:
             w('')
-            w(f'#### {section}')
+            heading = '###' if p == ALGORITHM_PART else '####'
+            w(f'{heading} {section}')
             w('')
         for c in chapters:
             src = f" · [原文]({c['src']})" if c['src'] else ''  # 补充章节没有对应原站文章

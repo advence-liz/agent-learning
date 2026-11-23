@@ -30,7 +30,7 @@ PARTS = [
     ('p8-technical-lectures', 8, '技术讲义与科普',
      '三条选读路线：历史与概念、Agent 工程、行业证据与业务落地', '组内递进，组间可跳读', 'supplement'),
     ('p9-algorithms', 9, '数据结构与算法',
-     '从数组、搜索与遍历练到动态规划和优先队列，再用 TypeScript 实现任务依赖规划器', '独立路线，可系统学或按面试题型复习', 'supplement'),
+     '按专题学习数据结构、搜索、图论、动态规划和数学，用 TypeScript 实验与综合练习自检', '独立路线，可系统学或按面试题型复习', 'supplement'),
 ]
 
 ORDER = [p[0] for p in PARTS]

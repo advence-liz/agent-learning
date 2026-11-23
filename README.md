@@ -199,16 +199,108 @@
 <a id="p9-algorithms"></a>
 ## 数据结构与算法
 
-从数组、搜索与遍历练到动态规划和优先队列，再用 TypeScript 实现任务依赖规划器。
+按专题学习数据结构、搜索、图论、动态规划和数学，用 TypeScript 实验与综合练习自检。
 
 - [ ] [算法导读：先说清状态，再背模板](p9-algorithms/00-guide.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/algo/home/)
+
+### 准备与解题框架
+
+- [ ] [复杂度：先数操作，再决定要不要优化](p9-algorithms/08-complexity.md) · ✍️ 原创
+- [ ] [不变量与对拍：用小输入找出大算法的边界](p9-algorithms/09-proof-and-oracles.md) · ✍️ 原创
+- [ ] [递归与显式栈：区分参数、返回值和回到父层的时机](p9-algorithms/10-recursion.md) · ✍️ 原创
+
+### 数组、容器与有序结构
+
+- [ ] [动态数组和环形队列：把移动成本留给扩容](p9-algorithms/44-dynamic-array-and-deque.md) · ✍️ 原创
 - [ ] [数组、哈希与前缀和：把重复计算变成查表](p9-algorithms/01-arrays-and-hash.md) · ✍️ 原创
+- [ ] [前缀频次：有负数的子数组和为什么改成查表](p9-algorithms/42-prefix-frequency.md) · ✍️ 原创
+- [ ] [差分数组：批量修改只记开始和结束](p9-algorithms/11-difference-array.md) · ✍️ 原创
+- [ ] [二维矩阵：用四个角回答矩形范围和](p9-algorithms/12-matrix-prefix.md) · ✍️ 原创
+- [ ] [二维遍历：转置、旋转与螺旋走的是不同下标](p9-algorithms/45-matrix-traversal.md) · ✍️ 原创
 - [ ] [双指针、滑动窗口与二分：每一步都要说明排除了什么](p9-algorithms/02-pointers-and-search.md) · ✍️ 原创
+- [ ] [原地覆盖：读指针审阅输入，写指针只填合法前缀](p9-algorithms/46-slow-fast-in-place.md) · ✍️ 原创
+- [ ] [二分答案：当可行性从假变真，就搜索第一个真](p9-algorithms/17-binary-search-answer.md) · ✍️ 原创
 - [ ] [链表、栈与队列：结构决定下一步处理谁](p9-algorithms/03-linear-structures.md) · ✍️ 原创
-- [ ] [树与图：DFS 汇总子树，BFS 按距离扩散](p9-algorithms/04-tree-and-graph.md) · ✍️ 原创
-- [ ] [回溯、动态规划与贪心：先判断哪些分支可以不算](p9-algorithms/05-backtracking-dp-greedy.md) · ✍️ 原创
+- [ ] [链表进阶：快慢指针、虚拟头与分段翻转](p9-algorithms/15-linked-list-patterns.md) · ✍️ 原创
+- [ ] [哈希表实现：桶内碰撞和扩容是性能账的两半](p9-algorithms/43-hash-table.md) · ✍️ 原创
+- [ ] [哈希与 LRU：按键定位和按顺序淘汰是两种操作](p9-algorithms/16-hash-lru.md) · ✍️ 原创
+- [ ] [单调栈与单调队列：候选被支配就不再保留](p9-algorithms/14-monotonic.md) · ✍️ 原创
+- [ ] [雨水与边界：水位由两侧较矮的挡板限制](p9-algorithms/73-trapping-water.md) · ✍️ 原创
+- [ ] [排序基础：用同一组记录看插入、选择、冒泡和堆排序](p9-algorithms/47-sorting-basics.md) · ✍️ 原创
 - [ ] [排序与堆：只要 Top K，就不用给所有元素排序](p9-algorithms/06-sorting-and-heap.md) · ✍️ 原创
+- [ ] [堆的线性建造与 K 路归并：只比较每路当前头部](p9-algorithms/48-heap-build-and-merge.md) · ✍️ 原创
+- [ ] [排序与选择：稳定性、划分和平均复杂度不能混为一谈](p9-algorithms/18-sort-and-select.md) · ✍️ 原创
+- [ ] [扫描线：不用枚举真实时间，枚举事件就够](p9-algorithms/49-sweep-line.md) · ✍️ 原创
+- [ ] [树状数组与线段树：边更新边查询时选择什么结构](p9-algorithms/13-range-structures.md) · ✍️ 原创
+
+### 树、图与路径
+
+- [ ] [树与图：DFS 汇总子树，BFS 按距离扩散](p9-algorithms/04-tree-and-graph.md) · ✍️ 原创
+- [ ] [搜索树：局部左右关系不足以证明整棵树合法](p9-algorithms/19-bst.md) · ✍️ 原创
+- [ ] [字典树：前缀存在不等于完整词已添加](p9-algorithms/20-trie.md) · ✍️ 原创
+- [ ] [树的重建、序列化与公共祖先：先说清信息够不够](p9-algorithms/21-tree-construction.md) · ✍️ 原创
+- [ ] [树上距离与重根 DP](p9-algorithms/67-tree-distance-rerooting.md) · ✍️ 原创
+- [ ] [连通性与并查集：只问是否同组，不必保存整条路径](p9-algorithms/22-graph-connectivity.md) · ✍️ 原创
+- [ ] [二分图染色与奇环](p9-algorithms/65-bipartite-odd-cycle.md) · ✍️ 原创
+- [ ] [加权最短路：首次发现不是最短，弹出有效最小项才是](p9-algorithms/23-dijkstra.md) · ✍️ 原创
+- [ ] [Bellman–Ford 与负环](p9-algorithms/63-bellman-ford.md) · ✍️ 原创
+- [ ] [Floyd–Warshall 全源最短路](p9-algorithms/64-floyd-warshall.md) · ✍️ 原创
+- [ ] [最小生成树：连通全图最省钱，不等于从某点出发最短](p9-algorithms/24-mst.md) · ✍️ 原创
+- [ ] [有向图结构：拓扑、环与强连通各回答不同问题](p9-algorithms/25-directed-graphs.md) · ✍️ 原创
+- [ ] [DAG DP 与关键路径](p9-algorithms/62-dag-critical-path.md) · ✍️ 原创
+- [ ] [桥与割点：用边编号处理多重边](p9-algorithms/66-bridges-and-articulation-points.md) · ✍️ 原创
+
+### 搜索、分治与贪心
+
+- [ ] [回溯、动态规划与贪心：先判断哪些分支可以不算](p9-algorithms/05-backtracking-dp-greedy.md) · ✍️ 原创
+- [ ] [回溯去重：只剪掉同层的等价选择](p9-algorithms/26-backtracking-duplicates.md) · ✍️ 原创
+- [ ] [带约束回溯：先确定剪掉的分支确实不可能完成](p9-algorithms/50-backtracking-constraints.md) · ✍️ 原创
+- [ ] [状态空间搜索：从格子、单词到双向 BFS](p9-algorithms/27-state-search.md) · ✍️ 原创
+- [ ] [岛屿搜索：面积、周长和连通数要分别记账](p9-algorithms/74-islands.md) · ✍️ 原创
+- [ ] [分治：先确认左右独立，再设计跨边界合并](p9-algorithms/28-divide-and-conquer.md) · ✍️ 原创
+- [ ] [折半枚举：指数搜索太大时，把独立选择分成两半](p9-algorithms/52-meet-in-middle.md) · ✍️ 原创
+- [ ] [区间与贪心：先区分选最多、合并和数资源](p9-algorithms/29-intervals-and-greedy.md) · ✍️ 原创
+- [ ] [优先队列贪心：最便宜的两项为什么可以先合并](p9-algorithms/51-priority-greedy.md) · ✍️ 原创
+
+### 动态规划专项
+
+- [ ] [动态规划方法：状态、转移、顺序与答案位置](p9-algorithms/30-dp-method.md) · ✍️ 原创
+- [ ] [网格 DP：障碍与最小代价](p9-algorithms/55-grid-dp.md) · ✍️ 原创
+- [ ] [背包：同一个状态维度，遍历方向决定能不能复用物品](p9-algorithms/31-knapsack.md) · ✍️ 原创
+- [ ] [二维 0/1 背包](p9-algorithms/60-two-dimensional-knapsack.md) · ✍️ 原创
+- [ ] [序列 DP：最长上升子序列不是最长连续片段](p9-algorithms/32-sequence-dp.md) · ✍️ 原创
+- [ ] [字符串 DP：从两个前缀的末尾推转移](p9-algorithms/33-string-dp.md) · ✍️ 原创
+- [ ] [模式匹配与分词：扫描位置相同，转移方向却不同](p9-algorithms/71-pattern-matching-dp.md) · ✍️ 原创
+- [ ] [区间 DP：第一次做会改变邻居，试着改枚举最后一次](p9-algorithms/34-interval-dp.md) · ✍️ 原创
+- [ ] [最长回文子序列](p9-algorithms/56-longest-palindromic-subsequence.md) · ✍️ 原创
+- [ ] [树与状态机 DP：有限状态承载未来需要的历史](p9-algorithms/35-tree-and-state-dp.md) · ✍️ 原创
+- [ ] [股票 DP：次数与手续费](p9-algorithms/57-stock-dp.md) · ✍️ 原创
+- [ ] [带权区间调度](p9-algorithms/61-weighted-interval-scheduling.md) · ✍️ 原创
+- [ ] [最小初始资源：逆推每个格子进入前最低需要多少](p9-algorithms/72-minimum-start-budget.md) · ✍️ 原创
+- [ ] [博弈 DP：轮到谁就站在谁一边](p9-algorithms/59-game-dp.md) · ✍️ 原创
+- [ ] [概率 DP：先到哪一边](p9-algorithms/58-probability-dp.md) · ✍️ 原创
+- [ ] [数位与状压 DP：压缩的是重复状态，不是随意减维](p9-algorithms/36-digit-and-bitmask-dp.md) · ✍️ 原创
+- [ ] [扔鸡蛋：反过来问给定次数最多能覆盖多少层](p9-algorithms/70-egg-drop.md) · ✍️ 原创
+
+### 字符串、数学与随机化
+
+- [ ] [KMP：失配时复用已经匹配的前后缀](p9-algorithms/37-kmp.md) · ✍️ 原创
+- [ ] [滚动哈希：快速筛选相同子串，但碰撞后还要验证](p9-algorithms/53-rolling-hash.md) · ✍️ 原创
+- [ ] [字符串乘法：位权对齐以后再进位](p9-algorithms/76-decimal-arithmetic.md) · ✍️ 原创
+- [ ] [整数运算：从最大公约数、筛法到快速幂](p9-algorithms/38-number-theory.md) · ✍️ 原创
+- [ ] [模运算中的除法：逆元要存在，才能换成乘法](p9-algorithms/54-modular-inverse.md) · ✍️ 原创
+- [ ] [位运算与组合计数：先定义编码与重复规则](p9-algorithms/39-bit-and-combinatorics.md) · ✍️ 原创
+- [ ] [随机算法：洗牌、抽样和期望时间各保证什么](p9-algorithms/40-randomization.md) · ✍️ 原创
+- [ ] [带权随机：用前缀权重划出等概率的整数格](p9-algorithms/75-weighted-sampling.md) · ✍️ 原创
+
+### 综合练习与复盘
+
 - [ ] [综合项目：用拓扑排序和堆规划任务依赖](p9-algorithms/07-task-planner.md) · ✍️ 原创
+- [ ] [第二实战：给日程服务做可验证的区间查询](p9-algorithms/68-scheduling-project.md) · ✍️ 原创
+- [ ] [第三实战：把路径查询拆成建模、选算法和校验结果](p9-algorithms/69-routing-project.md) · ✍️ 原创
+- [ ] [解析器实战：表达式优先级不是边扫描边求值就能解决](p9-algorithms/77-parser-project.md) · ✍️ 原创
+- [ ] [有序流实战：把多个来源的最新记录合成一页](p9-algorithms/78-stream-feed-project.md) · ✍️ 原创
+- [ ] [综合练习：先交付可验证的答案，再追求题数](p9-algorithms/41-practice-checkpoints.md) · ✍️ 原创
 
 ## 配套代码
 

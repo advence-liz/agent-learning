@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import re
 import unittest
 
 from parts import ORDER, PARTS
@@ -28,6 +29,14 @@ class NavigationTests(unittest.TestCase):
         self.assertTrue(chapters <= {Path(p) for p in check_publish.files()})
         text = (ROOT / 'README.md').read_text()
         self.assertTrue(all(f']({c["out"]})' in text for c in entries))
+        for page in chapters:
+            with self.subTest(chapter=page.name):
+                content = page.read_text()
+                self.assertTrue(content.startswith('# '))
+                if page.name != '00-guide.md':
+                    self.assertIn('<summary>', content)
+                for target in re.findall(r'\]\(((?:\.\./)?[^:/#\s)]+(?:/[^#\s)]+)*\.(?:md|ts))(?:#[^)]*)?\)', content):
+                    self.assertTrue((page.parent / target).is_file(), f'broken link {target}')
 
     def test_recommended_main_track_can_skip_electives(self):
         self.assertEqual([p[0] for p in PARTS if p[-1] == 'main'], [
@@ -56,7 +65,13 @@ class NavigationTests(unittest.TestCase):
                     yield path
 
         self.assertEqual(list(chapter_paths(agent[1:])), expected_agent)
-        self.assertEqual([next(iter(page.values())) for page in nav[2]['数据结构与算法']], [
+        algorithms = nav[2]['数据结构与算法']
+        self.assertEqual(next(iter(algorithms[0].values())), 'p9-algorithms/00-guide.md')
+        self.assertEqual([next(iter(group)) for group in algorithms[1:]], [
+            '准备与解题框架', '数组、容器与有序结构', '树、图与路径',
+            '搜索、分治与贪心', '动态规划专项', '字符串、数学与随机化', '综合练习与复盘',
+        ])
+        self.assertEqual(list(chapter_paths(algorithms)), [
             c['out'] for c in curriculum if c['part'] == 'p9-algorithms'
         ])
 
