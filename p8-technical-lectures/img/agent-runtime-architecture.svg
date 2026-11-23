@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 884" role="img" aria-labelledby="title desc">
+  <title id="title">Agent 分层架构图</title>
+  <desc id="desc">运行时是连接枢纽。上方的用户入口提交任务并接收交付；左侧模型接收上下文、返回文本或工具请求；右侧执行器接收获准的调用、返回结果或错误；下方会话状态、记忆和技能按需访问。连线是组件关系，不是执行顺序。</desc>
+  <style>
+    svg { --bg:#101826; --ink:#f6f1e7; --muted:#b9c5d7; --rule:#334258; --amber:#c78532; --teal:#169f88; --blue:#688cf0; }
+    text { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif; fill:var(--ink); }
+    .kicker { font-size:17px; font-weight:650; letter-spacing:1.4px; }
+    .headline { font-size:56px; font-weight:760; }
+    .subtitle { font-size:22px; fill:var(--muted); }
+    .label { font-size:26px; font-weight:720; }
+    .hub-title { font-size:39px; font-weight:740; }
+    .body { font-size:19px; fill:var(--muted); }
+    .small { font-size:17px; fill:var(--muted); }
+    .tag { font-size:16px; font-weight:700; letter-spacing:1.1px; }
+    .amber { color:var(--amber); }
+    .teal { color:var(--teal); }
+    .blue { color:var(--blue); }
+    .rail { fill:none; stroke:currentColor; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; }
+    .station { fill:var(--bg); stroke:currentColor; stroke-width:4; }
+    .rail-key { fill:currentColor; }
+  </style>
+
+  <rect width="720" height="884" rx="22" fill="var(--bg)"/>
+  <path d="M46 185H674 M46 808H674" stroke="var(--rule)"/>
+  <circle cx="52" cy="52" r="5" class="rail-key amber"/><circle cx="69" cy="52" r="5" class="rail-key teal"/><circle cx="86" cy="52" r="5" class="rail-key blue"/>
+  <text x="105" y="58" class="kicker">AGENT 图谱</text>
+  <text x="674" y="58" text-anchor="end" class="small">职责视图 / STRUCTURE</text>
+  <text x="46" y="116" class="headline">Agent 分层架构图</text>
+  <text x="46" y="155" class="subtitle">模型提出下一步，运行时负责把各层接起来</text>
+
+  <!-- Lines are drawn beneath labels and station bodies. The blue dashed leg is optional support, not a third action. -->
+  <path d="M360 277V345" class="rail amber"/>
+  <path d="M221 493V504Q221 523 203 523H167Q138 523 138 552V577" class="rail amber"/>
+  <path d="M499 493V504Q499 523 517 523H553Q582 523 582 552V577" class="rail teal"/>
+  <path d="M360 493V716" class="rail blue" stroke-dasharray="5 13"/>
+  <path d="M200 716H520" class="rail blue"/>
+
+  <text x="360" y="224" class="label" text-anchor="middle">用户入口</text>
+  <text x="360" y="252" class="body" text-anchor="middle">聊天界面 · CLI · API</text>
+  <circle cx="360" cy="277" r="10" class="station amber"/>
+  <text x="387" y="315" class="small">提交任务 / 接收交付</text>
+
+  <rect x="139" y="345" width="442" height="148" rx="24" fill="#1d2736" stroke="var(--amber)" stroke-width="2"/>
+  <rect x="160" y="366" width="4" height="105" rx="2" fill="var(--amber)"/>
+  <text x="184" y="383" class="tag" style="fill:#f2bc73">运行核心 / HARNESS</text>
+  <text x="183" y="430" class="hub-title">Agent 运行时</text>
+  <text x="184" y="464" class="body">组装上下文 · 调度循环 · 控制预算</text>
+  <circle cx="360" cy="345" r="7" class="station amber"/>
+  <circle cx="221" cy="493" r="6" class="station amber"/>
+  <circle cx="499" cy="493" r="6" class="station teal"/>
+  <circle cx="360" cy="493" r="6" class="station blue"/>
+
+  <text x="114" y="555" text-anchor="end" class="small">推理往返</text>
+  <circle cx="138" cy="577" r="12" class="station amber"/>
+  <text x="138" y="621" class="label" text-anchor="middle">模型推理</text>
+  <text x="138" y="650" class="body" text-anchor="middle">生成文本或工具请求</text>
+
+  <text x="605" y="555" class="small">调用往返</text>
+  <circle cx="582" cy="577" r="12" class="station teal"/>
+  <text x="582" y="621" class="label" text-anchor="middle">工具执行</text>
+  <text x="582" y="650" class="body" text-anchor="middle">执行获准操作并回传</text>
+
+  <text x="377" y="683" class="small">状态与资源 · 按需访问</text>
+  <circle cx="200" cy="716" r="9" class="station blue"/>
+  <circle cx="360" cy="716" r="9" class="station blue"/>
+  <circle cx="520" cy="716" r="9" class="station blue"/>
+  <g class="label" text-anchor="middle">
+    <text x="200" y="761">会话</text>
+    <text x="360" y="761">记忆</text>
+    <text x="520" y="761">技能</text>
+  </g>
+  <g class="small" text-anchor="middle">
+    <text x="200" y="787">记录任务进度</text>
+    <text x="360" y="787">复用相关信息</text>
+    <text x="520" y="787">加载操作方法</text>
+  </g>
+
+  <g class="small">
+    <path d="M48 845H68" class="rail amber"/><text x="80" y="851">任务与推理</text>
+    <path d="M257 845H277" class="rail teal"/><text x="289" y="851">调用与回传</text>
+    <path d="M468 845H489" class="rail blue" stroke-dasharray="4 9"/><text x="501" y="851">按需补给</text>
+  </g>
+</svg>

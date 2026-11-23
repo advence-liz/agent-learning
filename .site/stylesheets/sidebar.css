@@ -1,0 +1,16 @@
+/* Material sizes the desktop scroll container in JS. When that height is
+ * missing (e.g. a local file preview), keep the menu scrollable and let the
+ * sticky sidebar's real height keep it inside the main area, above the footer.
+ * Use Material's desktop breakpoint; the mobile drawer has its own scroller.
+ */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary:not(:has(> .md-sidebar__scrollwrap[style*="height:"])) {
+    height: auto;
+  }
+
+  .md-sidebar--primary > .md-sidebar__scrollwrap {
+    max-height: calc(100vh - 4.8rem);
+    max-height: calc(100dvh - 4.8rem);
+    overscroll-behavior-y: contain;
+  }
+}

@@ -27,7 +27,7 @@ PARTS = [
     ('p7-interview', 7, 'Agent 研发面试',
      '岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟', '主线学完后按目标岗位准备', 'main'),
     ('p8-technical-lectures', 8, '技术讲义与科普',
-     '用运行线路图理解 Agent，从代码库检索入门走到 RepoMap 原理，再回看 LLM 发展史', '按兴趣选读', 'supplement'),
+     '从 AI 简史和 Agent 原理出发，再看行业成果、代表应用与业务落地', '按兴趣选读', 'supplement'),
 ]
 
 ORDER = [p[0] for p in PARTS]

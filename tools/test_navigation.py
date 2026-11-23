@@ -64,5 +64,17 @@ class NavigationTests(unittest.TestCase):
         self.assertTrue((ROOT / guide).is_file())
 
 
+    def test_history_industry_and_business_have_distinct_supplement_pages(self):
+        curriculum = json.loads((ROOT / 'curriculum.json').read_text())
+        chapters = [c['out'] for c in curriculum if c['part'] == 'p8-technical-lectures']
+        history = 'p8-technical-lectures/08-ai-history.md'
+        business = 'p8-technical-lectures/09-ai-business-adoption.md'
+        self.assertEqual(chapters[0], history)
+        industry = 'p8-technical-lectures/10-ai-industry-watch.md'
+        for page in (history, industry, business):
+            self.assertEqual(chapters.count(page), 1)
+            self.assertTrue((ROOT / page).is_file())
+
+
 if __name__ == '__main__':
     unittest.main()

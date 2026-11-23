@@ -4,7 +4,7 @@
 
 > **使用边界：** 示例面向虚构项目。复制前检查工具版本、权限和依赖。Hooks 是本地运行时检查，不代替沙箱、服务端授权或独立 CI 门禁。原稿提到的「原图」指其评析的旧架构示意，下面的勘误已列明具体问题，本章不转载该图。
 
-## Harness = 回答四个互斥又穷尽的问题
+## Harness = 用四个问题分清配置的职责
 
 
 
@@ -244,20 +244,19 @@ description: 审查最近的 diff 并按严重程度分类反馈。用户要求 
 </details>
 
 <details>
-<summary>限制触发方式：allowed-tools 与 disable-model-invocation</summary>
+<summary>限制触发方式：手动调用不等于预批准工具</summary>
 <div>
 <div>
 <div>.claude/skills/deploy-staging/SKILL.md</div>
 <pre><code>---
 name: deploy-staging
 description: 部署当前分支到 staging 环境
-allowed-tools: Bash
 disable-model-invocation: true
 ---
 部署到 staging，先跑 `pnpm build`，成功后执行 `./scripts/deploy.sh staging`。</code></pre>
 
 </div>
-<p><code>disable-model-invocation: true</code> 之后，Claude <b>不会</b>自动猜着用它，只有你手动敲 <code>/deploy-staging</code> 才会触发——有风险的操作（部署、发布）建议都这样收紧，避免 Claude"好心办坏事"式的自动调用。</p>
+<p><code>disable-model-invocation: true</code> 之后，Claude <b>不会</b>自动猜着用它，只有你手动敲 <code>/deploy-staging</code> 才会触发——有风险的操作（部署、发布）建议都这样收紧，避免 Claude"好心办坏事"式的自动调用。<code>allowed-tools</code> 是预批准，不是工具白名单；这里不预批准 Bash，实际调用仍受权限控制。</p>
 </div>
 </details>
 
@@ -274,7 +273,7 @@ disable-model-invocation: true
 <b>Progressive Disclosure（渐进加载）三级火箭：</b>①会话开始只加载每个 skill 的 <code>name</code> + <code>description</code>；②判断相关时加载整篇 SKILL.md；③SKILL.md 里引用的 references/scripts 再按需加载。<b>description 写得越具体，触发越准</b>——"处理文档"这种描述基本等于没写。
 </div>
 <div>
-        编辑 SKILL.md 正文即时生效、无需重启；但新建一个此前不存在的顶层 skills 目录需要重启 Claude Code 才会被监听到；如果这个 skill 目录同时也是一个插件（带 <code>plugin.json</code>），改动 hooks/MCP 配置需要 <code>/reload-plugins</code>。
+        新增或编辑 Skill 后，先在新一次调用中确认正文；未发现时可用 <code>/reload-skills</code>。插件的 Hooks 或 MCP 配置变动用 <code>/reload-plugins</code>，并检查实际加载结果。
 </div>
 
 ## Subagents
@@ -285,7 +284,7 @@ disable-model-invocation: true
 <div><span>结论先行</span>建 subagent 不是为了"看起来分工明确"，唯一站得住脚的理由是<b>上下文隔离</b>：把会撑爆主会话 context 的探索/审查工作丢给一个独立 context window 的角色，主会话只收结果摘要。</div>
 
 <span>Level 1 · 基础</span>
-<p>最快的方式是交互式创建：</p>
+<p>历史用法：旧版可交互式创建。<a href="https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21198">2.1.198 已移除创建向导</a>；现行版本直接使用下方项目文件，也可用 <code>/agents</code> 查看已加载角色。</p>
 <div>
 <div>Claude Code 会话</div>
 <pre><code>&gt; /agents</code></pre>
@@ -450,9 +449,12 @@ git checkout -b feature/$ARGUMENTS</code></pre>
 $ cat &gt; .claude/hooks/guard-dangerous-bash.sh &lt;&lt; 'EOF'
 #!/usr/bin/env bash
 input=$(cat)
-cmd=$(echo "$input" | python3 -c "import sys,json; print(json.load(sys.stdin)['tool_input'].get('command',''))")
+if ! cmd=$(printf '%s' "$input" | jq -er '.tool_input.command | strings'); then
+  echo "无法读取 Bash 命令，拒绝本次调用。" &gt;&amp;2
+  exit 2
+fi
 if echo "$cmd" | grep -qE 'rm -rf (/|~|\*)|DROP TABLE'; then
-  echo "危险命令被拦截：$cmd" &gt;&amp;2
+  echo "命中示例拦截规则，不执行该命令。" &gt;&amp;2
   exit 2
 fi
 exit 0
@@ -465,7 +467,7 @@ $ chmod +x .claude/hooks/guard-dangerous-bash.sh</code></pre>
 <pre><code>{
   "hooks": {
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": ".claude/hooks/guard-dangerous-bash.sh" }] }
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-dangerous-bash.sh\"" }] }
     ]
   }
 }</code></pre>
@@ -479,18 +481,21 @@ $ chmod +x .claude/hooks/guard-dangerous-bash.sh</code></pre>
 <pre><code>{
   "hooks": {
     "PostToolUse": [
-      { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "bash .claude/hooks/lint-edited-file.sh" }] }
+      { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-edited-file.sh\"" }] }
     ]
   }
 }</code></pre>
 
-<div>作用：写入或编辑目标文件后，以本地安装的 ESLint 检查路径。只检查，不自动重写文件；其他文件类型略过。</div>
+<div>作用：匹配的 Write/Edit 成功后，以本地安装的 ESLint 检查路径。Lint 失败可反馈给模型，不会回滚已写入的文件；其他文件类型略过。脚本按启动项目目录定位，但检查在工具所在工作目录执行，切换 checkout 时要确认 cwd。</div>
 </div>
 
 <p>保存为 <code>.claude/hooks/lint-edited-file.sh</code>。需要 Bash、jq 和项目已安装的 ESLint：</p>
 <pre><code>#!/usr/bin/env bash
 set -euo pipefail
-file=$(jq -r '.tool_input.file_path // empty')
+input=$(cat)
+file=$(jq -r '.tool_input.file_path // empty' &lt;&lt;&lt; "$input")
+cwd=$(jq -r '.cwd // empty' &lt;&lt;&lt; "$input")
+cd -- "${cwd:-$PWD}"
 case "$file" in
   *.js|*.jsx|*.ts|*.tsx) pnpm exec eslint -- "$file" &gt;&amp;2 || exit 2 ;;
 esac</code></pre>
@@ -511,12 +516,15 @@ esac</code></pre>
 <pre><code>$ cat &gt; .claude/hooks/check-tests-passed.sh &lt;&lt; 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-active=$(jq -r '.stop_hook_active // false')
+input=$(cat)
+active=$(jq -r '.stop_hook_active // false' &lt;&lt;&lt; "$input")
 if [[ "$active" == true ]]; then
   exit 0  # 避免重复阻塞；CI 仍应独立判定
 fi
-if ! pnpm test --silent &gt;&amp;2; then
-  echo '{"decision":"block","reason":"测试未通过，请先修复失败用例再结束"}'
+cwd=$(jq -r '.cwd // empty' &lt;&lt;&lt; "$input")
+cd -- "${cwd:-$PWD}"
+if ! pnpm run test &gt;&amp;2; then
+  echo '{"decision":"block","reason":"测试命令失败。请在同一工作目录手动运行 pnpm run test，查看失败并修复；未验证前不要报告完成。"}'
   exit 0
 fi
 exit 0
@@ -529,12 +537,12 @@ $ chmod +x .claude/hooks/check-tests-passed.sh</code></pre>
 <pre><code>{
   "hooks": {
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "bash .claude/hooks/check-tests-passed.sh" }] }
+      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-tests-passed.sh\"" }] }
     ]
   }
 }</code></pre>
 
-<div>效果：Claude 说"我完成了"的那一刻，Stop hook 先偷偷跑一遍 <code>pnpm test</code>；测试没过，Claude 会被强制拉回去继续修，而不是等你事后自己发现测试是红的。<b>这就是原图"harness/workflow.md 写一句请测试通过"和这里的根本区别</b>：前者是请求，后者是运行时检查（不替代独立 CI）。</div>
+<div>效果：正常回合准备结束时，Stop hook 运行非 watch 的 <code>pnpm run test</code>，与 Claude 有没有说「完成」无关。首次失败用 JSON <code>reason</code> 请求继续处理；退出 0 时不能靠 stderr 把失败详情反馈给模型，所以例子明确要求重跑。为防反复阻塞，重入时跳过，不保证第二次结束时测试已通过。<b>这就是原图"harness/workflow.md 写一句请测试通过"和这里的根本区别</b>：前者是请求，后者是运行时检查（不替代独立 CI）。</div>
 </div>
 
 <details>
@@ -604,7 +612,7 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /"}}' \
   }
 }</code></pre>
 
-<div>效果：不管 Claude 出于什么理由想读 <code>.env</code> 或跑 <code>rm -rf</code>，都会被直接拒绝，连询问都不会问——这条建议在项目第一天就写上。</div>
+<div>效果：命中这些工具规则的调用会被直接拒绝。它不是文件系统隔离；不要据此认为任意脚本都无法间接读取文件或删除数据。敏感文件应放在执行环境可访问范围之外，或由沙箱限制。</div>
 </div>
 
 <span>Level 2 · 进阶：allow / ask 组合</span>
@@ -612,7 +620,7 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /"}}' \
 <div>.claude/settings.json</div>
 <pre><code>{
   "permissions": {
-    "allow": ["Bash(npm:*)", "Bash(git:*)", "Write(src/**)"],
+    "allow": ["Bash(npm run lint)", "Bash(git status)", "Edit(src/**)"],
     "deny": ["Bash(rm -rf:*)", "Read(**/.env)"],
     "ask": ["Bash(git push:*)"],
     "defaultMode": "default",
@@ -623,19 +631,19 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /"}}' \
 </div>
 <table>
 <tr><th>defaultMode</th><th>行为</th></tr>
-<tr><td><code>default</code></td><td>没命中任何规则时正常询问</td></tr>
-<tr><td><code>acceptEdits</code></td><td>文件读写自动放行，命令类工具仍会问——适合本地开发提速</td></tr>
-<tr><td><code>dontAsk</code></td><td>全自动不询问，配合 CI / 无人值守流水线使用</td></tr>
+<tr><td><code>default</code></td><td>按工具的默认行为决定；很多读取不询问，修改或执行命令可能询问</td></tr>
+<tr><td><code>acceptEdits</code></td><td>自动批准工作目录等授权范围内的常见文件编辑和部分文件命令；越界、受保护路径和多数其他命令仍需批准</td></tr>
+<tr><td><code>dontAsk</code></td><td>不弹权限确认：原本需要询问的调用默认拒绝；本来就不需批准或已批准的调用仍可运行</td></tr>
 </table>
 <p>判定顺序固定为 <b>deny → ask → allow → defaultMode 兜底</b>，先匹配先生效，deny 永远优先。</p>
 
-<span>Level 3 · 高阶：四层合并与冲突场景</span>
+<span>Level 3 · 高阶：常用配置来源与冲突场景</span>
 <div>
-<h3>settings.json 四层，Hooks 和 Permissions 共用</h3>
+<h3>Hooks 和 Permissions 的常用配置来源（非完整优先级表）</h3>
 <table>
 <tr><th>层级</th><th>路径</th><th>进 Git？</th><th>共享维度</th></tr>
 <tr><td>项目共享</td><td><span>.claude/settings.json</span></td><td>✅ 是</td><td>团队共享，所有人吃到同一套 hook/权限</td></tr>
-<tr><td>项目个人覆盖</td><td><span>.claude/settings.local.json</span></td><td>❌ 自动 gitignore</td><td>仅自己，限当前项目</td></tr>
+<tr><td>项目个人覆盖</td><td><span>.claude/settings.local.json</span></td><td>❌ 确认仓库已忽略</td><td>仅自己，限当前项目</td></tr>
 <tr><td>用户全局</td><td><span>~/.claude/settings.json</span></td><td>❌ 不在项目仓库内</td><td>仅自己，跨所有项目</td></tr>
 <tr><td>组织管控</td><td>managed-settings.json（企业 MDM / 注册表下发）</td><td>❌ 非 git，管理员统一推送</td><td>全组织强制，本地/项目配置都无法覆盖其 deny 规则</td></tr>
 </table>
@@ -757,7 +765,7 @@ tools: Read, Write, Edit, Bash
 memory: project
 skills: [run-full-check]
 ---
-实现功能前先看 memory 里记录的历史坑；实现完调用 run-full-check 技能自查。</code></pre>
+实现功能前先看 memory 里记录的历史坑；实现完按预载的 run-full-check 步骤自查。</code></pre>
 
 </div>
 
@@ -766,12 +774,15 @@ skills: [run-full-check]
 <div>.claude/hooks/check-tests-passed.sh</div>
 <pre><code>#!/usr/bin/env bash
 set -euo pipefail
-active=$(jq -r '.stop_hook_active // false')
+input=$(cat)
+active=$(jq -r '.stop_hook_active // false' &lt;&lt;&lt; "$input")
 if [[ "$active" == true ]]; then
   exit 0  # 避免重复阻塞；CI 仍应独立判定
 fi
-if ! pnpm test --silent &gt;&amp;2; then
-  echo '{"decision":"block","reason":"测试未通过，请查看失败输出并修复"}'
+cwd=$(jq -r '.cwd // empty' &lt;&lt;&lt; "$input")
+cd -- "${cwd:-$PWD}"
+if ! pnpm run test &gt;&amp;2; then
+  echo '{"decision":"block","reason":"测试命令失败。请在同一工作目录手动运行 pnpm run test，查看失败并修复；未验证前不要报告完成。"}'
   exit 0
 fi
 exit 0</code></pre>
@@ -784,7 +795,7 @@ exit 0</code></pre>
     "deny": ["Bash(rm -rf:*)", "Read(**/.env)"]
   },
   "hooks": {
-    "Stop": [{ "hooks": [{ "type": "command", "command": "bash .claude/hooks/check-tests-passed.sh" }] }]
+    "Stop": [{ "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-tests-passed.sh\"" }] }]
   }
 }</code></pre>
 
@@ -794,7 +805,7 @@ exit 0</code></pre>
 <h3>运行效果对比</h3>
 <div>
 <div><div>只有原图那种"假 harness"</div>Claude 写完代码，CLAUDE.md 里写了"必须测试通过"，但 Claude 因为上下文压力或误判提前汇报"完成"——测试其实是红的，你隔天才发现。</div>
-<div><div>加上 Enforcement 层的"真 harness"</div>Claude 说"完成"的瞬间，Stop hook 已经在背后跑了一遍 <code>pnpm test</code>；测试是红的就直接被拉回去继续修，首次失败时，钩子会提供失败反馈；不要把之后的文字汇报当作测试凭据，合并仍以独立 CI 结果为准。</div>
+<div><div>加上 Enforcement 层的"真 harness"</div>正常回合准备结束时，Stop hook 运行 <code>pnpm run test</code>；首次失败会通过 <code>reason</code> 要求模型重新查看和修复；不要把之后的文字汇报当作测试凭据，合并仍以独立 CI 结果为准。</div>
 </div>
 <p>这五个文件分别对应总论里的三个论点：CLAUDE.md 是①、skill 和 agent 是②、hook 和 settings.json 是③——原图只画出了①和②，这也是为什么原图搭出来的东西"看着像 harness，用起来不卡人"。</p>
 </div>
@@ -806,7 +817,7 @@ exit 0</code></pre>
 <ol>
 <li><b>定目标 + 识别真正重复发生的任务</b><span>和原图一致，这一步没错——没有真实重复出现的任务，做 skill/agent 就是过度工程。</span></li>
 <li><b>写一份 &lt;200 行的最小 CLAUDE.md</b><span>只写"每次会话都用得到"的事实；多步骤流程或只在部分场景生效的内容挪到 skill 或路径限定规则。</span></li>
-<li><b>先划安全底线：settings.json 的 deny 清单</b><span>在建任何 agent/skill 之前，先把"绝对不能做的事"堵死。</span></li>
+<li><b>先划安全底线：settings.json 的 deny 清单</b><span>在建任何 agent/skill 之前，写明工具层要拦的动作；系统级边界另用沙箱和执行端授权。</span></li>
 <li><b>把重复任务沉淀成 Skills</b><span>一个 skill 一个目录 + SKILL.md，description 写清楚触发时机。</span></li>
 <li><b>确有必要隔离上下文/分角色时，才建 Subagents</b><span>多数场景 Skill 已经够用；只有需要独立 context window 或明确权限隔离时才升级。</span></li>
 <li><b>需要固定触发入口的流程，做成 Slash Command / 编排型 Skill</b><span>取代"写一篇 workflow.md 指望 Claude 主动去读"的做法。</span></li>

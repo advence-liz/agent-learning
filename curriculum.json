@@ -1404,6 +1404,18 @@
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
   "idx": 1,
+  "id": "original/ai-history",
+  "title": "AI 发展简史：从手写规则到能调用工具的系统",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/08-ai-history.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 2,
   "id": "original/agent-runtime-map",
   "title": "Agent 运行线路图",
   "free": true,
@@ -1415,7 +1427,7 @@
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 2,
+  "idx": 3,
   "id": "original/codebase-search",
   "title": "代码库检索：向量检索、RepoMap 与 Agentic Search",
   "free": true,
@@ -1427,7 +1439,7 @@
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 3,
+  "idx": 4,
   "id": "original/llm-development",
   "title": "LLM 发展过程中的质疑与成长",
   "free": true,
@@ -1439,7 +1451,7 @@
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 4,
+  "idx": 5,
   "id": "original/agent-etymology",
   "title": "Agent 的前世今生：自己行动，还是替人行动？",
   "free": true,
@@ -1451,7 +1463,7 @@
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 5,
+  "idx": 6,
   "id": "original/llm-capability-boundaries",
   "title": "大模型的能力边界：论文、评测与现实各能说明什么？",
   "free": true,
@@ -1463,12 +1475,36 @@
  {
   "part": "p8-technical-lectures",
   "part_name": "技术讲义与科普",
-  "idx": 6,
+  "idx": 7,
   "id": "original/claude-code-harness-guide",
   "title": "Claude Code Harness 搭建指南（详实版）",
   "free": true,
   "src": "",
   "out": "p8-technical-lectures/07-claude-code-harness-guide.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 8,
+  "id": "original/ai-industry-watch",
+  "title": "AI 行业进展与代表应用：2026 年 11 月观察",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/10-ai-industry-watch.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p8-technical-lectures",
+  "part_name": "技术讲义与科普",
+  "idx": 9,
+  "id": "original/ai-business-adoption",
+  "title": "AI 怎么从试用走到业务流程：验效果、算成本、管执行",
+  "free": true,
+  "src": "",
+  "out": "p8-technical-lectures/09-ai-business-adoption.md",
   "src_headings": [],
   "kind": "lesson"
  }

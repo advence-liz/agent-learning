@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1018" role="img" aria-labelledby="title desc">
+  <title id="title">Agent 运行线路图</title>
+  <desc id="desc">任务主线从用户指令和准备上下文到模型推理、结果校验与停止。工具请求先过准入检查；获准后可执行工具并把结果或错误送回模型，未获准则不调用工具。会话状态、记忆和技能由运行时按需加载。凭证留在调用端：模型服务认证不同于工具认证及授权，均不是模型上下文的补给。</desc>
+  <style>
+    svg { --bg:#101826; --ink:#f6f1e7; --muted:#b9c5d7; --rule:#334258; --amber:#c78532; --teal:#169f88; --blue:#688cf0; }
+    text { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif; fill:var(--ink); }
+    .kicker { font-size:17px; font-weight:650; letter-spacing:1.4px; }
+    .headline { font-size:56px; font-weight:760; }
+    .subtitle { font-size:22px; fill:var(--muted); }
+    .label { font-size:25px; font-weight:720; }
+    .body { font-size:18px; fill:var(--muted); }
+    .small { font-size:17px; fill:var(--muted); }
+    .muted-blue { fill:#a4bcff; }
+    .muted-teal { fill:#7bdfcf; }
+    .amber { color:var(--amber); }
+    .teal { color:var(--teal); }
+    .blue { color:var(--blue); }
+    .rail { fill:none; stroke:currentColor; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; }
+    .station { fill:var(--bg); stroke:currentColor; stroke-width:4; }
+    .key { fill:currentColor; }
+  </style>
+
+  <rect width="720" height="1018" rx="22" fill="var(--bg)"/>
+  <path d="M46 181H674 M46 961H674" stroke="var(--rule)"/>
+  <circle cx="52" cy="52" r="5" class="key amber"/><circle cx="69" cy="52" r="5" class="key teal"/><circle cx="86" cy="52" r="5" class="key blue"/>
+  <text x="105" y="58" class="kicker">AGENT 图谱</text>
+  <text x="674" y="58" text-anchor="end" class="small">运行视图 / ROUTE</text>
+  <text x="46" y="116" class="headline">Agent 运行线路图</text>
+  <text x="46" y="155" class="subtitle">一条任务如何推进、调用工具，再回到模型</text>
+
+  <!-- Orange: task progression. Teal: request and return, joining only at the inference station. -->
+  <path d="M106 228V810" class="rail amber"/>
+  <path d="M106 425H282V347Q282 294 335 294H602Q650 294 650 342V552Q650 604 598 604H307Q252 604 252 549V490Q252 450 212 450H172Q148 450 130 437L106 425" class="rail teal"/>
+  <path d="M180 416l13 9-13 9z M485 285l13 9-13 9z M641 392l9 13 9-13z M410 595l-13 9 13 9z M198 441l-13 9 13 9z" class="key teal"/>
+  <!-- The supply rail is attached to the runtime, not the tool result or the credential store. -->
+  <path d="M466 663V736" class="rail blue" stroke-dasharray="4 13"/>
+  <path d="M322 736H610" class="rail blue"/>
+
+  <circle cx="106" cy="228" r="10" class="station amber"/>
+  <circle cx="106" cy="318" r="10" class="station amber"/>
+  <circle cx="106" cy="425" r="14" class="station" style="color:var(--ink);stroke-width:5"/>
+  <circle cx="106" cy="713" r="10" class="station amber"/>
+  <rect x="90" y="797" width="32" height="22" rx="11" class="key amber"/>
+  <text x="136" y="221" class="label">用户指令</text>
+  <text x="136" y="248" class="body">说明目标与交付要求</text>
+  <text x="136" y="311" class="label">准备上下文</text>
+  <text x="136" y="338" class="body">系统提示 · 材料</text>
+  <text x="136" y="383" class="label">模型推理</text>
+  <text x="136" y="409" class="body">提出下一步</text>
+  <text x="136" y="706" class="label">结果校验</text>
+  <text x="136" y="733" class="body">按交付条件检查</text>
+  <text x="136" y="799" class="label">结束任务</text>
+  <text x="136" y="827" class="body">区分已完成和未完成</text>
+
+  <circle cx="282" cy="425" r="13" class="station" style="color:var(--ink);stroke-width:5"/>
+  <text x="310" y="403" class="label">工具准入</text>
+  <text x="310" y="433" class="body">验参数 · 查权限 · 按需审批</text>
+  <text x="309" y="351" class="small muted-teal">获准后调用</text>
+  <rect x="307" y="453" width="179" height="36" rx="11" fill="#1d2736" stroke="var(--rule)"/>
+  <text x="322" y="477" class="small">未获准 · 不调用</text>
+  <circle cx="514" cy="294" r="10" class="station teal"/>
+  <text x="514" y="266" class="label" text-anchor="middle">工具执行</text>
+  <text x="514" y="327" class="body" text-anchor="middle">搜索 / 计算 / 读写 · 按需选</text>
+  <circle cx="650" cy="510" r="10" class="station teal"/>
+  <text x="620" y="505" class="label" text-anchor="end">观察结果</text>
+  <text x="620" y="532" class="body" text-anchor="end">成功、失败都回传</text>
+  <text x="304" y="559" class="label muted-teal">结果回填 · 再推理</text>
+  <text x="305" y="585" class="small">运行时用结果更新上下文</text>
+
+  <circle cx="466" cy="663" r="8" class="station blue"/>
+  <text x="486" y="669" class="label muted-blue">补给线</text>
+  <text x="486" y="696" class="small">由运行时按需取用</text>
+  <circle cx="322" cy="736" r="9" class="station blue"/>
+  <circle cx="466" cy="736" r="9" class="station blue"/>
+  <circle cx="610" cy="736" r="9" class="station blue"/>
+  <g class="label" text-anchor="middle">
+    <text x="322" y="776">会话状态</text><text x="466" y="776">记忆</text><text x="610" y="776">技能</text>
+  </g>
+  <g class="small" text-anchor="middle">
+    <text x="322" y="803">接续当前进度</text><text x="466" y="803">复用相关信息</text><text x="610" y="803">加载操作方法</text>
+  </g>
+
+  <rect x="46" y="861" width="628" height="76" rx="14" fill="#1d2736" stroke="var(--rule)"/>
+  <text x="65" y="892" class="body" style="fill:var(--ink);font-weight:700">凭证留在调用端，不是给模型的补给</text>
+  <text x="65" y="918" class="small">运行时向模型服务出示凭证；执行器按需向工具服务出示凭证。</text>
+  <g class="small">
+    <path d="M48 987H68" class="rail amber"/><text x="80" y="993">任务主线</text>
+    <path d="M257 987H277" class="rail teal"/><text x="289" y="993">工具循环</text>
+    <path d="M468 987H489" class="rail blue" stroke-dasharray="4 9"/><text x="501" y="993">按需补给</text>
+  </g>
+</svg>

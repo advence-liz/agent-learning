@@ -10,11 +10,12 @@ SITE = os.path.join(ROOT, '.site')
 DOCS = os.path.join(SITE, 'docs')
 cur = json.load(open(os.path.join(ROOT, 'curriculum.json')))
 
-# docs/ 只放软链接：章节目录 + 首页，不暴露 .crawl/ 等原站抓取内容
+# docs/ 只链接课程章节、首页和站点样式，不暴露 .crawl/ 等原站抓取内容
 # （nav 的分组顺序和标题在 .site/hooks.py 的 PARTS 里）
 os.makedirs(DOCS, exist_ok=True)
 links = {p: os.path.join(ROOT, p) for p in dict.fromkeys(c['part'] for c in cur)}
 links['index.md'] = os.path.join(ROOT, 'README.md')
+links['stylesheets'] = os.path.join(SITE, 'stylesheets')
 for name, target in links.items():
     path = os.path.join(DOCS, name)
     if os.path.islink(path):
@@ -77,6 +78,8 @@ markdown_extensions:
   - pymdownx.arithmatex: {{generic: true}}
   - pymdownx.superfences   # ```d2 围栏由 d2 插件自己注册
   - pymdownx.tabbed: {{alternate_style: true}}   # 代码的 Node / Python 两个版本，第一个标签页（Node）默认展开
+extra_css:
+  - stylesheets/sidebar.css
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
 """

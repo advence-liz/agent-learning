@@ -31,7 +31,7 @@
 <div>
 <div>
 <div>late 15c.</div>
-<div>行动者<span>one who acts —— 会自己做事的那个</span></div>
+<div>行动者<span>one who acts —— 做出行动的一方</span></div>
 </div>
 <div>
 <div>1550s</div>
@@ -56,7 +56,7 @@
 <div><p>今天所有关于「什么才算 agent」的争论，几乎都能还原成一个问题——你在用哪一个义项。</p></div>
 
 <figure style="margin-inline:0">
-<svg viewBox="0 0 680 406" role="img" aria-label="agent 一词的语义谱系图：拉丁语 agere 分出主体义与代理义两条线，分别流向哲学、计算机、经济学与商业法律，最终在 LLM agent 处合流" style="background:#1c1916;display:block;max-width:100%;height:auto">
+<svg viewBox="0 0 680 406" role="img" aria-label="agent 一词的语义谱系图：拉丁语 agere 分出主体义与代理义两条线，分别流向哲学、计算机、经济学与商业法律，在 LLM agent 的语境下再次合流" style="background:#1c1916;display:block;max-width:100%;height:auto">
 <title>agent 的语义谱系</title>
 <defs>
 <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -122,7 +122,7 @@
 <text x="340" y="349" text-anchor="middle" dominant-baseline="central" fill="#E0A458" font-family="Noto Sans SC, sans-serif" font-size="12">两条语义合流</text>
 </g>
 </svg>
-<figcaption>一个词根，两条分岔，四个学科，最后在 2023 年合流</figcaption>
+<figcaption>一个词根，两条分岔，四个学科，在当代 LLM Agent 的语境下再次合流</figcaption>
 </figure>
 
 <span id="philo"></span>
@@ -156,15 +156,15 @@
 
 ## 从 Actor 到 agent
 
-<p>计算机科学同时借了两边，但起点在主体义。目前索引到的最早计算语境用法，是 1973 年 Hewitt、Bishop 和 Steiger 的 Actor 模型论文——他们把 actor 描述为一个「扮演某种角色的活跃 agent」。Actor 是收消息、做计算、发消息、创建新 actor，无共享状态。这套东西是 90 年代 agent 概念的直接前身，也是 Erlang 进程、今天的消息传递并发的共同祖先。</p>
+<p>计算机科学同时借了两边，但起点在主体义。可以举一个计算语境的早期用例： 1973 年 Hewitt、Bishop 和 Steiger 的 Actor 模型论文——他们把 actor 描述为一个「扮演某种角色的活跃 agent」。Actor 是收消息、做计算、发消息、创建新 actor，无共享状态。这是消息传递并发传统的一个早期节点，也为比较后来 Agent 的分工与协作提供了参照。</p>
 <p>80 年代经 DAI（分布式人工智能）发酵，90 年代集中爆发：</p>
 <ul>
 <li><strong>Maes（1994）</strong>——interface agent、软件 agent，正好赶上 Web 起飞</li>
 <li><strong>Wooldridge &amp; Jennings（1995）</strong>——经典四属性：autonomy、social ability、reactivity、proactiveness</li>
-<li><strong>Russell &amp; Norvig（1995）</strong>——rational agent：通过传感器感知环境、通过执行器作用于环境。宽到温度计都算</li>
+<li><strong>Russell &amp; Norvig（1995）</strong>——一般 agent 定义：通过传感器感知环境、通过执行器作用于环境；能控制设备的恒温器也符合这个宽口径</li>
 <li><strong>BDI 架构、KQML / FIPA 通信协议、multi-agent systems</strong>——理论开始变成工程</li>
 </ul>
-<p>把这四条属性对着今天的 LLM agent 读一遍会有点毛骨悚然：autonomy 是模型自己决定下一步，social ability 是 MCP 和多 agent 通信，reactivity 是对工具返回值的响应，proactivity 是自己拆解并执行计划。三十年前的定义一条没浪费。<strong>衬底换了，架构没换。</strong></p>
+<p>把这四条属性对着今天的 LLM agent 读一遍会有点毛骨悚然：autonomy 是模型自己决定下一步，social ability 比较接近多 agent 协作（MCP 连接应用和工具、资料，不是多 agent 通信协议），reactivity 是对工具返回值的响应，proactivity 是自己拆解并执行计划。<strong>这些维度仍可用来比较系统，但不表示新旧架构相同。</strong></p>
 
 <span id="warning"></span>
 <p>1995 · 一次没被听进去的警告</p>
@@ -174,18 +174,18 @@
 
 <p>Wooldridge 和 Jennings 在 1995 年那篇综述里就写过：如果不把定义问题讲清楚，agent 有可能沦为一个噪音词，被滥用和误用，最后让整个研究社区陷入混乱。</p>
 <p>两年后，Franklin 和 Graesser 写了《Is It an Agent, or Just a Program?》，专门做了一个自治 agent 的分类法——之所以要写，正是因为这个词在 90 年代中期就已经泛滥到没有共识了。</p>
-<p>三十年过去，同一件事在更大的规模上重演了一遍。已有的那些定义其实并不互相矛盾，它们只是站在不同的抽象层：Russell &amp; Norvig 的 rational agent 宽到温度计都算；而 2024 年之后的「agentic AI」又窄到 2022 年之前的任何东西都不算。</p>
+<p>三十年过去，同一件事在更大的规模上重演了一遍。已有的那些定义其实并不互相矛盾，它们只是站在不同的抽象层：一般 agent 定义可包含恒温器；当代「agentic AI」的产品语境则常指能调用工具、迭代处理任务的生成式系统。</p>
 <p>Andrew Ng 在 2024 年提出的解法很务实：别争「是不是 agent」，改问「有多 agentic」——把一个二分谓词换成连续谱。这是一次体面的语用投降，也确实让讨论能继续下去了。</p>
 
 <span id="llm"></span>
 <p>2023 · 合流</p>
 
 
-## 两个义项第一次同时成立
+## LLM 让两个义项在更多任务中合流
 
-<p>2022 年之后，LLM 让「能感知、能规划、能调工具、能自主行动」的东西第一次真的做出来了：ReAct、AutoGPT、Generative Agents（Park 等，2023）、Voyager。</p>
-<p>这件事在语义上的意义是：<strong>主体义和代理义第一次在同一个对象上同时为真</strong>。此前的软件 agent 要么只是「替你跑」的脚本（代理义，但谈不上自主），要么只是理论上的自治体（主体义，但没落地）。现在你面对的是一个真的会自己决定下一步、同时又确实是在替你办事的东西。</p>
-<p>词兜了两千年的圈子，在这里合上了。</p>
+<p>2022 年之后，ReAct、AutoGPT、Generative Agents（Park 等，2023）、Voyager 等研究和原型，让自然语言参与规划、工具调用与行动反馈。它们覆盖的能力各不相同。</p>
+<p><strong>主体义和代理义并非第一次同时成立。</strong>前面提到的 Maes（1994）已经讨论主动为用户提供帮助的软件代理。LLM 让这种组合能用自然语言扩展到更多任务：系统在委托范围内自行选下一步，但执行权仍由外部系统约束。</p>
+<p>词兜了两千年的圈子，在新的技术条件下，再次把「自己行动」和「替人办事」放到了一起。</p>
 
 <span id="harness"></span>
 <p>2025 – 2026 · 重心转移</p>
@@ -197,7 +197,7 @@
 <p>这几年被反复讲的三段式是：prompt engineering（优化一次对话）→ context engineering（优化一个会话）→ harness engineering（设计跨会话、跨 agent 的系统）。</p>
 <div><p>「agent」这个词的重心，正在从「模型有多聪明」滑向「你给它套了什么笼子」。</p></div>
 <p>而笼子的设计问题，恰恰就是经济学那条线上的委托代理问题：在信息不对称、你无法逐步监督的前提下，怎么让受托方仍然做你想要的事。审批门是监督成本，权限最小化是约束成本，而无论如何都会漏掉的那部分，经济学管它叫剩余损失。</p>
-<p>换句话说，两条分岔在 2023 年合流之后，真正难的部分立刻回到了更古老的那一条上。</p>
+<p>换句话说，两条分岔在当代 LLM 系统中再次合流之后，真正难的部分立刻回到了更古老的那一条上。</p>
 
 <span id="chinese"></span>
 <p>译名</p>
@@ -222,7 +222,7 @@
 
 <ul>
 <li><span>1973</span><span>Ross, S. — The Economic Theory of Agency<span>委托代理问题的早期形式化</span></span></li>
-<li><span>1973</span><span>Hewitt, Bishop &amp; Steiger — A Universal Modular ACTOR Formalism for AI（IJCAI）<span>目前索引到的最早计算语境 agent 用法</span></span></li>
+<li><span>1973</span><span>Hewitt, Bishop &amp; Steiger — A Universal Modular ACTOR Formalism for AI（IJCAI）<span>计算语境中的一个早期 agent 用例</span></span></li>
 <li><span>1976</span><span>Jensen &amp; Meckling — Theory of the Firm<span>代理成本三分：监督、约束、剩余损失</span></span></li>
 <li><span>1994</span><span>Maes, P. — Agents that Reduce Work and Information Overload<span>interface agent</span></span></li>
 <li><span>1995</span><span>Wooldridge &amp; Jennings — Intelligent Agents: Theory and Practice<span>四属性定义，以及「噪音词」警告</span></span></li>

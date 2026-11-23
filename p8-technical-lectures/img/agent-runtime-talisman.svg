@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 984" role="img" aria-labelledby="title desc">
+  <title id="title">Agent 行器符：古籍符籙風格插圖</title>
+  <desc id="desc">原創仿古插圖，中央黃符自上而下寫着受令、推演、調器、驗果、知止。調器前先驗權；知止時分清已完成與未完成。符頭與印記為裝飾，不是傳統宗教符式。</desc>
+  <defs>
+    <linearGradient id="paper" x2="0.88" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#f1d897"/><stop offset=".52" stop-color="#e7bd60"/><stop offset="1" stop-color="#d9a94e"/>
+    </linearGradient>
+    <pattern id="fibres" width="68" height="64" patternUnits="userSpaceOnUse">
+      <path d="M5 12l20-3m14 33l24 2M12 52l16-2m20-31l13-1M25 27l13 1" fill="none" stroke="#784629" stroke-opacity=".14" stroke-width=".7"/>
+      <circle cx="31" cy="11" r=".9" fill="#784629" opacity=".24"/><circle cx="56" cy="54" r=".7" fill="#fff4ca" opacity=".55"/><circle cx="6" cy="36" r="1.1" fill="#784629" opacity=".16"/>
+    </pattern>
+    <path id="sheet" d="M166 199 186 194 211 198 248 194 283 197 320 193 358 196 390 193 425 197 466 193 507 197 551 193 550 240 554 286 551 339 555 398 551 452 555 501 551 555 554 605 550 659 554 713 550 766 554 821 523 826 492 822 450 827 408 823 361 828 320 824 277 829 236 825 197 829 166 824 168 779 164 729 168 679 164 629 168 576 164 523 168 464 165 415 168 359 164 308 168 256Z"/>
+  </defs>
+  <style>
+    svg { --mount:#241b17; --ivory:#f6e5ba; --soft:#d1bb8f; --rule:#654333; --cinnabar:#852a20; --ink:#4d251b; }
+    text { font-family:"Kaiti SC","STKaiti","Songti SC","Noto Serif CJK TC",serif; }
+    .ivory { fill:var(--ivory); }
+    .soft { fill:var(--soft); }
+    .red { fill:var(--cinnabar); }
+    .ink { fill:var(--ink); }
+    .key { font-size:18px; letter-spacing:3px; }
+    .title { font-size:75px; font-weight:700; letter-spacing:10px; }
+    .note { font-size:19px; }
+    .word { font-size:49px; font-weight:700; letter-spacing:4px; }
+    .side { font-size:23px; }
+    .brush { fill:none; stroke:var(--cinnabar); stroke-linecap:round; stroke-linejoin:round; }
+  </style>
+
+  <rect width="720" height="984" rx="24" fill="var(--mount)"/>
+  <rect x="16" y="16" width="688" height="952" rx="14" fill="none" stroke="var(--rule)"/>
+  <path d="M43 160H677 M43 871H677" stroke="var(--rule)"/>
+  <text x="47" y="50" class="soft key">AGENT 圖譜 · 古籍異本</text>
+  <text x="44" y="131" class="ivory title">行器符</text>
+  <g transform="translate(602 55) rotate(4 30 30)">
+    <rect width="60" height="60" rx="4" fill="#8d3025"/>
+    <rect x="5" y="5" width="50" height="50" rx="2" fill="none" stroke="var(--ivory)" stroke-width="1.2" opacity=".75"/>
+    <text x="30" y="27" text-anchor="middle" class="ivory side">圖</text><text x="30" y="49" text-anchor="middle" class="ivory side">譜</text>
+  </g>
+
+  <!-- The centred slip is yellow paper with cinnabar strokes. The drawn sigils are original ornament, not script. -->
+  <use href="#sheet" transform="translate(6 8)" fill="#130e0a" opacity=".72"/>
+  <use href="#sheet" fill="url(#paper)"/>
+  <use href="#sheet" fill="url(#fibres)"/>
+  <path d="M182 214H535V810H182Z" fill="none" stroke="#975234" stroke-width="1" opacity=".72"/>
+  <path d="M192 214v34m-10-24h28m315-10v34m10-24h-28M192 810v-36m-10 25h28m315 11v-36m10 25h-28" class="brush" stroke-width="1.5" opacity=".72"/>
+
+  <!-- Original talisman-style header: cloud flourishes around a hand-drawn cinnabar glyph. -->
+  <g class="brush">
+    <path d="M284 264q-22 3-31-10 6-13 25-9m-2 6q16 11 35-1m125 14q22 3 31-10-6-13-25-9m2 6q-16 11-35-1" stroke-width="3" opacity=".78"/>
+    <path d="M324 241q8 10 26 9 11-12 13-23 5 18 20 24l17-8M360 246q-3 20 5 38m-40-16q36-12 69 0m-62 16q20 4 49-9l-19 34 22-8-25 28" stroke-width="6.5"/>
+    <path d="M315 280q-13 17-4 30 11 9 23-2m69-29q16 17 7 30-11 10-23 1M272 312q9 8 25 1m151-1q-9 8-25 1" stroke-width="3.4"/>
+    <path d="M360 330l-16 11 16 11 16-11Z" stroke-width="2.3"/>
+  </g>
+
+  <!-- Five legible checkpoints, slightly offset like a hand-stamped manuscript. -->
+  <path d="M236 384C246 429 228 454 238 482S227 542 239 572 226 630 237 659 230 704 237 725" class="brush" stroke-width="2.2" opacity=".65"/>
+  <g class="red">
+    <path d="M229 387l9-8 8 9-8 9zM229 462l9-8 8 9-8 9zM229 538l9-8 8 9-8 9zM229 614l9-8 8 9-8 9zM229 690l9-8 8 9-8 9z"/>
+  </g>
+  <g class="red word" text-anchor="middle">
+    <text x="333" y="402" transform="rotate(-2 333 402)">受令</text>
+    <text x="333" y="478" transform="rotate(1 333 478)">推演</text>
+    <text x="333" y="554" transform="rotate(-2 333 554)">調器</text>
+    <text x="333" y="630" transform="rotate(1 333 630)">驗果</text>
+    <text x="333" y="706" transform="rotate(-2 333 706)">知止</text>
+  </g>
+  <g class="ink note" text-anchor="middle">
+    <text x="461" y="393">明其所求</text>
+    <text x="461" y="469">擬其下一步</text>
+    <text x="461" y="545">先驗權限</text>
+    <text x="461" y="621">核對交付</text>
+    <text x="461" y="697">分辨成否</text>
+  </g>
+
+  <g class="brush" stroke-width="2.7" opacity=".82">
+    <path d="M261 758q25-17 50-6 24 11 45-5m108 11q-25-17-50-6-24 11-45-5M360 732v45m-24-12h48m-24 8-14 13 14 9 14-9-14-13"/>
+    <path d="M267 777q16 6 33-3m153 3q-16 6-33-3"/>
+  </g>
+
+  <g class="soft side" text-anchor="middle">
+    <text x="621" y="307">依</text><text x="621" y="341">令</text><text x="621" y="375">而</text><text x="621" y="409">行</text>
+    <text x="99" y="602">驗</text><text x="99" y="636">果</text><text x="99" y="670">乃</text><text x="99" y="704">止</text>
+  </g>
+  <path d="M621 247v30m0 155v38M99 540v32m0 156v37" stroke="var(--rule)" stroke-width="1.5"/>
+
+  <text x="47" y="910" class="ivory side">器可調，不可越權。</text>
+  <text x="47" y="942" class="soft note">從上往下讀 · 符頭與印記為原創裝飾</text>
+</svg>
