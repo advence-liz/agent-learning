@@ -11,7 +11,7 @@ DOCS = os.path.join(SITE, 'docs')
 cur = json.load(open(os.path.join(ROOT, 'curriculum.json')))
 
 # docs/ 只链接课程章节、首页和站点样式，不暴露 .crawl/ 等原站抓取内容
-# （nav 的分组顺序和标题在 .site/hooks.py 的 PARTS 里）
+# （nav 的栏目与分组由 .site/hooks.py 生成）
 os.makedirs(DOCS, exist_ok=True)
 links = {p: os.path.join(ROOT, p) for p in dict.fromkeys(c['part'] for c in cur)}
 links['index.md'] = os.path.join(ROOT, 'README.md')
@@ -26,7 +26,7 @@ for name, target in links.items():
 
 
 yml = f"""# 由 tools/build_site.py 生成，不要手改
-site_name: AI 开发学习知识库
+site_name: 开发学习知识库
 site_url: !ENV [KB_SITE_URL, '']   # GitHub Pages 构建时由 CI 设置
 docs_dir: docs
 site_dir: build
@@ -35,6 +35,8 @@ theme:
   name: material
   language: zh
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.footer

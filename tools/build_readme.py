@@ -5,7 +5,7 @@ cur = json.load(open(os.path.join(ROOT, 'curriculum.json')))
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from parts import PARTS as _PARTS, ORDER, chapter_groups, label  # 部分元数据的唯一来源
+from parts import AGENT_PARTS, ALGORITHM_PART, PARTS as _PARTS, ORDER, chapter_groups, label
 PARTS = {pid: (label(pid), desc, advice) for pid, _, _, desc, advice, _ in _PARTS}
 
 def status(c):
@@ -15,41 +15,29 @@ def status(c):
 
 lines = []
 w = lines.append
-w('# AI 开发学习知识库')
+w('# 开发学习知识库')
 w('')
-w('> **一句话**：LLM 只是「根据已有 token 预测下一个 token」的概率模型；Agent、Function Calling、MCP、Skills、压缩、记忆、Sub Agent、Harness，全都是**在有限上下文里尽可能准确高效完成任务的工程方法**。整个知识库只讲这一件事。')
+w('> **两条独立学习路线**：想做能交付的 AI 应用，选 Agent 研发；想练数据结构、解题与复杂度分析，选数据结构与算法。两边都从自己的导读开始。')
 w('')
-w('骨架借鉴 [labuladong 的 AI 开发教程](https://labuladong.online/zh/ai-coding/ai-guide/)（选题、章节划分、「先用起来再讲原理」的讲法）。')
-w('📖 是免费章节的**读书笔记**（请先读原文）；✍️ 是**独立原创课文**：会员章节全部重写（没有使用原站付费内容），另有 5 篇地基章虽然原文免费，也写成了自成一体的课文，原文作为延伸阅读。')
+w('- **[Agent 研发 →](p0-core/00-guide.md)**：从上下文与工具调用入门，拆解工业级实现，手写自己的 Agent，再准备研发面试。')
+w('- **[数据结构与算法 →](p9-algorithms/00-guide.md)**：用 TypeScript 练搜索、遍历和动态规划，最后实现任务依赖规划器。不需要模型或 API key。')
 w('')
-w('## 学习路线')
+w('## Agent 研发：先跑通，再拆解，最后自己做')
 w('')
-w('顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。目录与网站导航按编号展示；第 8 部分是独立补充讲义，可按兴趣选读。机器学习（第 5、6 部分）对应用主线是选修，可以跳到第 7 部分；目标 JD 涉及训练时再补齐。第 7 部分按岗位地图、模型与训练、Agent 机制、生产工程、系统设计、项目与模拟六个主题贯通备考；JD 证据收在导读参考区，不独立成章。')
+w('第 0–1 部分打地基，第 2 部分亲手写聊天机器人、Coding Agent、RAG、MCP，第 3 部分拆工业级实现及生产工程，第 4 部分逐步实现 mini Claude Code，最后到第 7 部分准备面试。第 5–6 部分的机器学习和训练按需选修，第 8 部分的技术讲义可独立阅读。')
 w('')
-w('```mermaid')
-w('flowchart LR')
-w('  P0["0 核心概念<br/>token · 上下文"] --> P1["1 工具技巧<br/>hooks · subagent · skills"]')
-w('  P1 --> P2["2 Agent 开发基础<br/>chatbot · RAG · MCP"]')
-w('  P2 --> P3["3 工业级 Agent<br/>拆解 · 构建 · 评测 · 安全"]')
-w('  P3 --> P4["4 手搓 mini Claude Code<br/>21 次增量"]')
-w('  P4 --> P7["7 Agent 研发面试<br/>考点 · 高频题 · 系统设计"]')
-w('  P0 -.选修.-> P5["5 机器学习基础"] --> P6["6 神经网络 + LLM<br/>推理 · LoRA"]')
-w('```')
+w('骨架借鉴 [labuladong 的 AI 开发教程](https://labuladong.online/zh/ai-coding/ai-guide/)。下方 📖 是读书笔记，✍️ 是独立原创课文。勾选框可跟踪进度（编辑 `[ ]` → `[x]`）。')
 w('')
 w('| 部分 | 讲什么 | 建议 |')
 w('|---|---|---|')
-for p in ORDER:
+for p in AGENT_PARTS:
     t, d, s = PARTS[p]
     w(f'| [{t}](#{p}) | {d} | {s} |')
-w('')
-w('## 目录')
-w('')
-w('勾选框用来跟踪进度（直接在编辑器里改 `[ ]` → `[x]`）。')
 for p in ORDER:
     t, d, s = PARTS[p]
     w('')
     w(f'<a id="{p}"></a>')
-    w(f'### {t}')
+    w(f'## {t}' if p == ALGORITHM_PART else f'### {t}')
     w('')
     w(f'{d}。')
     w('')
@@ -76,10 +64,11 @@ w('| `code/mini_cc-node/` | 第 4 部分的 mini Claude Code（Node 版） | `cd
 w('| `code/agent/` | 同上，Python 版 | `cd code/agent && uv run pytest -q` |')
 w('| `code/mini_cc/` | 同上，Python 版；`CHANGELOG.md` 记录每章增量 | `cd code/mini_cc && uv run python -m mini_cc` |')
 w('| `code/ml/` | 第 5–6 部分的手写算法，均与 sklearn / torch 对拍 | `cd code/ml && uv run pytest -q` |')
+w('| `code/algorithm-node/` | 算法栏目的 TypeScript 示例、边界测试与任务依赖规划器 | `cd code/algorithm-node && npm test` |')
 w('')
 w('Node 版需要 Node 24 以上，直接运行 `.ts` 文件，没有构建步骤。')
 w('')
-w('所有测试都跑离线 fake 模型，不消耗 API。要连真实模型，设置 `ANTHROPIC_API_KEY`（可选 `ANTHROPIC_BASE_URL`）。')
+w('Agent 相关测试使用离线 fake 模型；算法示例和测试不使用模型。要连真实模型，设置 `ANTHROPIC_API_KEY`（可选 `ANTHROPIC_BASE_URL`）。')
 w('')
 w('## 维护')
 w('')

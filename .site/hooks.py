@@ -1,7 +1,8 @@
 """MkDocs hook。
 
-on_config：按 curriculum.json 生成 nav，只收已存在的章节；`mkdocs serve` 每次重建都会重跑，
-           所以写作中的新章节写出来就自动出现在导航里。
+on_config：按 curriculum.json 生成 Agent 和算法两个栏目，只收已存在的章节；
+           `mkdocs serve` 重建时会重新读取课程清单。
+on_nav：限制页脚「上一页 / 下一页」留在当前栏目。
 on_page_markdown：渲染前改写 markdown（源文件不动）：
   1. `<details>` → `<details markdown="1">`，让折叠答案里的 markdown 也被渲染（配合 md_in_html）
   2. 指向 code/ 下源码的相对链接：
@@ -40,31 +41,56 @@ D2_MIN_SCALE = 0.75
 # 部分的顺序和标题来自 tools/parts.py（与 README 共用，唯一来源）
 import sys
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
-from parts import ORDER, chapter_groups, nav_label  # noqa: E402
-PARTS = [(pid, nav_label(pid)) for pid in ORDER]
+from parts import AGENT_PARTS, ALGORITHM_PART, chapter_groups, nav_label  # noqa: E402
 
 
 def on_config(config, **kwargs):
-    with open(os.path.join(ROOT, 'curriculum.json'), encoding='utf-8') as curriculum:
-        cur = json.load(curriculum)
-    nav = [{'首页': 'index.md'}]
-    for part, name in PARTS:
+    with open(os.path.join(ROOT, 'curriculum.json'), encoding='utf-8') as source:
+        curriculum = json.load(source)
+
+    def part_items(part):
         items = []
-        if part == 'p0-core' and os.path.exists(os.path.join(ROOT, 'p0-core/00-guide.md')):
-            items.append({'本章导读': 'p0-core/00-guide.md'})
-        for section, chapters in chapter_groups(cur, part):
+        for section, chapters in chapter_groups(curriculum, part):
             pages = [
                 {('📖 ' if c['kind'] == 'note' else '') + c['title']: c['out']}
-                for c in chapters if os.path.exists(os.path.join(ROOT, c['out']))
+                for c in chapters if os.path.isfile(os.path.join(ROOT, c['out']))
             ]
             if section and pages:
                 items.append({section: pages})
             else:
                 items.extend(pages)
+        return items
+
+    agent = []
+    guide = 'p0-core/00-guide.md'
+    if os.path.isfile(os.path.join(ROOT, guide)):
+        agent.append({'Agent 导读': guide})
+    for part in AGENT_PARTS:
+        items = part_items(part)
         if items:
-            nav.append({name: items})
+            agent.append({nav_label(part): items})
+
+    nav = [{'首页': 'index.md'}]
+    if agent:
+        nav.append({'Agent 研发': agent})
+    if algorithms := part_items(ALGORITHM_PART):
+        nav.append({nav_label(ALGORITHM_PART): algorithms})
     config['nav'] = nav
     return config
+
+
+def on_nav(nav, **kwargs):
+    def tab(item):
+        while item.parent is not None:
+            item = item.parent
+        return item
+
+    for page in nav.pages:
+        for attr in ('previous_page', 'next_page'):
+            neighbor = getattr(page, attr)
+            if neighbor is not None and tab(page) is not tab(neighbor):
+                setattr(page, attr, None)
+    return nav
 
 
 def on_page_markdown(markdown, page, **kwargs):

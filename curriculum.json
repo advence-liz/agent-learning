@@ -1528,5 +1528,101 @@
   "src_headings": [],
   "kind": "lesson",
   "section": "判断进展和落地价值"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 0,
+  "id": "original/algorithms-guide",
+  "title": "算法导读：先说清状态，再背模板",
+  "free": true,
+  "src": "https://labuladong.online/zh/algo/home/",
+  "out": "p9-algorithms/00-guide.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 1,
+  "id": "original/algorithm-arrays",
+  "title": "数组、哈希与前缀和：把重复计算变成查表",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/01-arrays-and-hash.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 2,
+  "id": "original/algorithm-search",
+  "title": "双指针、滑动窗口与二分：每一步都要说明排除了什么",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/02-pointers-and-search.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 3,
+  "id": "original/algorithm-linear-structures",
+  "title": "链表、栈与队列：结构决定下一步处理谁",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/03-linear-structures.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 4,
+  "id": "original/algorithm-traversal",
+  "title": "树与图：DFS 汇总子树，BFS 按距离扩散",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/04-tree-and-graph.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 5,
+  "id": "original/algorithm-choices",
+  "title": "回溯、动态规划与贪心：先判断哪些分支可以不算",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/05-backtracking-dp-greedy.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 6,
+  "id": "original/algorithm-ordering",
+  "title": "排序与堆：只要 Top K，就不用给所有元素排序",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/06-sorting-and-heap.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 7,
+  "id": "original/algorithm-task-planner",
+  "title": "综合项目：用拓扑排序和堆规划任务依赖",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/07-task-planner.md",
+  "src_headings": [],
+  "kind": "lesson"
  }
 ]

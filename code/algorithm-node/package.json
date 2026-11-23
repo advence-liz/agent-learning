@@ -1,0 +1,17 @@
+{
+  "name": "algorithm-learning-lab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings src examples tests"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "oxlint": "1.94.0",
+    "typescript": "5.9.3"
+  }
+}

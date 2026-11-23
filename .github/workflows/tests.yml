@@ -68,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [agent-node, mini_cc-node]
+        project: [agent-node, mini_cc-node, algorithm-node]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -82,3 +82,7 @@ jobs:
           npm ci
           npm run typecheck
           npm test
+      - name: lint
+        if: matrix.project == 'algorithm-node'
+        working-directory: code/${{ matrix.project }}
+        run: npm run lint

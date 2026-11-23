@@ -1,23 +1,15 @@
-# AI 开发学习知识库
+# 开发学习知识库
 
-> **一句话**：LLM 只是「根据已有 token 预测下一个 token」的概率模型；Agent、Function Calling、MCP、Skills、压缩、记忆、Sub Agent、Harness，全都是**在有限上下文里尽可能准确高效完成任务的工程方法**。整个知识库只讲这一件事。
+> **两条独立学习路线**：想做能交付的 AI 应用，选 Agent 研发；想练数据结构、解题与复杂度分析，选数据结构与算法。两边都从自己的导读开始。
 
-骨架借鉴 [labuladong 的 AI 开发教程](https://labuladong.online/zh/ai-coding/ai-guide/)（选题、章节划分、「先用起来再讲原理」的讲法）。
-📖 是免费章节的**读书笔记**（请先读原文）；✍️ 是**独立原创课文**：会员章节全部重写（没有使用原站付费内容），另有 5 篇地基章虽然原文免费，也写成了自成一体的课文，原文作为延伸阅读。
+- **[Agent 研发 →](p0-core/00-guide.md)**：从上下文与工具调用入门，拆解工业级实现，手写自己的 Agent，再准备研发面试。
+- **[数据结构与算法 →](p9-algorithms/00-guide.md)**：用 TypeScript 练搜索、遍历和动态规划，最后实现任务依赖规划器。不需要模型或 API key。
 
-## 学习路线
+## Agent 研发：先跑通，再拆解，最后自己做
 
-顺序是**先造一个玩具，再拆真家伙，最后自己造一个像样的**：第 2 部分亲手写出聊天机器人、Coding Agent、RAG、MCP，知道一个 Agent 最少由什么组成；第 3 部分带着这些零件去抓包拆 Claude Code / Codex，看工业级实现多做了什么，再收束到构建、评测、安全；第 4 部分把拆到的能力一章一章加进自己的 mini Claude Code。主线学完后，第 7 部分把全库串成面试准备：每道题都指回讲原理的章节。目录与网站导航按编号展示；第 8 部分是独立补充讲义，可按兴趣选读。机器学习（第 5、6 部分）对应用主线是选修，可以跳到第 7 部分；目标 JD 涉及训练时再补齐。第 7 部分按岗位地图、模型与训练、Agent 机制、生产工程、系统设计、项目与模拟六个主题贯通备考；JD 证据收在导读参考区，不独立成章。
+第 0–1 部分打地基，第 2 部分亲手写聊天机器人、Coding Agent、RAG、MCP，第 3 部分拆工业级实现及生产工程，第 4 部分逐步实现 mini Claude Code，最后到第 7 部分准备面试。第 5–6 部分的机器学习和训练按需选修，第 8 部分的技术讲义可独立阅读。
 
-```mermaid
-flowchart LR
-  P0["0 核心概念<br/>token · 上下文"] --> P1["1 工具技巧<br/>hooks · subagent · skills"]
-  P1 --> P2["2 Agent 开发基础<br/>chatbot · RAG · MCP"]
-  P2 --> P3["3 工业级 Agent<br/>拆解 · 构建 · 评测 · 安全"]
-  P3 --> P4["4 手搓 mini Claude Code<br/>21 次增量"]
-  P4 --> P7["7 Agent 研发面试<br/>考点 · 高频题 · 系统设计"]
-  P0 -.选修.-> P5["5 机器学习基础"] --> P6["6 神经网络 + LLM<br/>推理 · LoRA"]
-```
+骨架借鉴 [labuladong 的 AI 开发教程](https://labuladong.online/zh/ai-coding/ai-guide/)。下方 📖 是读书笔记，✍️ 是独立原创课文。勾选框可跟踪进度（编辑 `[ ]` → `[x]`）。
 
 | 部分 | 讲什么 | 建议 |
 |---|---|---|
@@ -30,10 +22,6 @@ flowchart LR
 | [第 6 部分 · 神经网络 + LLM 开发基础](#p6-nn-llm) | 手写自动求导、优化器、推理全流程、LoRA 微调 | 选修 |
 | [第 7 部分 · Agent 研发面试](#p7-interview) | 岗位地图 → 模型与训练 → Agent 机制 → 生产工程 → 系统设计 → 项目与模拟 | 主线学完后按目标岗位准备 |
 | [第 8 部分 · 技术讲义与科普](#p8-technical-lectures) | 三条选读路线：历史与概念、Agent 工程、行业证据与业务落地 | 组内递进，组间可跳读 |
-
-## 目录
-
-勾选框用来跟踪进度（直接在编辑器里改 `[ ]` → `[x]`）。
 
 <a id="p0-core"></a>
 ### 第 0 部分 · 核心概念
@@ -208,6 +196,20 @@ flowchart LR
 - [ ] [AI 行业进展与代表应用：2026 年 11 月观察](p8-technical-lectures/10-ai-industry-watch.md) · ✍️ 原创
 - [ ] [AI 怎么从试用走到业务流程：验效果、算成本、管执行](p8-technical-lectures/09-ai-business-adoption.md) · ✍️ 原创
 
+<a id="p9-algorithms"></a>
+## 数据结构与算法
+
+从数组、搜索与遍历练到动态规划和优先队列，再用 TypeScript 实现任务依赖规划器。
+
+- [ ] [算法导读：先说清状态，再背模板](p9-algorithms/00-guide.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/algo/home/)
+- [ ] [数组、哈希与前缀和：把重复计算变成查表](p9-algorithms/01-arrays-and-hash.md) · ✍️ 原创
+- [ ] [双指针、滑动窗口与二分：每一步都要说明排除了什么](p9-algorithms/02-pointers-and-search.md) · ✍️ 原创
+- [ ] [链表、栈与队列：结构决定下一步处理谁](p9-algorithms/03-linear-structures.md) · ✍️ 原创
+- [ ] [树与图：DFS 汇总子树，BFS 按距离扩散](p9-algorithms/04-tree-and-graph.md) · ✍️ 原创
+- [ ] [回溯、动态规划与贪心：先判断哪些分支可以不算](p9-algorithms/05-backtracking-dp-greedy.md) · ✍️ 原创
+- [ ] [排序与堆：只要 Top K，就不用给所有元素排序](p9-algorithms/06-sorting-and-heap.md) · ✍️ 原创
+- [ ] [综合项目：用拓扑排序和堆规划任务依赖](p9-algorithms/07-task-planner.md) · ✍️ 原创
+
 ## 配套代码
 
 第 0–4 部分的代码有 Node（TypeScript）和 Python 两版，逻辑一一对应，正文默认展示 Node 版，代码块上方的标签页可以切到 Python。
@@ -220,10 +222,11 @@ flowchart LR
 | `code/agent/` | 同上，Python 版 | `cd code/agent && uv run pytest -q` |
 | `code/mini_cc/` | 同上，Python 版；`CHANGELOG.md` 记录每章增量 | `cd code/mini_cc && uv run python -m mini_cc` |
 | `code/ml/` | 第 5–6 部分的手写算法，均与 sklearn / torch 对拍 | `cd code/ml && uv run pytest -q` |
+| `code/algorithm-node/` | 算法栏目的 TypeScript 示例、边界测试与任务依赖规划器 | `cd code/algorithm-node && npm test` |
 
 Node 版需要 Node 24 以上，直接运行 `.ts` 文件，没有构建步骤。
 
-所有测试都跑离线 fake 模型，不消耗 API。要连真实模型，设置 `ANTHROPIC_API_KEY`（可选 `ANTHROPIC_BASE_URL`）。
+Agent 相关测试使用离线 fake 模型；算法示例和测试不使用模型。要连真实模型，设置 `ANTHROPIC_API_KEY`（可选 `ANTHROPIC_BASE_URL`）。
 
 ## 维护
 
