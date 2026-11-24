@@ -397,9 +397,9 @@ git checkout -b feature/$ARGUMENTS</code></pre>
 
 
 <span>Claude Code 原生识别</span>
-<span>真正的强制执行</span>
+<span>在匹配的事件上运行检查</span>
 
-<div><span>结论先行</span>Hooks 是整个 harness 里唯一能对 Claude 说"不"的地方——CLAUDE.md / Skills / Subagent 里写的都是"请这样做"，模型仍可能因为权衡、误解、上下文压力而不照做；Hooks 是在特定生命周期节点<b>强制</b>执行的脚本或判定，不依赖模型"愿不愿意"。这正是"verification loop 是 harness engineering 核心杠杆"这个判断的具体落地机制。</div>
+<div><span>结论先行</span>Hook 由运行时在匹配事件上触发；能否阻止动作、阻止什么，要看事件和返回结果。它不是唯一的拦截点：工具权限可在调用边界拒绝命中的请求，Stop Hook 可以阻止当前回合结束，独立 CI 则可以作为合并条件。CLAUDE.md 和 Skills 里的文字指导，不等于这些程序化检查。参见<a href="https://code.claude.com/docs/en/hooks">官方 Hooks 参考</a>和<a href="https://code.claude.com/docs/en/permissions">权限规则</a>。</div>
 
 <span>Level 1 · 基础：从一个桌面通知开始</span>
 <p>最简单、零风险的 hook：Claude 需要你确认时弹一个系统通知。</p>
@@ -778,10 +778,15 @@ exit 0</code></pre>
 
 <div>
 <h3>运行效果对比</h3>
-<div>
-<div><div>只有原图那种"假 harness"</div>Claude 写完代码，CLAUDE.md 里写了"必须测试通过"，但 Claude 因为上下文压力或误判提前汇报"完成"——测试其实是红的，你隔天才发现。</div>
-<div><div>加上 Enforcement 层的"真 harness"</div>正常回合准备结束时，Stop hook 运行 <code>pnpm run test</code>；首次失败会通过 <code>reason</code> 要求模型重新查看和修复；不要把之后的文字汇报当作测试凭据，合并仍以独立 CI 结果为准。</div>
-</div>
+<table>
+<thead><tr><th>这次出了什么情况</th><th>哪一关负责</th><th>这段示例实际做到什么</th></tr></thead>
+<tbody>
+<tr><td>工具请求命中明确的拒绝规则</td><td>工具权限</td><td>拒绝命中的调用，不替代沙箱或服务端授权。</td></tr>
+<tr><td>正常回合准备结束，但测试失败</td><td>Stop Hook</td><td>运行测试；首次失败用 <code>decision: block</code> 和 <code>reason</code> 给模型反馈。</td></tr>
+<tr><td>收到反馈后再次进入 Stop</td><td>脚本的重入保护</td><td><code>stop_hook_active</code> 为真时跳过本次检查，避免反复阻塞；跳过不等于测试通过。</td></tr>
+<tr><td>决定是否允许合并</td><td>独立 CI 与仓库合并规则</td><td>以仓库配置的必过检查为准。本示例不强制跑 lint，也没有配置合并规则。</td></tr>
+</tbody>
+</table>
 <p>这五个文件分别对应总论里的三个论点：CLAUDE.md 是①、skill 和 agent 是②、hook 和 settings.json 是③——原图只画出了①和②，这也是为什么原图搭出来的东西"看着像 harness，用起来不卡人"。</p>
 </div>
 
@@ -796,7 +801,7 @@ exit 0</code></pre>
 <li><b>把重复任务沉淀成 Skills</b><span>一个 skill 一个目录 + SKILL.md，description 写清楚触发时机。</span></li>
 <li><b>确有必要隔离上下文/分角色时，才建 Subagents</b><span>多数场景 Skill 已经够用；只有需要独立 context window 或明确权限隔离时才升级。</span></li>
 <li><b>需要固定触发入口的流程，做成 Slash Command / 编排型 Skill</b><span>取代"写一篇 workflow.md 指望 Claude 主动去读"的做法。</span></li>
-<li><b>加 Hooks，把"应该做"变成"必须做"</b><span>原图完全没有这一步，却是 harness 和普通 prompt 工程的分水岭。</span></li>
+<li><b>在合适的事件上加 Hook</b><span>按事件能力做检查或反馈；最终交付条件仍要配置到独立 CI 和仓库规则。</span></li>
 <li><b>需要团队复用时，打包成 Plugin 发布到 Marketplace</b><span>最后一步，先把单个项目里的 harness 跑顺，再规模化分发。</span></li>
 </ol>
 

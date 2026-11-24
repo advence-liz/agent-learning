@@ -53,7 +53,26 @@ models -> agent: 调用工具
 
 随后增加的是系统层能力：例如模型先从知识库查证，再决定是否需要计算，读回结果后输出或继续。外部执行器可以提供权限、上限和记录；这些不是模型「更聪明」就会自动拥有的能力。可对照[《Agent 运行线路图》](01-agent-runtime-map.md)、[《AI 行业进展与代表应用》](10-ai-industry-watch.md)与[《AI 怎么从试用走到业务流程》](09-ai-business-adoption.md)。
 
-### 一手资料与历史资料
+### 模型会回答，不等于它查过资料 { #answer-vs-evidence }
+
+**训练让模型学会生成回答；要证明某条政策适用，仍要看本轮拿到了什么依据。** 同样问「这笔订单还能退吗？」，模型可能面对三种不同的输入：
+
+```d2
+direction: down
+question: 这笔订单还能退吗？
+prior: "没有政策原文\n不能确认适用条款"
+old: "给了旧版政策\n能引用，未必适用"
+current: "查到生效政策\n还要核对订单条件"
+question -> prior: 只给问题
+question -> old: 人把原文贴进对话
+question -> current: 工具查回原文
+```
+
+**读图：** 三条线是三种输入，不是三个必经步骤。没有资料时，模型仍能靠训练学到的模式生成看似合理的回答。贴资料或调用工具，是给本轮增加上下文，不是当场重新训练模型。
+
+比如，旧版写「签收后 30 天」，现行条款写「这个类目的订单限签收后 15 天」。模型即使准确引用了旧文字，也可能对第 20 天提出的退货请求给出错误答复。**查到原文以后，再核对生效日期、适用类目和订单条件；缺条件就说缺什么。** 能引用不等于结论正确，能查到也不等于有权退款。想看生成原理，读[《LLM 和 Agent》](../p0-core/01-llm-and-agent.md)；想看工具结果怎样回到模型，读[《Agent 运行线路图》](01-agent-runtime-map.md)。
+
+### 一手资料与历史资料 { #_5 }
 
 - [图灵论文（1950）](https://academic.oup.com/mind/article/LIX/236/433/986238) · [达特茅斯原始提案（1955）](https://www-formal.stanford.edu/jmc/history/dartmouth/dartmouth.html)
 - [计算机历史博物馆：AI 与机器人时间线](https://www.computerhistory.org/timeline/ai-robotics/) · [MIT 林肯实验室：AI 简史](https://www.ll.mit.edu/sites/default/files/publication/doc/2021-03/Artificial%20Intelligence%20Short%20History%2C%20Present%20Developments%2C%20and%20Future%20Outlook%20-%20Final%20Report%20-%202021-03-16_0.pdf)
