@@ -299,6 +299,7 @@
 
 ### 综合练习与复盘
 
+- [ ] [11 道经典算法面试题：把解法讲清楚，再写代码](p9-algorithms/83-interview-classics.md) · ✍️ 原创
 - [ ] [综合项目：用拓扑排序和堆规划任务依赖](p9-algorithms/07-task-planner.md) · ✍️ 原创
 - [ ] [第二实战：给日程服务做可验证的区间查询](p9-algorithms/68-scheduling-project.md) · ✍️ 原创
 - [ ] [第三实战：把路径查询拆成建模、选算法和校验结果](p9-algorithms/69-routing-project.md) · ✍️ 原创

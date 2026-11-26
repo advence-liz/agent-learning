@@ -2530,6 +2530,19 @@
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
   "idx": 77,
+  "id": "original/algorithm-interview-classics",
+  "title": "11 道经典算法面试题：把解法讲清楚，再写代码",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/83-interview-classics.md",
+  "src_headings": [],
+  "kind": "lesson",
+  "section": "综合练习与复盘"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 78,
   "id": "original/algorithm-task-planner",
   "title": "综合项目：用拓扑排序和堆规划任务依赖",
   "free": true,
@@ -2542,7 +2555,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 78,
+  "idx": 79,
   "id": "original/algorithm-scheduling-project",
   "title": "第二实战：给日程服务做可验证的区间查询",
   "free": true,
@@ -2555,7 +2568,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 79,
+  "idx": 80,
   "id": "original/algorithm-routing-project",
   "title": "第三实战：把路径查询拆成建模、选算法和校验结果",
   "free": true,
@@ -2568,7 +2581,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 80,
+  "idx": 81,
   "id": "original/algorithm-parser-project",
   "title": "解析器实战：表达式优先级不是边扫描边求值就能解决",
   "free": true,
@@ -2581,7 +2594,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 81,
+  "idx": 82,
   "id": "original/algorithm-stream-feed-project",
   "title": "有序流实战：把多个来源的最新记录合成一页",
   "free": true,
@@ -2594,7 +2607,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 82,
+  "idx": 83,
   "id": "original/algorithm-practice-checkpoints",
   "title": "综合练习：先交付可验证的答案，再追求题数",
   "free": true,

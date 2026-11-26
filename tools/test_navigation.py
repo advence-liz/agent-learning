@@ -74,6 +74,9 @@ class NavigationTests(unittest.TestCase):
             '准备与解题框架', '数组、容器与有序结构', '树、图与路径',
             '搜索、分治与贪心', '动态规划专项', '字符串、数学与随机化', '综合练习与复盘',
         ])
+        practice = next(iter(algorithms[-1].values()))
+        self.assertEqual(next(iter(practice[0].values())),
+                         'p9-algorithms/83-interview-classics.md')
         self.assertEqual(list(chapter_paths(algorithms)), [
             c['out'] for c in curriculum if c['part'] == 'p9-algorithms'
         ])
