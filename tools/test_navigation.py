@@ -66,8 +66,11 @@ class NavigationTests(unittest.TestCase):
 
         self.assertEqual(list(chapter_paths(agent[1:])), expected_agent)
         algorithms = nav[2]['数据结构与算法']
-        self.assertEqual(next(iter(algorithms[0].values())), 'p9-algorithms/00-guide.md')
-        self.assertEqual([next(iter(group)) for group in algorithms[1:]], [
+        self.assertEqual([next(iter(group.values())) for group in algorithms[:4]], [
+            'p9-algorithms/00-guide.md', 'p9-algorithms/81-storage-and-traversal.md',
+            'p9-algorithms/79-core-frameworks.md', 'p9-algorithms/82-mixed-practice.md',
+        ])
+        self.assertEqual([next(iter(group)) for group in algorithms[4:]], [
             '准备与解题框架', '数组、容器与有序结构', '树、图与路径',
             '搜索、分治与贪心', '动态规划专项', '字符串、数学与随机化', '综合练习与复盘',
         ])

@@ -1545,6 +1545,42 @@
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
   "idx": 1,
+  "id": "original/algorithm-storage-and-traversal",
+  "title": "从数组到图：数据怎么存，决定你怎么找",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/81-storage-and-traversal.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 2,
+  "id": "original/algorithm-core-frameworks",
+  "title": "核心算法框架：先辨认题目的信号，再挑模板",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/79-core-frameworks.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 3,
+  "id": "original/algorithm-mixed-practice",
+  "title": "五道混合题：题目不告诉你该用哪种算法",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/82-mixed-practice.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 4,
   "id": "original/algorithm-complexity",
   "title": "复杂度：先数操作，再决定要不要优化",
   "free": true,
@@ -1557,7 +1593,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 2,
+  "idx": 5,
   "id": "original/algorithm-proof-and-oracles",
   "title": "不变量与对拍：用小输入找出大算法的边界",
   "free": true,
@@ -1570,7 +1606,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 3,
+  "idx": 6,
   "id": "original/algorithm-recursion",
   "title": "递归与显式栈：区分参数、返回值和回到父层的时机",
   "free": true,
@@ -1583,7 +1619,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 4,
+  "idx": 7,
   "id": "original/algorithm-dynamic-array-and-deque",
   "title": "动态数组和环形队列：把移动成本留给扩容",
   "free": true,
@@ -1596,7 +1632,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 5,
+  "idx": 8,
   "id": "original/algorithm-arrays",
   "title": "数组、哈希与前缀和：把重复计算变成查表",
   "free": true,
@@ -1609,7 +1645,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 6,
+  "idx": 9,
   "id": "original/algorithm-prefix-frequency",
   "title": "前缀频次：有负数的子数组和为什么改成查表",
   "free": true,
@@ -1622,7 +1658,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 7,
+  "idx": 10,
   "id": "original/algorithm-difference-array",
   "title": "差分数组：批量修改只记开始和结束",
   "free": true,
@@ -1635,7 +1671,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 8,
+  "idx": 11,
   "id": "original/algorithm-matrix-prefix",
   "title": "二维矩阵：用四个角回答矩形范围和",
   "free": true,
@@ -1648,7 +1684,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 9,
+  "idx": 12,
   "id": "original/algorithm-matrix-traversal",
   "title": "二维遍历：转置、旋转与螺旋走的是不同下标",
   "free": true,
@@ -1661,7 +1697,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 10,
+  "idx": 13,
   "id": "original/algorithm-search",
   "title": "双指针、滑动窗口与二分：每一步都要说明排除了什么",
   "free": true,
@@ -1674,7 +1710,20 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 11,
+  "idx": 14,
+  "id": "original/algorithm-sliding-window-practice",
+  "title": "滑动窗口三练：长度变了，哪条规则也要跟着变？",
+  "free": true,
+  "src": "",
+  "out": "p9-algorithms/80-sliding-window-practice.md",
+  "src_headings": [],
+  "kind": "lesson",
+  "section": "数组、容器与有序结构"
+ },
+ {
+  "part": "p9-algorithms",
+  "part_name": "数据结构与算法",
+  "idx": 15,
   "id": "original/algorithm-slow-fast-in-place",
   "title": "原地覆盖：读指针审阅输入，写指针只填合法前缀",
   "free": true,
@@ -1687,7 +1736,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 12,
+  "idx": 16,
   "id": "original/algorithm-binary-search-answer",
   "title": "二分答案：当可行性从假变真，就搜索第一个真",
   "free": true,
@@ -1700,7 +1749,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 13,
+  "idx": 17,
   "id": "original/algorithm-linear-structures",
   "title": "链表、栈与队列：结构决定下一步处理谁",
   "free": true,
@@ -1713,7 +1762,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 14,
+  "idx": 18,
   "id": "original/algorithm-linked-list-patterns",
   "title": "链表进阶：快慢指针、虚拟头与分段翻转",
   "free": true,
@@ -1726,7 +1775,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 15,
+  "idx": 19,
   "id": "original/algorithm-hash-table",
   "title": "哈希表实现：桶内碰撞和扩容是性能账的两半",
   "free": true,
@@ -1739,7 +1788,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 16,
+  "idx": 20,
   "id": "original/algorithm-hash-lru",
   "title": "哈希与 LRU：按键定位和按顺序淘汰是两种操作",
   "free": true,
@@ -1752,7 +1801,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 17,
+  "idx": 21,
   "id": "original/algorithm-monotonic",
   "title": "单调栈与单调队列：候选被支配就不再保留",
   "free": true,
@@ -1765,7 +1814,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 18,
+  "idx": 22,
   "id": "original/algorithm-trapping-water",
   "title": "雨水与边界：水位由两侧较矮的挡板限制",
   "free": true,
@@ -1778,7 +1827,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 19,
+  "idx": 23,
   "id": "original/algorithm-sorting-basics",
   "title": "排序基础：用同一组记录看插入、选择、冒泡和堆排序",
   "free": true,
@@ -1791,7 +1840,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 20,
+  "idx": 24,
   "id": "original/algorithm-ordering",
   "title": "排序与堆：只要 Top K，就不用给所有元素排序",
   "free": true,
@@ -1804,7 +1853,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 21,
+  "idx": 25,
   "id": "original/algorithm-heap-build-and-merge",
   "title": "堆的线性建造与 K 路归并：只比较每路当前头部",
   "free": true,
@@ -1817,7 +1866,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 22,
+  "idx": 26,
   "id": "original/algorithm-sort-and-select",
   "title": "排序与选择：稳定性、划分和平均复杂度不能混为一谈",
   "free": true,
@@ -1830,7 +1879,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 23,
+  "idx": 27,
   "id": "original/algorithm-sweep-line",
   "title": "扫描线：不用枚举真实时间，枚举事件就够",
   "free": true,
@@ -1843,7 +1892,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 24,
+  "idx": 28,
   "id": "original/algorithm-range-structures",
   "title": "树状数组与线段树：边更新边查询时选择什么结构",
   "free": true,
@@ -1856,7 +1905,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 25,
+  "idx": 29,
   "id": "original/algorithm-traversal",
   "title": "树与图：DFS 汇总子树，BFS 按距离扩散",
   "free": true,
@@ -1869,7 +1918,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 26,
+  "idx": 30,
   "id": "original/algorithm-bst",
   "title": "搜索树：局部左右关系不足以证明整棵树合法",
   "free": true,
@@ -1882,7 +1931,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 27,
+  "idx": 31,
   "id": "original/algorithm-trie",
   "title": "字典树：前缀存在不等于完整词已添加",
   "free": true,
@@ -1895,7 +1944,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 28,
+  "idx": 32,
   "id": "original/algorithm-tree-construction",
   "title": "树的重建、序列化与公共祖先：先说清信息够不够",
   "free": true,
@@ -1908,7 +1957,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 29,
+  "idx": 33,
   "id": "original/algorithm-tree-distance-rerooting",
   "title": "树上距离与重根 DP",
   "free": true,
@@ -1921,7 +1970,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 30,
+  "idx": 34,
   "id": "original/algorithm-graph-connectivity",
   "title": "连通性与并查集：只问是否同组，不必保存整条路径",
   "free": true,
@@ -1934,7 +1983,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 31,
+  "idx": 35,
   "id": "original/algorithm-bipartite-odd-cycle",
   "title": "二分图染色与奇环",
   "free": true,
@@ -1947,7 +1996,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 32,
+  "idx": 36,
   "id": "original/algorithm-dijkstra",
   "title": "加权最短路：首次发现不是最短，弹出有效最小项才是",
   "free": true,
@@ -1960,7 +2009,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 33,
+  "idx": 37,
   "id": "original/algorithm-bellman-ford",
   "title": "Bellman–Ford 与负环",
   "free": true,
@@ -1973,7 +2022,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 34,
+  "idx": 38,
   "id": "original/algorithm-floyd-warshall",
   "title": "Floyd–Warshall 全源最短路",
   "free": true,
@@ -1986,7 +2035,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 35,
+  "idx": 39,
   "id": "original/algorithm-mst",
   "title": "最小生成树：连通全图最省钱，不等于从某点出发最短",
   "free": true,
@@ -1999,7 +2048,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 36,
+  "idx": 40,
   "id": "original/algorithm-directed-graphs",
   "title": "有向图结构：拓扑、环与强连通各回答不同问题",
   "free": true,
@@ -2012,7 +2061,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 37,
+  "idx": 41,
   "id": "original/algorithm-dag-critical-path",
   "title": "DAG DP 与关键路径",
   "free": true,
@@ -2025,7 +2074,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 38,
+  "idx": 42,
   "id": "original/algorithm-bridges-and-articulation-points",
   "title": "桥与割点：用边编号处理多重边",
   "free": true,
@@ -2038,7 +2087,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 39,
+  "idx": 43,
   "id": "original/algorithm-choices",
   "title": "回溯、动态规划与贪心：先判断哪些分支可以不算",
   "free": true,
@@ -2051,7 +2100,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 40,
+  "idx": 44,
   "id": "original/algorithm-backtracking-duplicates",
   "title": "回溯去重：只剪掉同层的等价选择",
   "free": true,
@@ -2064,7 +2113,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 41,
+  "idx": 45,
   "id": "original/algorithm-backtracking-constraints",
   "title": "带约束回溯：先确定剪掉的分支确实不可能完成",
   "free": true,
@@ -2077,7 +2126,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 42,
+  "idx": 46,
   "id": "original/algorithm-state-search",
   "title": "状态空间搜索：从格子、单词到双向 BFS",
   "free": true,
@@ -2090,7 +2139,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 43,
+  "idx": 47,
   "id": "original/algorithm-islands",
   "title": "岛屿搜索：面积、周长和连通数要分别记账",
   "free": true,
@@ -2103,7 +2152,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 44,
+  "idx": 48,
   "id": "original/algorithm-divide-and-conquer",
   "title": "分治：先确认左右独立，再设计跨边界合并",
   "free": true,
@@ -2116,7 +2165,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 45,
+  "idx": 49,
   "id": "original/algorithm-meet-in-middle",
   "title": "折半枚举：指数搜索太大时，把独立选择分成两半",
   "free": true,
@@ -2129,7 +2178,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 46,
+  "idx": 50,
   "id": "original/algorithm-intervals-and-greedy",
   "title": "区间与贪心：先区分选最多、合并和数资源",
   "free": true,
@@ -2142,7 +2191,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 47,
+  "idx": 51,
   "id": "original/algorithm-priority-greedy",
   "title": "优先队列贪心：最便宜的两项为什么可以先合并",
   "free": true,
@@ -2155,7 +2204,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 48,
+  "idx": 52,
   "id": "original/algorithm-dp-method",
   "title": "动态规划方法：状态、转移、顺序与答案位置",
   "free": true,
@@ -2168,7 +2217,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 49,
+  "idx": 53,
   "id": "original/algorithm-grid-dp",
   "title": "网格 DP：障碍与最小代价",
   "free": true,
@@ -2181,7 +2230,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 50,
+  "idx": 54,
   "id": "original/algorithm-knapsack",
   "title": "背包：同一个状态维度，遍历方向决定能不能复用物品",
   "free": true,
@@ -2194,7 +2243,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 51,
+  "idx": 55,
   "id": "original/algorithm-two-dimensional-knapsack",
   "title": "二维 0/1 背包",
   "free": true,
@@ -2207,7 +2256,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 52,
+  "idx": 56,
   "id": "original/algorithm-sequence-dp",
   "title": "序列 DP：最长上升子序列不是最长连续片段",
   "free": true,
@@ -2220,7 +2269,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 53,
+  "idx": 57,
   "id": "original/algorithm-string-dp",
   "title": "字符串 DP：从两个前缀的末尾推转移",
   "free": true,
@@ -2233,7 +2282,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 54,
+  "idx": 58,
   "id": "original/algorithm-pattern-matching-dp",
   "title": "模式匹配与分词：扫描位置相同，转移方向却不同",
   "free": true,
@@ -2246,7 +2295,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 55,
+  "idx": 59,
   "id": "original/algorithm-interval-dp",
   "title": "区间 DP：第一次做会改变邻居，试着改枚举最后一次",
   "free": true,
@@ -2259,7 +2308,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 56,
+  "idx": 60,
   "id": "original/algorithm-longest-palindromic-subsequence",
   "title": "最长回文子序列",
   "free": true,
@@ -2272,7 +2321,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 57,
+  "idx": 61,
   "id": "original/algorithm-tree-and-state-dp",
   "title": "树与状态机 DP：有限状态承载未来需要的历史",
   "free": true,
@@ -2285,7 +2334,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 58,
+  "idx": 62,
   "id": "original/algorithm-stock-dp",
   "title": "股票 DP：次数与手续费",
   "free": true,
@@ -2298,7 +2347,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 59,
+  "idx": 63,
   "id": "original/algorithm-weighted-interval-scheduling",
   "title": "带权区间调度",
   "free": true,
@@ -2311,7 +2360,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 60,
+  "idx": 64,
   "id": "original/algorithm-minimum-start-budget",
   "title": "最小初始资源：逆推每个格子进入前最低需要多少",
   "free": true,
@@ -2324,7 +2373,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 61,
+  "idx": 65,
   "id": "original/algorithm-game-dp",
   "title": "博弈 DP：轮到谁就站在谁一边",
   "free": true,
@@ -2337,7 +2386,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 62,
+  "idx": 66,
   "id": "original/algorithm-probability-dp",
   "title": "概率 DP：先到哪一边",
   "free": true,
@@ -2350,7 +2399,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 63,
+  "idx": 67,
   "id": "original/algorithm-digit-and-bitmask-dp",
   "title": "数位与状压 DP：压缩的是重复状态，不是随意减维",
   "free": true,
@@ -2363,7 +2412,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 64,
+  "idx": 68,
   "id": "original/algorithm-egg-drop",
   "title": "扔鸡蛋：反过来问给定次数最多能覆盖多少层",
   "free": true,
@@ -2376,7 +2425,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 65,
+  "idx": 69,
   "id": "original/algorithm-kmp",
   "title": "KMP：失配时复用已经匹配的前后缀",
   "free": true,
@@ -2389,7 +2438,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 66,
+  "idx": 70,
   "id": "original/algorithm-rolling-hash",
   "title": "滚动哈希：快速筛选相同子串，但碰撞后还要验证",
   "free": true,
@@ -2402,7 +2451,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 67,
+  "idx": 71,
   "id": "original/algorithm-decimal-arithmetic",
   "title": "字符串乘法：位权对齐以后再进位",
   "free": true,
@@ -2415,7 +2464,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 68,
+  "idx": 72,
   "id": "original/algorithm-number-theory",
   "title": "整数运算：从最大公约数、筛法到快速幂",
   "free": true,
@@ -2428,7 +2477,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 69,
+  "idx": 73,
   "id": "original/algorithm-modular-inverse",
   "title": "模运算中的除法：逆元要存在，才能换成乘法",
   "free": true,
@@ -2441,7 +2490,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 70,
+  "idx": 74,
   "id": "original/algorithm-bit-and-combinatorics",
   "title": "位运算与组合计数：先定义编码与重复规则",
   "free": true,
@@ -2454,7 +2503,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 71,
+  "idx": 75,
   "id": "original/algorithm-randomization",
   "title": "随机算法：洗牌、抽样和期望时间各保证什么",
   "free": true,
@@ -2467,7 +2516,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 72,
+  "idx": 76,
   "id": "original/algorithm-weighted-sampling",
   "title": "带权随机：用前缀权重划出等概率的整数格",
   "free": true,
@@ -2480,7 +2529,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 73,
+  "idx": 77,
   "id": "original/algorithm-task-planner",
   "title": "综合项目：用拓扑排序和堆规划任务依赖",
   "free": true,
@@ -2493,7 +2542,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 74,
+  "idx": 78,
   "id": "original/algorithm-scheduling-project",
   "title": "第二实战：给日程服务做可验证的区间查询",
   "free": true,
@@ -2506,7 +2555,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 75,
+  "idx": 79,
   "id": "original/algorithm-routing-project",
   "title": "第三实战：把路径查询拆成建模、选算法和校验结果",
   "free": true,
@@ -2519,7 +2568,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 76,
+  "idx": 80,
   "id": "original/algorithm-parser-project",
   "title": "解析器实战：表达式优先级不是边扫描边求值就能解决",
   "free": true,
@@ -2532,7 +2581,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 77,
+  "idx": 81,
   "id": "original/algorithm-stream-feed-project",
   "title": "有序流实战：把多个来源的最新记录合成一页",
   "free": true,
@@ -2545,7 +2594,7 @@
  {
   "part": "p9-algorithms",
   "part_name": "数据结构与算法",
-  "idx": 78,
+  "idx": 82,
   "id": "original/algorithm-practice-checkpoints",
   "title": "综合练习：先交付可验证的答案，再追求题数",
   "free": true,

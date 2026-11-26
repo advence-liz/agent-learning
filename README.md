@@ -202,6 +202,9 @@
 按专题学习数据结构、搜索、图论、动态规划和数学，用 TypeScript 实验与综合练习自检。
 
 - [ ] [算法导读：先说清状态，再背模板](p9-algorithms/00-guide.md) · ✍️ 原创 · [原文](https://labuladong.online/zh/algo/home/)
+- [ ] [从数组到图：数据怎么存，决定你怎么找](p9-algorithms/81-storage-and-traversal.md) · ✍️ 原创
+- [ ] [核心算法框架：先辨认题目的信号，再挑模板](p9-algorithms/79-core-frameworks.md) · ✍️ 原创
+- [ ] [五道混合题：题目不告诉你该用哪种算法](p9-algorithms/82-mixed-practice.md) · ✍️ 原创
 
 ### 准备与解题框架
 
@@ -218,6 +221,7 @@
 - [ ] [二维矩阵：用四个角回答矩形范围和](p9-algorithms/12-matrix-prefix.md) · ✍️ 原创
 - [ ] [二维遍历：转置、旋转与螺旋走的是不同下标](p9-algorithms/45-matrix-traversal.md) · ✍️ 原创
 - [ ] [双指针、滑动窗口与二分：每一步都要说明排除了什么](p9-algorithms/02-pointers-and-search.md) · ✍️ 原创
+- [ ] [滑动窗口三练：长度变了，哪条规则也要跟着变？](p9-algorithms/80-sliding-window-practice.md) · ✍️ 原创
 - [ ] [原地覆盖：读指针审阅输入，写指针只填合法前缀](p9-algorithms/46-slow-fast-in-place.md) · ✍️ 原创
 - [ ] [二分答案：当可行性从假变真，就搜索第一个真](p9-algorithms/17-binary-search-answer.md) · ✍️ 原创
 - [ ] [链表、栈与队列：结构决定下一步处理谁](p9-algorithms/03-linear-structures.md) · ✍️ 原创
