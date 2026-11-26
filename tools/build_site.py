@@ -33,6 +33,7 @@ site_dir: build
 use_directory_urls: false
 theme:
   name: material
+  custom_dir: overrides
   language: zh
   features:
     - navigation.tabs

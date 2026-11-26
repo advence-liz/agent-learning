@@ -1,0 +1,47 @@
+{% macro route(steps) %}
+  <ol class="course-steps" role="list">
+    {% for step in steps %}
+      <li><a href="{{ step.url | url }}"><span class="course-step-no" aria-label="第 {{ step.number }} 部分">{{ '%02d' | format(step.number) }}</span><span>{{ step.title | e }}</span></a></li>
+    {% endfor %}
+  </ol>
+{% endmacro %}
+
+<div class="course-home">
+  <header class="course-hero">
+    <h1 id="{{ (page.toc | first).id | e }}">{{ config.site_name | e }}</h1>
+    <p>沿 Agent 研发路线做一个能用工具的应用，或从数据结构与算法开始练解题。</p>
+    <nav class="course-starts" aria-label="按目标开始">
+      {% for start in course_starts %}
+        <a href="{{ start.url | url }}">{{ start.label | e }}</a>
+      {% endfor %}
+    </nav>
+  </header>
+
+  <div class="course-routes">
+    <section class="course-main-route" aria-labelledby="course-main-title">
+      <h2 id="course-main-title">沿主线做出一个 Agent</h2>
+      {{ route(course_tracks.main) }}
+    </section>
+    <section class="course-electives" aria-labelledby="course-elective-title">
+      <section aria-labelledby="course-elective-title">
+        <h2 id="course-elective-title">想了解模型怎么训练？</h2>
+        <p>应用开发可以先跳过这两部分，涉及训练和推理时再回来补。</p>
+        {{ route(course_tracks.elective) }}
+      </section>
+      <section class="course-more" aria-labelledby="course-more-title">
+        <h2 id="course-more-title">独立路线与讲义</h2>
+        <ul class="course-steps" role="list">
+          {% for resource in [course_algorithm, course_lectures] if resource %}
+            <li><a href="{{ resource.url | url }}">{{ resource.title | e }}</a></li>
+          {% endfor %}
+        </ul>
+      </section>
+    </section>
+  </div>
+
+  <details class="course-reference">
+    <summary>查看完整章节目录与学习说明</summary>
+    {# The README supplies the existing anchors and searchable content; its title is rendered above. #}
+    {{ page.content.partition('</h1>')[2] }}
+  </details>
+</div>

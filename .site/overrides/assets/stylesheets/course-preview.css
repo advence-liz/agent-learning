@@ -1,0 +1,177 @@
+/* Shared reading palette. This sheet is loaded by the two preview pages only. */
+body[data-md-color-scheme] {
+  --course-paper: #f8f8fd;
+  --course-surface: #fff;
+  --course-ink: #24213c;
+  --course-muted: #56536c;
+  --course-key: #4c39a6;
+  --course-line: #dedbf0;
+  --course-band: #eeecfa;
+  --course-type: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+  --md-typeset-a-color: var(--course-key);
+  --md-accent-fg-color: var(--course-key);
+  --md-default-bg-color: var(--course-paper);
+  --md-default-fg-color: var(--course-ink);
+  --md-default-fg-color--light: var(--course-muted);
+}
+body[data-md-color-scheme='slate'] {
+  --course-paper: #1b192a;
+  --course-surface: #222033;
+  --course-ink: #f1eeff;
+  --course-muted: #c4bedb;
+  --course-key: #c6b9ff;
+  --course-line: #43405c;
+  --course-band: #30284b;
+}
+.md-header, .md-tabs {
+  background: var(--course-surface);
+  color: var(--course-ink);
+  border-bottom: 1px solid var(--course-line);
+  box-shadow: none;
+  --md-primary-fg-color: var(--course-surface);
+  --md-primary-bg-color: var(--course-ink);
+}
+.md-header .md-search__form { background: var(--course-band); }
+.md-header .md-search__input::placeholder { color: var(--course-muted); }
+:is(.course-home, .course-guide, .md-header, .md-sidebar) :focus-visible {
+  outline: 2px solid var(--course-key);
+  outline-offset: 3px;
+}
+.course-home, .course-guide { font-family: var(--course-type); }
+
+/* Home: the only bold surface is the opening. The route is an ordered reading list. */
+.md-main__inner:has(.course-home) { max-width: 68rem; }
+.md-main__inner:has(.course-home) .md-sidebar--secondary { display: none; }
+.course-home { padding-bottom: 2rem; }
+.course-hero {
+  padding: clamp(1.25rem, 4vw, 3rem);
+  border: 1px solid var(--course-line);
+  border-top: 4px solid var(--course-key);
+  border-radius: .6rem;
+  background: var(--course-band);
+}
+.course-home .course-hero h1 {
+  margin: 0;
+  color: var(--course-ink);
+  font-size: clamp(1.7rem, 4.7vw, 3.1rem);
+  font-weight: 740;
+  line-height: 1.16;
+  letter-spacing: -.045em;
+}
+.course-hero p {
+  max-width: 34em;
+  margin: .8rem 0 1.35rem;
+  color: var(--course-muted);
+  font-size: clamp(.8rem, 2vw, 1rem);
+  line-height: 1.7;
+}
+.course-starts { display: flex; flex-wrap: wrap; gap: .45rem; }
+.course-home .course-starts a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: .38rem .7rem;
+  border: 1px solid var(--course-key);
+  border-radius: .3rem;
+  color: var(--course-key);
+  font-size: .72rem;
+  font-weight: 650;
+}
+.course-home .course-starts a:first-child {
+  background: var(--course-key);
+  color: var(--course-paper);
+}
+.course-home a:hover { text-decoration: underline; text-underline-offset: .16em; }
+.course-routes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: clamp(1.3rem, 5vw, 3rem);
+  margin: 1.65rem 0 1.6rem;
+}
+.course-home .course-routes h2 {
+  margin: 0 0 .55rem;
+  color: var(--course-ink);
+  font-size: clamp(.95rem, 2.5vw, 1.3rem);
+  font-weight: 710;
+  line-height: 1.35;
+  letter-spacing: -.025em;
+}
+.course-routes p { color: var(--course-muted); margin: 0 0 .65rem; }
+.course-more { margin-top: 1rem; }
+.course-home .course-steps { list-style: none; margin: 0; padding: 0; }
+.md-typeset .course-home .course-steps li { margin: 0; border-bottom: 1px solid var(--course-line); }
+.course-home .course-steps li:first-child { border-top: 1px solid var(--course-line); }
+.course-home .course-steps a {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+  min-height: 44px;
+  padding: .45rem .2rem;
+  color: var(--course-ink);
+  font-weight: 600;
+}
+.course-step-no { color: var(--course-key); font-size: .68rem; font-variant-numeric: tabular-nums; }
+.course-home .course-reference {
+  border-color: var(--course-line);
+  background: var(--course-surface);
+  box-shadow: none;
+}
+.course-home .course-reference > summary {
+  min-height: 44px;
+  padding: .55rem 1.8rem .55rem .75rem;
+  background: var(--course-band);
+  color: var(--course-ink);
+}
+.course-home .course-reference > summary::before { display: none; }
+
+/* Guide: preserve the rendered article and its anchors, but set a slower reading measure. */
+.course-guide { width: min(100%, 38rem); margin-inline: auto; line-height: 1.85; }
+.course-guide > h1 {
+  margin-bottom: .8rem;
+  color: var(--course-ink);
+  font-size: clamp(1.45rem, 3.4vw, 2.25rem);
+  font-weight: 740;
+  letter-spacing: -.035em;
+  line-height: 1.22;
+}
+.course-guide > h2 { margin-top: 1.85em; font-weight: 690; line-height: 1.4; }
+.course-guide > h3 { font-weight: 660; }
+.md-typeset .course-guide > h1 + blockquote { margin: 0 0 1.35rem; padding: 0; border: 0; }
+.course-guide > h1 + blockquote p:first-child {
+  margin: 0 0 .8rem;
+  color: var(--course-muted);
+  font-size: .72rem;
+}
+.course-guide > h1 + blockquote p:last-child {
+  margin: 0;
+  padding: .8rem 1rem;
+  border-inline-start: 3px solid var(--course-key);
+  border-radius: 0 .35rem .35rem 0;
+  background: var(--course-band);
+  color: var(--course-ink);
+}
+.course-guide :is(.d2, pre) { overscroll-behavior-inline: contain; }
+.course-guide .d2 {
+  margin-block: 1rem;
+  padding: .35rem;
+  border: 1px solid var(--course-line);
+  border-radius: .35rem;
+  background: var(--course-surface);
+}
+.course-guide :is(.md-typeset__table, .tabbed-set) { max-width: 100%; }
+.course-guide .md-typeset__table { min-width: 0; }
+.course-guide table:not([class]) th { background: var(--course-band); color: var(--course-ink); }
+.course-guide table:not([class]) :is(td, th) { border-color: var(--course-line); }
+.course-guide details { border-color: var(--course-line); box-shadow: none; }
+.course-guide details > summary { background: var(--course-band); }
+
+@media (min-width: 76.25em) {
+  .md-main__inner:has(.course-home) .md-sidebar--primary { display: none; }
+  .md-main__inner:has(.course-home) .md-content { max-width: 54rem; margin-inline: auto; }
+}
+@media (max-width: 44em) {
+  .course-routes { grid-template-columns: minmax(0, 1fr); }
+  .course-home, .course-guide { overflow-wrap: anywhere; }
+  .course-guide pre { overflow-wrap: normal; }
+  .course-guide > h1 + blockquote p:last-child { padding: .65rem .75rem; }
+}

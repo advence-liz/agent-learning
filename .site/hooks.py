@@ -41,7 +41,7 @@ D2_MIN_SCALE = 0.75
 # 部分的顺序和标题来自 tools/parts.py（与 README 共用，唯一来源）
 import sys
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
-from parts import AGENT_PARTS, ALGORITHM_PART, chapter_groups, nav_label  # noqa: E402
+from parts import AGENT_PARTS, ALGORITHM_PART, BY_ID, chapter_groups, nav_label  # noqa: E402
 
 
 def on_config(config, **kwargs):
@@ -91,6 +91,38 @@ def on_nav(nav, **kwargs):
             if neighbor is not None and tab(page) is not tab(neighbor):
                 setattr(page, attr, None)
     return nav
+
+
+def on_page_context(context, page, config, nav, **kwargs):
+    if not page.is_homepage:
+        return
+
+    # Read the first published page per part from MkDocs, not from hard-coded URLs.
+    urls = {}
+    for chapter in nav.pages:
+        part = chapter.file.src_uri.split('/', 1)[0]
+        if part in BY_ID:
+            urls.setdefault(part, chapter.url)
+    entries = {}
+    for part, url in urls.items():
+        _, number, title, _, _, track = BY_ID[part]
+        entries[part] = dict(number=number, title=title, url=url, track=track)
+
+    context['course_tracks'] = {
+        track: [entries[part] for part in AGENT_PARTS if part in entries and entries[part]['track'] == track]
+        for track in ('main', 'elective')
+    }
+    context['course_starts'] = [
+        dict(label=label, url=entries[part]['url'])
+        for part, label in (
+            ('p2-agent-basics', '从零做一个 Agent'),
+            ('p4-mini-cc', '手搓 mini Claude Code'),
+            ('p7-interview', '准备 Agent 面试'),
+        )
+        if part in entries
+    ]
+    context['course_algorithm'] = entries.get(ALGORITHM_PART)
+    context['course_lectures'] = entries.get('p8-technical-lectures')
 
 
 def on_page_markdown(markdown, page, **kwargs):

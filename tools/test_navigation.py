@@ -75,6 +75,28 @@ class NavigationTests(unittest.TestCase):
             c['out'] for c in curriculum if c['part'] == 'p9-algorithms'
         ])
 
+    def test_course_home_keeps_agent_and_algorithm_entries(self):
+        from types import SimpleNamespace
+
+        spec = importlib.util.spec_from_file_location('site_hooks', ROOT / '.site/hooks.py')
+        hooks = importlib.util.module_from_spec(spec)
+        pages = [SimpleNamespace(file=SimpleNamespace(src_uri=path), url=path[:-3] + '.html')
+                 for path in ['p0-core/00-guide.md', *[c['out'] for c in json.loads((ROOT / 'curriculum.json').read_text())]]]
+        hooks_context = {}
+        spec.loader.exec_module(hooks)
+        home = SimpleNamespace(is_homepage=True)
+        nav = SimpleNamespace(pages=pages)
+        hooks.on_page_context(hooks_context, home, {}, nav)
+        self.assertEqual([step['number'] for step in hooks_context['course_tracks']['main']], [0, 1, 2, 3, 4, 7])
+        self.assertEqual([step['number'] for step in hooks_context['course_tracks']['elective']], [5, 6])
+        self.assertEqual([start['url'].split('/')[0] for start in hooks_context['course_starts']],
+                         ['p2-agent-basics', 'p4-mini-cc', 'p7-interview'])
+        self.assertEqual(hooks_context['course_algorithm']['url'], 'p9-algorithms/00-guide.html')
+        self.assertEqual(hooks_context['course_lectures']['url'], 'p8-technical-lectures/00-reading-guide.html')
+        untouched = {}
+        hooks.on_page_context(untouched, SimpleNamespace(is_homepage=False), {}, nav)
+        self.assertEqual(untouched, {})
+
     def test_footer_links_do_not_cross_tracks(self):
         from types import SimpleNamespace
 
