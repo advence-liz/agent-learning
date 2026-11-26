@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class NavigationTests(unittest.TestCase):
     def test_parts_display_in_numeric_order(self):
-        self.assertEqual([p[1] for p in PARTS], list(range(10)))
-        self.assertEqual(ORDER[-1], 'p9-algorithms')
+        self.assertEqual([p[1] for p in PARTS], list(range(11)))
+        self.assertEqual(ORDER[-1], 'p10-backend-systems')
 
     def test_algorithms_are_an_independent_track_and_all_pages_are_scanned(self):
         import check_publish
@@ -44,18 +44,18 @@ class NavigationTests(unittest.TestCase):
             'p4-mini-cc', 'p7-interview',
         ])
 
-    def test_site_groups_agent_and_algorithms_into_peer_tabs(self):
+    def test_site_groups_agent_algorithms_and_backend_into_peer_tabs(self):
         spec = importlib.util.spec_from_file_location('site_hooks', ROOT / '.site/hooks.py')
         hooks = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(hooks)
         nav = hooks.on_config({})['nav']
-        self.assertEqual([next(iter(item)) for item in nav], ['首页', 'Agent 研发', '数据结构与算法'])
+        self.assertEqual([next(iter(item)) for item in nav], ['首页', 'Agent 研发', '数据结构与算法', '后端系统'])
         self.assertEqual(nav[0]['首页'], 'index.md')
         agent = nav[1]['Agent 研发']
         self.assertEqual(agent[0], {'Agent 导读': 'p0-core/00-guide.md'})
         self.assertEqual([int(next(iter(group)).split(' · ')[0]) for group in agent[1:]], list(range(9)))
         curriculum = json.loads((ROOT / 'curriculum.json').read_text())
-        expected_agent = [c['out'] for c in curriculum if c['part'] != 'p9-algorithms']
+        expected_agent = [c['out'] for c in curriculum if c['part'] not in ('p9-algorithms', 'p10-backend-systems')]
         def chapter_paths(items):
             for item in items:
                 path = next(iter(item.values()))
@@ -65,6 +65,9 @@ class NavigationTests(unittest.TestCase):
                     yield path
 
         self.assertEqual(list(chapter_paths(agent[1:])), expected_agent)
+        self.assertEqual(list(chapter_paths(nav[3]['后端系统'])), [
+            c['out'] for c in curriculum if c['part'] == 'p10-backend-systems'
+        ])
         algorithms = nav[2]['数据结构与算法']
         self.assertEqual([next(iter(group.values())) for group in algorithms[:4]], [
             'p9-algorithms/00-guide.md', 'p9-algorithms/81-storage-and-traversal.md',
@@ -81,7 +84,21 @@ class NavigationTests(unittest.TestCase):
             c['out'] for c in curriculum if c['part'] == 'p9-algorithms'
         ])
 
-    def test_course_home_keeps_agent_and_algorithm_entries(self):
+    def test_backend_curriculum_is_complete_and_scanned(self):
+        import check_publish
+
+        group = 'p10-backend-systems'
+        curriculum = json.loads((ROOT / 'curriculum.json').read_text())
+        paths = [c['out'] for c in curriculum if c['part'] == group]
+        self.assertEqual(paths[0], f'{group}/00-guide.md')
+        self.assertEqual(len(paths), 7)
+        self.assertEqual(paths[1], f'{group}/06-foundations.md')
+        self.assertEqual({ROOT / path for path in paths}, set((ROOT / group).glob('*.md')))
+        self.assertTrue({ROOT / path for path in paths} <= {Path(p) for p in check_publish.files()})
+        guide = (ROOT / paths[0]).read_text()
+        self.assertTrue(all(f']({Path(path).name})' in guide for path in paths[1:]))
+
+    def test_course_home_keeps_all_peer_entries(self):
         from types import SimpleNamespace
 
         spec = importlib.util.spec_from_file_location('site_hooks', ROOT / '.site/hooks.py')
@@ -98,6 +115,7 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual([start['url'].split('/')[0] for start in hooks_context['course_starts']],
                          ['p2-agent-basics', 'p4-mini-cc', 'p7-interview'])
         self.assertEqual(hooks_context['course_algorithm']['url'], 'p9-algorithms/00-guide.html')
+        self.assertEqual(hooks_context['course_backend']['url'], 'p10-backend-systems/00-guide.html')
         self.assertEqual(hooks_context['course_lectures']['url'], 'p8-technical-lectures/00-reading-guide.html')
         untouched = {}
         hooks.on_page_context(untouched, SimpleNamespace(is_homepage=False), {}, nav)
@@ -127,7 +145,7 @@ class NavigationTests(unittest.TestCase):
         offsets = [text.index(f'<a id="{pid}"></a>') for pid in [
             'p0-core', 'p1-tools', 'p2-agent-basics', 'p3-agent-internals',
             'p4-mini-cc', 'p5-ml', 'p6-nn-llm', 'p7-interview', 'p8-technical-lectures',
-            'p9-algorithms',
+            'p9-algorithms', 'p10-backend-systems',
         ]]
         self.assertEqual(offsets, sorted(offsets))
 

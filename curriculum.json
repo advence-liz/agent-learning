@@ -2616,5 +2616,89 @@
   "src_headings": [],
   "kind": "lesson",
   "section": "综合练习与复盘"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 0,
+  "id": "original/backend-guide",
+  "title": "后端面试导读：先练核心追问，再补组件细节",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/00-guide.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 6,
+  "id": "original/backend-foundations",
+  "title": "网络与运行时：从请求超时反推连接、线程和 I/O",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/06-foundations.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 1,
+  "id": "original/backend-traffic",
+  "title": "请求入口与稳定性：请求变慢时，先找到在哪排队",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/01-traffic.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 2,
+  "id": "original/backend-database",
+  "title": "数据库：先缩小扫描和锁范围，再谈读写分离与分片",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/02-database.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 3,
+  "id": "original/backend-cache",
+  "title": "缓存：减少回源，但别把缓存当成事实来源",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/03-cache.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 4,
+  "id": "original/backend-queues",
+  "title": "消息队列：允许重复投递，但不能重复产生业务效果",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/04-queues.md",
+  "src_headings": [],
+  "kind": "lesson"
+ },
+ {
+  "part": "p10-backend-systems",
+  "part_name": "后端系统",
+  "idx": 5,
+  "id": "original/backend-system-design",
+  "title": "系统设计实战：用一条订单链路验证取舍",
+  "free": true,
+  "src": "",
+  "out": "p10-backend-systems/05-system-design.md",
+  "src_headings": [],
+  "kind": "lesson"
  }
 ]

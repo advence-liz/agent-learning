@@ -9,7 +9,7 @@
 <div class="course-home">
   <header class="course-hero">
     <h1 id="{{ (page.toc | first).id | e }}">{{ config.site_name | e }}</h1>
-    <p>沿 Agent 研发路线做一个能用工具的应用，或从数据结构与算法开始练解题。</p>
+    <p>沿 Agent 研发路线做一个能用工具的应用，练数据结构与算法，或沿后端系统路线准备面试。</p>
     <nav class="course-starts" aria-label="按目标开始">
       {% for start in course_starts %}
         <a href="{{ start.url | url }}">{{ start.label | e }}</a>
@@ -31,7 +31,7 @@
       <section class="course-more" aria-labelledby="course-more-title">
         <h2 id="course-more-title">独立路线与讲义</h2>
         <ul class="course-steps" role="list">
-          {% for resource in [course_algorithm, course_lectures] if resource %}
+          {% for resource in [course_algorithm, course_backend, course_lectures] if resource %}
             <li><a href="{{ resource.url | url }}">{{ resource.title | e }}</a></li>
           {% endfor %}
         </ul>
