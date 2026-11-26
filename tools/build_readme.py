@@ -5,7 +5,7 @@ cur = json.load(open(os.path.join(ROOT, 'curriculum.json')))
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from parts import AGENT_PARTS, ALGORITHM_PART, PARTS as _PARTS, ORDER, chapter_groups, label
+from parts import AGENT_PARTS, INDEPENDENT_PARTS, PARTS as _PARTS, ORDER, chapter_groups, label
 PARTS = {pid: (label(pid), desc, advice) for pid, _, _, desc, advice, _ in _PARTS}
 
 def status(c):
@@ -17,10 +17,11 @@ lines = []
 w = lines.append
 w('# 开发学习知识库')
 w('')
-w('> **两条独立学习路线**：想做能交付的 AI 应用，选 Agent 研发；想练数据结构、解题与复杂度分析，选数据结构与算法。两边都从自己的导读开始。')
+w('> **三条独立学习路线**：Agent 研发练应用交付，数据结构与算法练解题，后端系统练故障追问与系统设计。按目标选自己的导读。')
 w('')
 w('- **[Agent 研发 →](p0-core/00-guide.md)**：从上下文与工具调用入门，拆解工业级实现，手写自己的 Agent，再准备研发面试。')
 w('- **[数据结构与算法 →](p9-algorithms/00-guide.md)**：用 TypeScript 练搜索、遍历和动态规划，最后实现任务依赖规划器。不需要模型或 API key。')
+w('- **[后端系统 →](p10-backend-systems/00-guide.md)**：围绕 SQL、缓存、MQ 和稳定性，拿同一条订单链路练首问、故障追问和限时设计。')
 w('')
 w('## Agent 研发：先跑通，再拆解，最后自己做')
 w('')
@@ -37,7 +38,7 @@ for p in ORDER:
     t, d, s = PARTS[p]
     w('')
     w(f'<a id="{p}"></a>')
-    w(f'## {t}' if p == ALGORITHM_PART else f'### {t}')
+    w(f'## {t}' if p in INDEPENDENT_PARTS else f'### {t}')
     w('')
     w(f'{d}。')
     w('')
@@ -46,7 +47,7 @@ for p in ORDER:
     for section, chapters in chapter_groups(cur, p):
         if section:
             w('')
-            heading = '###' if p == ALGORITHM_PART else '####'
+            heading = '###' if p in INDEPENDENT_PARTS else '####'
             w(f'{heading} {section}')
             w('')
         for c in chapters:

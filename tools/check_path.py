@@ -1,7 +1,7 @@
 """检查学习路径的章间衔接：python3 tools/check_path.py（有问题退出码 1）
 
 阅读序列 = tools/parts.py 的部分顺序 × curriculum.json 里各部分的章节顺序（p0 前面加导读）。
-主线和选修是两条链：主线 0→1→2→3→4→7，选修 5→6。
+主线 0→1→2→3→4→7、选修 5→6 与后端各自检查，不跨栏目。
 
 检查两件事：
 1. 带「上一章 / 上一篇 / 下一章 / 下一篇 / 下一部分」字样的链接，必须指向序列里真正相邻的那一章。
@@ -32,7 +32,7 @@ def chain(track):
 
 problems = []
 prev_of, next_of = {}, {}
-for track in ('main', 'elective'):
+for track in ('main', 'elective', 'backend'):
     parts = chain(track)
     flat = [o for p in parts for o in p]
     for a, b in zip(flat, flat[1:]):

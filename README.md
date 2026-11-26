@@ -1,9 +1,10 @@
 # 开发学习知识库
 
-> **两条独立学习路线**：想做能交付的 AI 应用，选 Agent 研发；想练数据结构、解题与复杂度分析，选数据结构与算法。两边都从自己的导读开始。
+> **三条独立学习路线**：Agent 研发练应用交付，数据结构与算法练解题，后端系统练故障追问与系统设计。按目标选自己的导读。
 
 - **[Agent 研发 →](p0-core/00-guide.md)**：从上下文与工具调用入门，拆解工业级实现，手写自己的 Agent，再准备研发面试。
 - **[数据结构与算法 →](p9-algorithms/00-guide.md)**：用 TypeScript 练搜索、遍历和动态规划，最后实现任务依赖规划器。不需要模型或 API key。
+- **[后端系统 →](p10-backend-systems/00-guide.md)**：围绕 SQL、缓存、MQ 和稳定性，拿同一条订单链路练首问、故障追问和限时设计。
 
 ## Agent 研发：先跑通，再拆解，最后自己做
 
@@ -301,6 +302,19 @@
 - [ ] [解析器实战：表达式优先级不是边扫描边求值就能解决](p9-algorithms/77-parser-project.md) · ✍️ 原创
 - [ ] [有序流实战：把多个来源的最新记录合成一页](p9-algorithms/78-stream-feed-project.md) · ✍️ 原创
 - [ ] [综合练习：先交付可验证的答案，再追求题数](p9-algorithms/41-practice-checkpoints.md) · ✍️ 原创
+
+<a id="p10-backend-systems"></a>
+## 后端系统
+
+用订单链路练 SQL、缓存、消息可靠性、过载保护和系统设计。
+
+- [ ] [后端面试导读：先练核心追问，再补组件细节](p10-backend-systems/00-guide.md) · ✍️ 原创
+- [ ] [网络与运行时：从请求超时反推连接、线程和 I/O](p10-backend-systems/06-foundations.md) · ✍️ 原创
+- [ ] [请求入口与稳定性：请求变慢时，先找到在哪排队](p10-backend-systems/01-traffic.md) · ✍️ 原创
+- [ ] [数据库：先缩小扫描和锁范围，再谈读写分离与分片](p10-backend-systems/02-database.md) · ✍️ 原创
+- [ ] [缓存：减少回源，但别把缓存当成事实来源](p10-backend-systems/03-cache.md) · ✍️ 原创
+- [ ] [消息队列：允许重复投递，但不能重复产生业务效果](p10-backend-systems/04-queues.md) · ✍️ 原创
+- [ ] [系统设计实战：用一条订单链路验证取舍](p10-backend-systems/05-system-design.md) · ✍️ 原创
 
 ## 配套代码
 

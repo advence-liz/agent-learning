@@ -1,6 +1,6 @@
 """MkDocs hook。
 
-on_config：按 curriculum.json 生成 Agent 和算法两个栏目，只收已存在的章节；
+on_config：按 curriculum.json 生成 Agent 与独立栏目，只收已存在的章节；
            `mkdocs serve` 重建时会重新读取课程清单。
 on_nav：限制页脚「上一页 / 下一页」留在当前栏目。
 on_page_markdown：渲染前改写 markdown（源文件不动）：
@@ -41,7 +41,7 @@ D2_MIN_SCALE = 0.75
 # 部分的顺序和标题来自 tools/parts.py（与 README 共用，唯一来源）
 import sys
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
-from parts import AGENT_PARTS, ALGORITHM_PART, BY_ID, chapter_groups, nav_label  # noqa: E402
+from parts import AGENT_PARTS, ALGORITHM_PART, BACKEND_PART, INDEPENDENT_PARTS, BY_ID, chapter_groups, nav_label  # noqa: E402
 
 
 def on_config(config, **kwargs):
@@ -73,8 +73,9 @@ def on_config(config, **kwargs):
     nav = [{'首页': 'index.md'}]
     if agent:
         nav.append({'Agent 研发': agent})
-    if algorithms := part_items(ALGORITHM_PART):
-        nav.append({nav_label(ALGORITHM_PART): algorithms})
+    for part in INDEPENDENT_PARTS:
+        if items := part_items(part):
+            nav.append({nav_label(part): items})
     config['nav'] = nav
     return config
 
@@ -122,6 +123,7 @@ def on_page_context(context, page, config, nav, **kwargs):
         if part in entries
     ]
     context['course_algorithm'] = entries.get(ALGORITHM_PART)
+    context['course_backend'] = entries.get(BACKEND_PART)
     context['course_lectures'] = entries.get('p8-technical-lectures')
 
 
