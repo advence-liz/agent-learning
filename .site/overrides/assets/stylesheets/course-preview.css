@@ -1,4 +1,4 @@
-/* Shared reading palette. This sheet is loaded by the two preview pages only. */
+/* Shared palette and reading styles for the course site. */
 body[data-md-color-scheme] {
   --course-paper: #f8f8fd;
   --course-surface: #fff;
@@ -33,11 +33,11 @@ body[data-md-color-scheme='slate'] {
 }
 .md-header .md-search__form { background: var(--course-band); }
 .md-header .md-search__input::placeholder { color: var(--course-muted); }
-:is(.course-home, .course-guide, .md-header, .md-sidebar) :focus-visible {
+:is(.course-home, .course-article, .md-header, .md-tabs, .md-sidebar) :focus-visible {
   outline: 2px solid var(--course-key);
   outline-offset: 3px;
 }
-.course-home, .course-guide { font-family: var(--course-type); }
+.course-home, .course-article { font-family: var(--course-type); }
 
 /* Home: the only bold surface is the opening. The route is an ordered reading list. */
 .md-main__inner:has(.course-home) { max-width: 68rem; }
@@ -124,9 +124,9 @@ body[data-md-color-scheme='slate'] {
 }
 .course-home .course-reference > summary::before { display: none; }
 
-/* Guide: preserve the rendered article and its anchors, but set a slower reading measure. */
-.course-guide { width: min(100%, 38rem); margin-inline: auto; line-height: 1.85; }
-.course-guide > h1 {
+/* All chapters share a reading measure; only the build guide has a two-part lead. */
+.course-article { width: min(100%, 38rem); margin-inline: auto; line-height: 1.85; }
+.course-article > h1 {
   margin-bottom: .8rem;
   color: var(--course-ink);
   font-size: clamp(1.45rem, 3.4vw, 2.25rem);
@@ -134,15 +134,15 @@ body[data-md-color-scheme='slate'] {
   letter-spacing: -.035em;
   line-height: 1.22;
 }
-.course-guide > h2 { margin-top: 1.85em; font-weight: 690; line-height: 1.4; }
-.course-guide > h3 { font-weight: 660; }
-.md-typeset .course-guide > h1 + blockquote { margin: 0 0 1.35rem; padding: 0; border: 0; }
-.course-guide > h1 + blockquote p:first-child {
+.course-article > h2 { margin-top: 1.85em; font-weight: 690; line-height: 1.4; }
+.course-article > h3 { font-weight: 660; }
+.md-typeset .course-build-guide > h1 + blockquote { margin: 0 0 1.35rem; padding: 0; border: 0; }
+.course-build-guide > h1 + blockquote p:first-child {
   margin: 0 0 .8rem;
   color: var(--course-muted);
   font-size: .72rem;
 }
-.course-guide > h1 + blockquote p:last-child {
+.course-build-guide > h1 + blockquote p:last-child {
   margin: 0;
   padding: .8rem 1rem;
   border-inline-start: 3px solid var(--course-key);
@@ -150,20 +150,22 @@ body[data-md-color-scheme='slate'] {
   background: var(--course-band);
   color: var(--course-ink);
 }
-.course-guide :is(.d2, pre) { overscroll-behavior-inline: contain; }
-.course-guide .d2 {
+.course-article :is(.d2, pre, .md-typeset__scrollwrap, div.arithmatex) { overscroll-behavior-x: contain; }
+.course-article div.arithmatex { overflow-x: auto; }
+.course-article .d2 {
   margin-block: 1rem;
   padding: .35rem;
   border: 1px solid var(--course-line);
   border-radius: .35rem;
   background: var(--course-surface);
 }
-.course-guide :is(.md-typeset__table, .tabbed-set) { max-width: 100%; }
-.course-guide .md-typeset__table { min-width: 0; }
-.course-guide table:not([class]) th { background: var(--course-band); color: var(--course-ink); }
-.course-guide table:not([class]) :is(td, th) { border-color: var(--course-line); }
-.course-guide details { border-color: var(--course-line); box-shadow: none; }
-.course-guide details > summary { background: var(--course-band); }
+.course-article pre > code { line-height: 1.55; }
+.course-article :is(.md-typeset__table, .tabbed-set) { max-width: 100%; }
+.course-article .md-typeset__table { min-width: 0; }
+.course-article table:not([class]) th { background: var(--course-band); color: var(--course-ink); }
+.course-article table:not([class]) :is(td, th) { border-color: var(--course-line); }
+.course-article details { border-color: var(--course-line); box-shadow: none; }
+.course-article details > summary { background: var(--course-band); }
 
 @media (min-width: 76.25em) {
   .md-main__inner:has(.course-home) .md-sidebar--primary { display: none; }
@@ -171,7 +173,7 @@ body[data-md-color-scheme='slate'] {
 }
 @media (max-width: 44em) {
   .course-routes { grid-template-columns: minmax(0, 1fr); }
-  .course-home, .course-guide { overflow-wrap: anywhere; }
-  .course-guide pre { overflow-wrap: normal; }
-  .course-guide > h1 + blockquote p:last-child { padding: .65rem .75rem; }
+  .course-home, .course-article { overflow-wrap: anywhere; }
+  .course-article pre { overflow-wrap: normal; }
+  .course-build-guide > h1 + blockquote p:last-child { padding: .65rem .75rem; }
 }
